@@ -68,6 +68,18 @@ test('today: before the window', async ({ page }) => {
   await shot(page, '01b-today-before-full', { full: true });
 });
 
+test('today: fasting stages', async ({ page }) => {
+  await openAt(page, '2026-09-27T13:10');
+  await seed(page, { ...WEEK, settings: install });
+  await page.locator('[data-block="stages"]').scrollIntoViewIfNeeded();
+  await page.evaluate(() => window.scrollBy(0, -120));
+  await shot(page, '01c-today-stages');
+  await tap(page, 'about-stages');
+  await shot(page, '01d-stages-sheet');
+  await page.locator('[data-sheet="stages"]').evaluate((el) => { el.scrollTop = el.scrollHeight; });
+  await shot(page, '01e-stages-sheet-end');
+});
+
 test('today: window open, phases and sheets', async ({ page }) => {
   await openAt(page, '2026-09-27T17:30');
   await seed(page, { ...WEEK, settings: install });

@@ -4,7 +4,7 @@ import { h, hl, live } from './dom.js';
 import { button, choice, scale, timeField, TRAINING_OPTIONS, STOP_TEXT } from './components.js';
 import * as store from '../store.js';
 import {
-  MIN, fmtCountdown, fmtDayLong, fmtDuration, fmtElapsed, fmtMinutes, fmtTime, fmtWhen, isWorkweekday, minutesOfDay, now,
+  MIN, fmtCountdown, fmtDayLong, fmtDuration, fmtMinutes, fmtTime, fmtWhen, isWorkweekday, minutesOfDay, now,
 } from '../core/time.js';
 import {
   CUTOFF_MIN, LIMIT_MS, WINDOW_MS, canReopen, isWorkday, lastEatingTs, lateNightDay, plannedStartMin, timeOnOrAfter, windowPhase,
@@ -13,6 +13,7 @@ import { dunes } from './art.js';
 import { firstBite, forgotCloseDefault, showDoneEatingSheet, showFinishMealSheet, showLogMealSheet, showMealEditSheet } from './meal.js';
 import { showOutsideSheet } from './outside.js';
 import { showOpeningSheet, showWindowTimesSheet } from './window-times.js';
+import { stagesSection } from './stages.js';
 import { dayTypeText, header, liveNote, mealInProgress, mealsOfDay, nextWindowLine, note, notices, runningFullness } from './shared.js';
 
 const days = (n) => `${n} ${n === 1 ? 'day' : 'days'}`;
@@ -23,8 +24,13 @@ export function signature(ctx) {
   if (mode === 'open') parts.push(windowPhase(rec, ctx.nowTs));
   if (mode === 'closed') parts.push(canReopen(rec, ctx.nowTs));
   parts.push(runningFullness(ctx).length);
+  // While fasting, redraw the stage bar every 5 minutes and at each new stage.
+  const last = fasting(mode) ? lastEatingTs(ctx) : null;
+  if (last) parts.push(Math.floor((ctx.nowTs - last) / (5 * MIN)));
   return parts.join('|');
 }
+
+const fasting = (mode) => mode === 'before' || mode === 'closed' || mode === 'noEating';
 
 export function renderToday(ctx, app) {
   const { mode, rec } = ctx.mode;
@@ -42,6 +48,7 @@ export function renderToday(ctx, app) {
     header(ctx, app, { title: fmtDayLong(ctx.todayKey), sub: dayTypeText(ctx.todayKey, todayRec) }),
     notices(ctx, app),
     main,
+    fasting(mode) ? stagesSection(ctx, app, lastEatingTs(ctx)) : null,
     streakSection(ctx),
     checkinSection(ctx, app),
     mealsSection(ctx, app, mealsKey),
@@ -65,8 +72,7 @@ function beforeBlock(ctx, app) {
         h('h1', { class: 'display gap-s' }, 'Fasting'),
         h('p', { class: 'gap' }, 'Window planned for ', hl(fmtMinutes(planned)), '.')),
       h('div', { class: 'margin' },
-        last ? note('Last bite', fmtWhen(last, key)) : null,
-        last ? liveNote('Since', (t) => fmtElapsed(t - last)) : null)),
+        last ? note('Last bite', fmtWhen(last, key)) : null)),
     workdayEarly ? h('p', { class: 'statement gap', 'data-testid': 'firm-reminder' }, 'Opening before 16:00 makes today a miss.') : null,
     h('div', { class: 'gap-l' }, button('First bite', () => firstBite(app.ctx(), app), { big: true, name: 'first-bite' })),
     h('p', { class: 'quiet small gap' }, 'Until then: water, sparkling water, black coffee, espresso, plain tea.'),
@@ -179,8 +185,7 @@ function closedBlock(ctx, app, rec) {
         h('h1', { class: `display gap-s ${success ? 'hl' : 'clay'}`, 'data-testid': 'window-length' }, fmtDuration(e.lengthMs))),
       h('div', { class: 'margin' },
         note('First bite', fmtTime(rec.firstBite)),
-        note('Last bite', fmtWhen(rec.lastBite, ctx.todayKey)),
-        liveNote('Since', (t) => fmtElapsed(t - (lastEatingTs(ctx) || rec.lastBite))))),
+        note('Last bite', fmtWhen(rec.lastBite, ctx.todayKey)))),
     success
       ? h('p', { class: 'statement gap', 'data-testid': 'result' }, 'Success. All eating inside the window.')
       : h('div', { class: 'gap', 'data-testid': 'result' }, e.reasons.map((r) => h('p', { class: 'statement clay' }, reasonLine(r, e)))),

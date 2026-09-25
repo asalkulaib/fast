@@ -22,6 +22,19 @@ Live app: https://asalkulaib.github.io/fast/
 - Between midnight and 04:00, late eating can be counted against the night before.
 - The streak counts consecutive successful days. A day with nothing logged breaks it, so Fast asks you to fill in any gap.
 
+## Fasting stages
+
+While you fast, Today shows a 24-hour stage bar timed from your last bite. The hours are typical, not exact, and never a target. Past 24 hours the bar stays full.
+
+| Stage | Typical time | Based on |
+|---|---|---|
+| Digesting | 0 to about 4 h | [Dimitriadis et al., Nutrients 2021](https://pmc.ncbi.nlm.nih.gov/articles/PMC7825450/) |
+| Blood sugar settles | about 4 to 12 h | [Dimitriadis et al., Nutrients 2021](https://pmc.ncbi.nlm.nih.gov/articles/PMC7825450/) |
+| Metabolic switch | from about 12 h, up to 36 h | [Anton et al., Obesity 2018](https://pubmed.ncbi.nlm.nih.gov/29086496/) |
+| Ketones climbing | 24 h and beyond | [Pan et al., 2000](https://journals.sagepub.com/doi/10.1097/00004647-200010000-00012); [Ho et al., J Clin Invest 1988](https://pmc.ncbi.nlm.nih.gov/articles/PMC329619/) |
+
+Autophagy is described as uncertain instead of being given an hour: the evidence comes mostly from cell and animal studies ([Bagherniya et al., 2018](https://pubmed.ncbi.nlm.nih.gov/30172870/); [Bensalem et al., 2025](https://pubmed.ncbi.nlm.nih.gov/40345145)).
+
 ## Weight Shortcut
 
 Your scale syncs each weigh-in to Apple Health. This Shortcut reads the last 14 days, scrambles them and copies them to the clipboard. It never shows a number, and Fast shows only 7-day and weekly averages.

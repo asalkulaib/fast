@@ -956,6 +956,44 @@ sup.fn {
   fill: var(--accent);
 }
 
+.stage-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--s3);
+}
+
+.stage-elapsed {
+  font-size: 17px;
+  color: var(--text-display);
+}
+
+.stage-bar {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.stage-bar text {
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 11px;
+  fill: var(--text-quiet);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.stage-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--s3);
+}
+
+.stage-row .label {
+  flex: none;
+}
+
 .chart .chart-end {
   fill: var(--text-display);
   font-size: 12px;
