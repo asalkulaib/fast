@@ -89,6 +89,12 @@ function windowSection(ctx, app, key, rec) {
         h('div', { class: 'gap' }, button('Save window', async () => {
           if (firstTs == null) { draft.hint = 'Add the first bite time.'; draw(); return; }
           if (firstTs > now() || (lastTs != null && lastTs > now())) { draft.hint = 'That time is still ahead.'; draw(); return; }
+          if (rec.firstBite) {
+            // An existing window: meals are kept consistent with the new times.
+            const result = await store.adjustWindow(key, firstTs, lastTs);
+            if (result.error) { draft.hint = result.error; draw(); }
+            return;
+          }
           await store.setWindowTimes(key, firstTs, lastTs);
         }, { block: true, name: 'save-window' })),
         rec.firstBite

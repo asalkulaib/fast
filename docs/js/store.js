@@ -2,7 +2,7 @@
 // Each change is written to IndexedDB first, then applied here and announced.
 
 import * as db from './db.js';
-import { now, dayKey, floorToMinute, fmtDayLong, MIN } from './core/time.js';
+import { now, dayKey, floorToMinute, fmtDayLong, fmtTime, MIN } from './core/time.js';
 
 export const DEFAULTS = {
   workdayStart: '17:30',
@@ -94,43 +94,79 @@ export function openWindow(ts) {
   return updateDay(dayKey(t), { firstBite: t, lastBite: null, noEating: false });
 }
 
-export function undoOpen(key) {
-  return updateDay(key, { firstBite: null, lastBite: null });
+/**
+ * Removes a window opened by mistake, together with the meals logged in it,
+ * as if First bite had never been tapped. One transaction.
+ */
+export async function cancelWindow(key) {
+  const old = state.days.get(key);
+  if (!old) return;
+  const meals = [...state.meals.values()].filter((m) => m.day === key);
+  const rec = { ...old, firstBite: null, lastBite: null, updatedAt: now() };
+  await db.batch([{ store: 'days', put: rec }, ...meals.map((m) => ({ store: 'meals', remove: m.id }))]);
+  state.days.set(key, rec);
+  for (const m of meals) state.meals.delete(m.id);
+  changed();
 }
 
+export const undoOpen = cancelWindow;
+
 /**
- * Changes a window's first bite. A window belongs to the day of its first
- * bite, so a bite moved past midnight moves the window (and its meals) too,
- * in one transaction. It never overwrites a day that already holds a
- * window or a no-eating record. Resolves with { key } or { error }.
+ * Changes a window's first bite and last bite (null while it is open), in
+ * one transaction. The window follows its first bite to that bite's day, and
+ * the first meal (the one that started at the old first bite) moves with it.
+ * Meals still open end at a new last bite. Refuses times that would leave
+ * another meal outside the window, or that would overwrite another day's
+ * record. Resolves with { key } or { error }.
  */
-export async function moveFirstBite(oldKey, ts) {
-  const t = stamp(ts);
-  const newKey = dayKey(t);
-  const old = state.days.get(oldKey) || { day: oldKey };
-  const lastBite = old.lastBite && old.lastBite >= t ? old.lastBite : null;
-  if (newKey === oldKey) {
-    await updateDay(oldKey, { firstBite: t, lastBite });
-    return { key: oldKey };
-  }
+export async function adjustWindow(oldKey, firstTs, lastTs) {
+  const old = state.days.get(oldKey);
+  if (!old || !old.firstBite) return { error: 'This window no longer exists.' };
+  const first = stamp(firstTs);
+  const last = lastTs == null ? null : stamp(lastTs);
+  if (last != null && last < first) return { error: 'The last bite comes before the first bite.' };
+  const newKey = dayKey(first);
   const target = state.days.get(newKey);
-  if (target && (target.firstBite || target.noEating)) {
+  if (newKey !== oldKey && target && (target.firstBite || target.noEating)) {
     return { error: `${fmtDayLong(newKey)} already has a record. Change it from the Week screen.` };
   }
+  const delta = first - old.firstBite;
+  const shift = (t) => (t == null ? t : t + delta);
+  const meals = [...state.meals.values()].filter((m) => m.day === oldKey).map((m) => {
+    const moved = m.startedAt === old.firstBite
+      ? { ...m, day: newKey, startedAt: first, finishedAt: shift(m.finishedAt), fullness20DueAt: shift(m.fullness20DueAt) }
+      : { ...m, day: newKey };
+    if (last != null) {
+      if (!moved.finishedAt) moved.finishedAt = Math.max(last, moved.startedAt);
+      else if (moved.finishedAt > last && moved.startedAt <= last) moved.finishedAt = last;
+    }
+    return moved;
+  });
+  const early = meals.find((m) => m.startedAt < first);
+  if (early) return { error: `A meal is logged at ${fmtTime(early.startedAt)}, before that time. Change or delete it first.` };
+  const late = last == null ? null : meals.find((m) => m.startedAt > last);
+  if (late) return { error: `A meal is logged at ${fmtTime(late.startedAt)}, after that time. Change or delete it first.` };
+
   const at = now();
-  const moved = { ...(target || { day: newKey }), day: newKey, firstBite: t, lastBite, noEating: false, updatedAt: at };
-  const emptied = { ...old, firstBite: null, lastBite: null, updatedAt: at };
-  const meals = [...state.meals.values()].filter((m) => m.day === oldKey).map((m) => ({ ...m, day: newKey }));
-  await db.batch([
-    { store: 'days', put: moved },
-    { store: 'days', put: emptied },
-    ...meals.map((m) => ({ store: 'meals', put: m })),
-  ]);
-  state.days.set(newKey, moved);
-  state.days.set(oldKey, emptied);
+  const base = newKey === oldKey ? old : target || { day: newKey };
+  const rec = { ...base, day: newKey, firstBite: first, lastBite: last, noEating: false, updatedAt: at };
+  const ops = [{ store: 'days', put: rec }];
+  const emptied = newKey === oldKey ? null : { ...old, firstBite: null, lastBite: null, updatedAt: at };
+  if (emptied) ops.push({ store: 'days', put: emptied });
+  for (const m of meals) ops.push({ store: 'meals', put: m });
+  await db.batch(ops);
+  state.days.set(newKey, rec);
+  if (emptied) state.days.set(oldKey, emptied);
   for (const m of meals) state.meals.set(m.id, m);
   changed();
   return { key: newKey };
+}
+
+/** Moves the first bite of a window (the first-bite sheet), keeping a valid last bite. */
+export function moveFirstBite(oldKey, ts) {
+  const old = state.days.get(oldKey);
+  const t = stamp(ts);
+  return adjustWindow(oldKey, t, old && old.lastBite && old.lastBite >= t ? old.lastBite : null);
 }
 
 /** Meals still open when a window closes end at its last bite (no 20-minute check). */

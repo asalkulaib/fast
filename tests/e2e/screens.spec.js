@@ -126,6 +126,26 @@ test('today: over by 20 min and the forgotten close', async ({ page }) => {
   await shot(page, '15-today-forgot-close');
 });
 
+test('today: correcting a window', async ({ page }) => {
+  await openAt(page, '2026-09-27T17:45');
+  await seed(page, {
+    ...WEEK,
+    days: [...WEEK.days, { day: '2026-09-27', firstBite: ms('2026-09-27T16:30'), lastBite: null }],
+    meals: [...WEEK.meals, { id: 9, day: '2026-09-27', name: 'Dinner', startedAt: ms('2026-09-27T16:30'), finishedAt: null }],
+    settings: install,
+  });
+  await shot(page, '17-today-open-change-link');
+  await tap(page, 'change-opening');
+  await shot(page, '18-opening-sheet');
+  await tap(page, 'remove-window');
+  await shot(page, '18b-opening-remove-confirm');
+  await tap(page, 'keep-window');
+  await tap(page, 'close-sheet');
+  await seed(page, { ...WEEK, days: [...WEEK.days, { day: '2026-09-27', firstBite: ms('2026-09-27T12:30'), lastBite: ms('2026-09-27T16:50') }], settings: install });
+  await tap(page, 'change-times');
+  await shot(page, '19-window-times-sheet');
+});
+
 test('today: notices', async ({ page }) => {
   await openAt(page, '2026-09-27T09:00');
   await seed(page, { days: [WEEK.days[0]], settings: settings({ installedAt: ms('2026-09-18T08:00') }) });

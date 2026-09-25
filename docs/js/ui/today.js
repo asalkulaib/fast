@@ -12,6 +12,7 @@ import {
 import { dunes } from './art.js';
 import { firstBite, forgotCloseDefault, showDoneEatingSheet, showFinishMealSheet, showLogMealSheet, showMealEditSheet } from './meal.js';
 import { showOutsideSheet } from './outside.js';
+import { showOpeningSheet, showWindowTimesSheet } from './window-times.js';
 import { dayTypeText, header, liveNote, mealInProgress, mealsOfDay, nextWindowLine, note, notices, runningFullness } from './shared.js';
 
 const days = (n) => `${n} ${n === 1 ? 'day' : 'days'}`;
@@ -121,6 +122,7 @@ function openBlock(ctx, app, rec) {
         h('div', { class: 'gap' }, button('Finished this meal', () => showFinishMealSheet(app, eating.id), { block: true, name: 'finish-meal' })))
       : h('div', { class: 'gap' }, button('Log a meal', () => showLogMealSheet(app, rec.day), { kind: 'secondary', name: 'log-meal' })),
     h('div', { class: 'gap' }, button("I'm done eating", () => showDoneEatingSheet(app, rec.day), { block: true, name: 'done-eating' })),
+    h('div', { class: 'gap-s' }, button('Change opening time', () => showOpeningSheet(app, rec.day), { kind: 'secondary', name: 'change-opening' })),
   );
 }
 
@@ -187,7 +189,9 @@ function closedBlock(ctx, app, rec) {
         h('span', { class: 'small quiet' }, 'Still inside your 4 hours.'),
         button('Reopen window', () => store.reopenWindow(rec.day), { kind: 'secondary', name: 'reopen' }))
       : null,
-    h('div', { class: 'gap' }, button('I ate something', () => showOutsideSheet(app, { day: rec.day }), { kind: 'secondary', name: 'ate-something' })),
+    h('div', { class: 'btn-row gap' },
+      button('I ate something', () => showOutsideSheet(app, { day: rec.day }), { kind: 'secondary', name: 'ate-something' }),
+      button('Change times', () => showWindowTimesSheet(app, rec.day), { kind: 'secondary', name: 'change-times' })),
     h('p', { class: 'quiet gap', 'data-testid': 'next-window' }, nextWindowLine(ctx, rec.day)),
   );
 }
