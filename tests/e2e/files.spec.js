@@ -57,6 +57,9 @@ test('JSON backup, wipe, restore: everything comes back', async ({ page }) => {
   await expect(page.getByTestId('flash')).toHaveText('Backup restored.');
   const after = await readDb(page);
   expect(stripSettings(after)).toEqual(stripSettings(before));
+  // The restored file counts as a backup made when it was exported: no nagging.
+  await expect(page.getByTestId('backup-status')).toHaveText('Last backup today.');
+  expect(after.settings.find((s) => s.key === 'lastBackupAt').value).toBe(Date.parse(backup.exportedAt));
 });
 
 test('restore refuses a file that is not a Fast backup', async ({ page }) => {

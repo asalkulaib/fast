@@ -341,7 +341,16 @@ export async function resetHistory() {
 
 export async function restore(backup) {
   const d = backup.data;
-  const keep = { installedAt: state.settings.installedAt, persisted: state.settings.persisted };
+  // The file is itself a backup, made when it was exported, so the backup
+  // reminder counts from the latest of that, the file's own record and ours.
+  const recorded = d.settings.find((s) => s.key === 'lastBackupAt');
+  const exported = Date.parse(backup.exportedAt);
+  const lastBackupAt = Math.max(
+    state.settings.lastBackupAt || 0,
+    (recorded && recorded.value) || 0,
+    Number.isFinite(exported) ? exported : 0,
+  ) || null;
+  const keep = { installedAt: state.settings.installedAt, persisted: state.settings.persisted, lastBackupAt };
   const settings = d.settings.filter((s) => !(s.key in keep));
   await db.replaceAll({ ...d, settings: [...settings, ...Object.entries(keep).map(([key, value]) => ({ key, value }))] });
   await load();
