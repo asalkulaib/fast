@@ -4,8 +4,10 @@
 // Fast:  the fast that ended that day, from the latest eating before that
 //        day's first bite to that first bite. Unknown before the first
 //        eating on record, so the first tracked day has no fast.
+// Paused days have neither, and a fast that spans a pause is unknown: eating
+// during a pause is not recorded.
 
-import { HOUR, addDays } from './time.js';
+import { HOUR, addDays, dayKey } from './time.js';
 
 /** Every moment of eating on record, oldest first. */
 function eatingTimes({ days, meals, outside }) {
@@ -41,21 +43,27 @@ function latestBefore(sorted, ts) {
 
 /**
  * One entry per day from fromKey to toKey (inclusive):
- * { day, fastMs, feastMs } with null where there is nothing to show.
+ * { day, fastMs, feastMs, paused } with null where there is nothing to show.
  */
 export function dailySeries(data, fromKey, toKey) {
   const times = eatingTimes(data);
+  const pausedKeys = [...data.days.values()].filter((r) => r.paused).map((r) => r.day);
   const out = [];
   for (let k = fromKey; k <= toKey; k = addDays(k, 1)) {
     const rec = data.days.get(k);
     let fastMs = null;
     let feastMs = null;
+    if (rec && rec.paused) {
+      out.push({ day: k, fastMs, feastMs, paused: rec.paused });
+      continue;
+    }
     if (rec && rec.firstBite) {
       const before = latestBefore(times, rec.firstBite);
-      if (before != null) fastMs = rec.firstBite - before;
+      const from = before == null ? null : dayKey(before);
+      if (before != null && !pausedKeys.some((p) => p >= from && p < k)) fastMs = rec.firstBite - before;
       if (rec.lastBite) feastMs = rec.lastBite - rec.firstBite;
     }
-    out.push({ day: k, fastMs, feastMs });
+    out.push({ day: k, fastMs, feastMs, paused: null });
   }
   return out;
 }
@@ -67,6 +75,17 @@ export function summarize(series, metric) {
     count: values.length,
     avgMs: values.length ? values.reduce((a, b) => a + b, 0) / values.length : null,
   };
+}
+
+/**
+ * The trailing 7-day average of a metric at each day, or null where those
+ * 7 days hold fewer than 3 values.
+ */
+export function rollingAverage(series, metric, days = 7, min = 3) {
+  return series.map((_, i) => {
+    const values = series.slice(Math.max(0, i - days + 1), i + 1).map((d) => d[metric]).filter((v) => v != null);
+    return values.length >= min ? values.reduce((a, b) => a + b, 0) / values.length : null;
+  });
 }
 
 /** A clean top for the hour axis and its step. */

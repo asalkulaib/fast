@@ -89,6 +89,24 @@ export async function setTime(page, name, hhmm) {
   }
 }
 
+/** Rolls a date wheel to a day ('2026-09-29'), the same way as setTime. */
+export async function setDate(page, name, key) {
+  const col = page.locator(`[data-date="${name}"]:visible [data-part="date"]`).first();
+  await expect(async () => {
+    const rolled = await col.evaluate((c, k) => {
+      if (!c.isConnected) return false;
+      const item = c.querySelector(`.wheel-item[data-key="${k}"]`);
+      if (!item) throw new Error(`${k} is not on this wheel`);
+      c.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      c.scrollTop = Number(item.dataset.value) * item.offsetHeight;
+      c.dispatchEvent(new Event('scroll'));
+      c.dispatchEvent(new Event('scrollend'));
+      return true;
+    }, key);
+    expect(rolled).toBe(true);
+  }).toPass({ timeout: 5000 });
+}
+
 export const sheet = (page, name) => page.locator(`[data-sheet="${name}"]`);
 
 /** Settings row helper for seeding. */

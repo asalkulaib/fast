@@ -38,7 +38,7 @@ export function buildCsvFiles(data, { nowTs, todayKey, startKey }) {
   const outsideKeys = new Set(data.outside.map((o) => o.day));
   const windowKeys = [...new Set([...dayKeys.filter((k) => {
     const r = data.days.get(k);
-    return r.firstBite || r.noEating;
+    return r.firstBite || r.noEating || r.paused;
   }), ...outsideKeys])].sort();
 
   const windows = toCsv(
@@ -46,7 +46,8 @@ export function buildCsvFiles(data, { nowTs, todayKey, startKey }) {
     windowKeys.map((k) => {
       const rec = data.days.get(k);
       const e = evaluate(k);
-      const result = e.state === 'open' ? 'open' : e.state === 'noEating' && e.result === 'success' ? 'no eating' : e.result;
+      let result = e.state === 'open' ? 'open' : e.state === 'noEating' && e.result === 'success' ? 'no eating' : e.result;
+      if (e.result === 'paused' && typeof e.paused === 'string') result = `paused (${e.paused})`;
       return [
         k, weekdayName(k), dayType(k, rec),
         time(e.firstBite), time(e.lastBite), e.lastBite ? dayKey(e.lastBite) : null,

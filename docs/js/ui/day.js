@@ -5,11 +5,12 @@ import { h, hl } from './dom.js';
 import { button, choice, scale, timeField, TRAINING_OPTIONS, TRIGGER_OPTIONS, OUTCOME_TEXT } from './components.js';
 import { openSheet, sheetHead } from './sheet.js';
 import * as store from '../store.js';
-import { at, fmtDayLong, fmtDuration, fmtTime, fmtWhen, isWorkweekday, minutesOfDay, nearestTime, now, weekStart } from '../core/time.js';
-import { isWorkday, plannedStartMin, timeOnOrAfter } from '../core/rules.js';
+import { at, fmtDayLong, fmtDuration, fmtOnDay, fmtTime, isWorkweekday, minutesOfDay, nearestTime, now, weekStart } from '../core/time.js';
+import { isOpen, isPaused, isWorkday, plannedStartMin, timeOnOrAfter } from '../core/rules.js';
 import { showLogMealSheet, showMealEditSheet } from './meal.js';
 import { AMOUNT_OPTIONS, showOutsideSheet } from './outside.js';
 import { mealMeta } from './today.js';
+import { pauseWord } from './pause.js';
 import { dayTypeText, header, mealsOfDay, outsideOfDay, temptationsOfDay } from './shared.js';
 
 const REASON = { early: 'opened before 16:00', over: 'over 4 h 15 min', outside: 'ate outside the window' };
@@ -20,6 +21,7 @@ function resultLine(e) {
     case 'miss': return h('p', { class: 'gap-s' }, `Miss: ${e.reasons.map((r) => REASON[r]).join(', ')}.`);
     case 'pending': return h('p', { class: 'gap-s quiet' }, e.state === 'open' ? 'Window open.' : 'In progress.');
     case 'unlogged': return h('p', { class: 'gap-s quiet' }, 'Nothing logged yet.');
+    case 'paused': return h('p', { class: 'gap-s' }, 'Paused: not tracked.');
     default: return h('p', { class: 'gap-s quiet' }, 'Before tracking started.');
   }
 }
@@ -28,22 +30,49 @@ export function renderDay(ctx, app, key) {
   const rec = ctx.days.get(key) || { day: key };
   const e = ctx.evaluate(key);
   const past = key <= ctx.todayKey;
+  const paused = isPaused(rec);
+  const tracked = past && !paused; // a paused day shows only its pause
   return h('div', { class: 'day', 'data-day': key },
     header(ctx, app, { title: 'Day', sub: dayTypeText(key, rec) }),
     h('section', { class: 'section strong' },
       h('h1', { class: 'display' }, fmtDayLong(key)),
       resultLine(e),
       button('‹ Back to the week', () => app.go(`week/${weekStart(key)}`), { kind: 'secondary', name: 'back-to-week' })),
-    past ? windowSection(ctx, app, key, rec) : h('section', { class: 'section' }, h('p', { class: 'quiet' }, 'This day has not started yet.')),
-    isWorkweekday(key) ? h('section', { class: 'section' },
+    paused ? pausedSection(app, key, rec) : null,
+    tracked ? windowSection(ctx, app, key, rec) : null,
+    !past && !paused ? h('section', { class: 'section' }, h('p', { class: 'quiet' }, 'This day has not started yet.')) : null,
+    !paused && !isOpen(rec) ? pauseSection(app, key) : null,
+    isWorkweekday(key) && !paused ? h('section', { class: 'section' },
       h('div', { class: 'label' }, 'Day off'),
       h('p', { class: 'small gap-s' }, rec.dayOff ? 'Weekend rules apply to this day.' : 'A workday: the 16:00 rule applies.'),
       button(rec.dayOff ? 'Make it a workday again' : 'Mark as a day off', () => store.updateDay(key, { dayOff: !rec.dayOff }), { kind: 'secondary', name: 'toggle-day-off' })) : null,
-    past ? mealsSection(ctx, app, key, rec) : null,
-    past ? outsideSection(ctx, app, key) : null,
-    past ? checkinSection(ctx, key, rec) : null,
-    past ? temptationSection(ctx, app, key) : null,
+    tracked ? mealsSection(ctx, app, key, rec) : null,
+    tracked ? outsideSection(ctx, app, key) : null,
+    tracked ? checkinSection(ctx, key, rec) : null,
+    tracked ? temptationSection(ctx, app, key) : null,
   );
+}
+
+function pausedSection(app, key, rec) {
+  const word = pauseWord(rec.paused);
+  return h('section', { class: 'section', 'data-block': 'day-paused' },
+    h('div', { class: 'label' }, 'Paused'),
+    h('p', { class: 'gap-s' }, `${word ? `${word}. ` : ''}This day is not tracked. Unpause it to log it.`),
+    button('Unpause this day', async () => {
+      const { undo } = await store.unpauseDays([key]);
+      app.flash('Day unpaused.', { undo });
+    }, { kind: 'secondary', name: 'unpause-day' }));
+}
+
+function pauseSection(app, key) {
+  return h('section', { class: 'section', 'data-block': 'day-pause' },
+    h('div', { class: 'label' }, 'Pause'),
+    h('p', { class: 'small gap-s' }, 'Travel, illness or Ramadan: a paused day is not tracked, and your streak waits.'),
+    button('Pause this day', async () => {
+      const res = await store.pauseDays(key, key, true);
+      if (res.error) app.flash(res.error);
+      else app.flash('Day paused.', { undo: res.undo });
+    }, { kind: 'secondary', name: 'pause-day' }));
 }
 
 // Unsaved window times survive re-renders (for example after rating energy
@@ -81,7 +110,7 @@ function windowSection(ctx, app, key, rec) {
       const firstTs = () => (draft.first != null ? at(key, draft.first) : null);
       const lastTs = () => (firstTs() != null && draft.last != null ? timeOnOrAfter(firstTs(), draft.last) : null);
       const summaryText = () => (lastTs() != null
-        ? `${fmtTime(firstTs())} to ${fmtWhen(lastTs(), key)}, ${fmtDuration(lastTs() - firstTs())}.`
+        ? `${fmtTime(firstTs())} to ${fmtOnDay(lastTs(), key)}, ${fmtDuration(lastTs() - firstTs())}.`
         : 'With no last bite, the window stays open.');
       // The wheels update the summary in place, so rolling never redraws them.
       const summary = h('p', { class: 'quiet small gap-s', 'data-testid': 'day-summary' }, summaryText());
@@ -103,14 +132,21 @@ function windowSection(ctx, app, key, rec) {
             // An existing window: meals are kept consistent with the new times.
             const result = await store.adjustWindow(key, first, last);
             if (result.error) setHint(result.error);
+            else app.flash('Window saved.', { undo: result.undo });
             return;
           }
+          const undo = store.undoPoint({ days: [key], meals: store.mealIdsOf(key) });
           await store.setWindowTimes(key, first, last);
+          app.flash('Window saved.', { undo });
         }, { block: true, name: 'save-window' })),
         rec.firstBite
           ? h('div', { class: 'gap-s' }, draft.confirmClear
             ? h('div', { class: 'btn-row' }, h('span', { class: 'small' }, 'Clear this window?'),
-              button('Clear', () => store.clearWindow(key), { kind: 'secondary', name: 'confirm-clear' }),
+              button('Clear', async () => {
+                const undo = store.undoPoint({ days: [key] });
+                await store.clearWindow(key);
+                app.flash('Window cleared.', { undo });
+              }, { kind: 'secondary', name: 'confirm-clear' }),
               button('Keep', () => { draft.confirmClear = false; draw(); }, { kind: 'secondary' }))
             : button('Clear this window', () => { draft.confirmClear = true; draw(); }, { kind: 'secondary', name: 'clear-window' }))
           : null,
@@ -144,7 +180,7 @@ function outsideSection(ctx, app, key) {
       ? h('ul', { class: 'list gap-s' }, items.map((o) => h('li', {},
         h('button', { type: 'button', class: 'item', 'data-outside': String(o.id), onclick: () => showOutsideEditSheet(app, o.id) },
           h('span', {}, `${trig[o.trigger] || 'no trigger'}${o.amount === 'little' ? ', a little' : o.amount === 'meal' ? ', more than a little' : ''}`),
-          h('span', { class: 'item-side' }, fmtWhen(o.at, key))))))
+          h('span', { class: 'item-side' }, fmtOnDay(o.at, key))))))
       : h('p', { class: 'quiet small gap-s' }, 'Nothing outside the window.'),
     button('Add eating outside the window', () => showOutsideSheet(app, { day: key }), { kind: 'secondary', name: 'add-outside' }));
 }
@@ -188,12 +224,19 @@ function showOutsideEditSheet(app, id) {
     h('div', { class: 'gap' }, button('Save', async () => {
       // An unchanged time keeps its exact moment; a changed one stays next to it.
       const when = draft.minutes === minutesOfDay(o.at) ? o.at : nearestTime(o.at, draft.minutes);
+      const undo = store.undoPoint({ outside: [id] });
       await store.updateOutside(id, { trigger: draft.trigger, amount: draft.amount, at: when });
-      api.close();
+      await api.close();
+      app.flash('Entry saved.', { undo });
     }, { block: true, name: 'save-outside' })),
     h('div', { class: 'gap-s' }, confirming
       ? h('div', { class: 'btn-row' }, h('span', { class: 'small' }, 'Delete this entry?'),
-        button('Delete', async () => { await store.deleteOutside(id); api.close(); }, { kind: 'secondary', name: 'confirm-delete-outside' }),
+        button('Delete', async () => {
+          const undo = store.undoPoint({ outside: [id] });
+          await store.deleteOutside(id);
+          await api.close();
+          app.flash('Entry deleted.', { undo });
+        }, { kind: 'secondary', name: 'confirm-delete-outside' }),
         button('Keep', () => { confirming = false; api.rerender(); }, { kind: 'secondary' }))
       : button('Delete entry', () => { confirming = true; api.rerender(); }, { kind: 'secondary', name: 'delete-outside' })),
   ), { name: 'edit-outside', label: 'Outside the window' });

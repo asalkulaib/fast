@@ -1,7 +1,7 @@
 // Shared controls: rating scales, choices, the rolling 24-hour time wheel, fields.
 
 import { h } from './dom.js';
-import { minutesOfDay, now } from '../core/time.js';
+import { addDays, fmtDayShort, minutesOfDay, now } from '../core/time.js';
 
 let uid = 0;
 const nextId = (p) => `${p}-${++uid}`;
@@ -65,16 +65,23 @@ export function choice({ options, value, onChange, label, cols = 3, name }) {
   return h('div', { class: 'choice-wrap' }, label ? h('div', { class: 'label field-label', id: labelId }, label) : null, grid);
 }
 
-// ---------- Rolling time wheel ----------
+// ---------- Rolling wheels ----------
 
 const ROW = 36; // px per row; five rows show, the middle one is selected
+const pad2 = (i) => String(i).padStart(2, '0');
 
 /**
- * One rolling column (hours or minutes). Scroll-snap does the rolling; the
- * value is committed when it comes to rest, or at once on a tap or arrow key.
- * Our own positioning never counts as a choice: only touch, wheel or keys do.
+ * One rolling column. Scroll-snap does the rolling; the value is committed
+ * when it comes to rest, or at once on a tap or arrow key. Our own
+ * positioning never counts as a choice: only touch, wheel or keys do.
+ * With loop, the values repeat above and below like the iPhone clock
+ * (23 rolls on to 00), and the column quietly moves back to its middle copy
+ * whenever it comes to rest, so it can always roll on in both directions.
  */
-function wheelColumn({ count, index, label, part, onSettle }) {
+function wheelColumn({ count, index, label, part, onSettle, text = pad2, keyOf = null, loop = false }) {
+  const copies = loop ? 2 * Math.ceil(4000 / (count * ROW)) + 1 : 1;
+  const home = ((copies - 1) / 2) * count; // position of value 0 in the middle copy
+  const total = count * copies;
   const col = h('div', {
     class: 'wheel-col',
     tabindex: '0',
@@ -84,29 +91,43 @@ function wheelColumn({ count, index, label, part, onSettle }) {
     'aria-valuemax': String(count - 1),
     'data-part': part,
   });
-  const items = Array.from({ length: count }, (_, i) => h('div', { class: 'wheel-item', 'data-value': String(i), 'aria-hidden': 'true' }, String(i).padStart(2, '0')));
+  const items = Array.from({ length: total }, (_, p) => h('div', {
+    class: 'wheel-item',
+    'data-value': String(p % count),
+    'data-key': keyOf ? keyOf(p % count) : null,
+    'aria-hidden': 'true',
+  }, text(p % count)));
   col.append(h('div', { class: 'wheel-pad', 'aria-hidden': 'true' }), ...items, h('div', { class: 'wheel-pad', 'aria-hidden': 'true' }));
 
-  let current = index;
-  let shown = -1;
+  let current = index; // the value
+  let shown = -1; // the position painted as selected
   let touched = false;
+  let picked = false; // chosen by a key or a tap: the value leads and the wheel follows it
   let timer = null;
-  const clamp = (i) => Math.max(0, Math.min(count - 1, i));
-  const nearest = () => clamp(Math.round(col.scrollTop / ROW));
-  const paint = (i) => {
-    if (i === shown) return;
+  const clampPos = (p) => Math.max(0, Math.min(total - 1, p));
+  const valueAt = (p) => p % count;
+  const nearest = () => clampPos(Math.round(col.scrollTop / ROW));
+  const paint = (p) => {
+    if (p === shown) return;
     for (const j of [shown - 2, shown - 1, shown, shown + 1, shown + 2]) if (items[j]) items[j].className = 'wheel-item';
-    for (const [j, cls] of [[i - 2, 'far'], [i - 1, 'near'], [i, 'on'], [i + 1, 'near'], [i + 2, 'far']]) {
+    for (const [j, cls] of [[p - 2, 'far'], [p - 1, 'near'], [p, 'on'], [p + 1, 'near'], [p + 2, 'far']]) {
       if (items[j]) items[j].className = `wheel-item ${cls}`;
     }
-    shown = i;
-    col.setAttribute('aria-valuenow', String(i));
-    col.setAttribute('aria-valuetext', String(i).padStart(2, '0'));
+    shown = p;
+    col.setAttribute('aria-valuenow', String(valueAt(p)));
+    col.setAttribute('aria-valuetext', text(valueAt(p)));
   };
-  const choose = (i) => {
-    paint(i);
-    if (i !== current) {
-      current = i;
+  const recentre = (p) => {
+    const q = home + valueAt(p);
+    if (q === p) return;
+    col.scrollTop = q * ROW;
+    paint(q);
+  };
+  const choose = (p) => {
+    paint(p);
+    const v = valueAt(p);
+    if (v !== current) {
+      current = v;
       onSettle();
     }
   };
@@ -114,7 +135,16 @@ function wheelColumn({ count, index, label, part, onSettle }) {
     clearTimeout(timer);
     timer = null;
     // Saving redraws the screen; a column already replaced has no position to read.
-    if (touched && col.isConnected) choose(nearest());
+    if (!touched || !col.isConnected) return;
+    // After a key or a tap, the browser's own animation or snapping may have
+    // left the wheel elsewhere: put it back on the chosen value.
+    if (picked) {
+      place();
+      return;
+    }
+    const p = nearest();
+    choose(p);
+    recentre(p);
   };
   col.addEventListener('scroll', () => {
     if (!col.isConnected) return;
@@ -123,26 +153,35 @@ function wheelColumn({ count, index, label, part, onSettle }) {
     timer = setTimeout(settle, 140);
   }, { passive: true });
   col.addEventListener('scrollend', settle);
-  for (const type of ['pointerdown', 'touchstart', 'wheel']) col.addEventListener(type, () => { touched = true; }, { passive: true });
+  for (const type of ['pointerdown', 'touchstart', 'wheel']) {
+    col.addEventListener(type, () => { touched = true; picked = false; }, { passive: true });
+  }
   col.addEventListener('keydown', (e) => {
     if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
     e.preventDefault();
     touched = true;
-    const i = clamp(shown + (e.key === 'ArrowDown' ? 1 : -1));
-    col.scrollTop = i * ROW;
-    choose(i);
+    picked = true;
+    // Step from the chosen value, not from a roll still under way.
+    const step = e.key === 'ArrowDown' ? 1 : -1;
+    const v = loop ? (current + step + count) % count : Math.max(0, Math.min(count - 1, current + step));
+    col.scrollTop = (home + v) * ROW;
+    choose(home + v);
   });
-  items.forEach((it, j) => it.addEventListener('click', () => {
+  // A tap on a number picks it (one listener for the whole column).
+  col.addEventListener('click', (e) => {
+    const p = items.indexOf(e.target.closest('.wheel-item'));
+    if (p < 0) return;
     touched = true;
+    picked = true;
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    col.scrollTo({ top: j * ROW, behavior: reduce ? 'auto' : 'smooth' });
-    choose(j);
-  }));
+    col.scrollTo({ top: p * ROW, behavior: reduce ? 'auto' : 'smooth' });
+    choose(p);
+  });
 
   // Position once the column is on screen and has a size.
   const place = () => {
-    col.scrollTop = current * ROW;
-    paint(current);
+    col.scrollTop = (home + current) * ROW;
+    paint(home + current);
   };
   const ro = new ResizeObserver(() => {
     if (col.clientHeight > 0) {
@@ -151,13 +190,13 @@ function wheelColumn({ count, index, label, part, onSettle }) {
     }
   });
   ro.observe(col);
-  paint(current);
+  paint(home + current);
 
   return {
     col,
     index: () => current,
-    set(i) {
-      current = clamp(i);
+    set(v) {
+      current = Math.max(0, Math.min(count - 1, v));
       touched = false;
       place();
     },
@@ -186,8 +225,8 @@ export function timeField({ minutes, onChange, label, hint, name, fallback = nul
       onChange(m);
     }
   };
-  const hours = wheelColumn({ count: 24, index: Math.floor(start / 60), label: 'Hours', part: 'hour', onSettle: commit });
-  const mins = wheelColumn({ count: 60, index: start % 60, label: 'Minutes', part: 'minute', onSettle: commit });
+  const hours = wheelColumn({ count: 24, index: Math.floor(start / 60), label: 'Hours', part: 'hour', onSettle: commit, loop: true });
+  const mins = wheelColumn({ count: 60, index: start % 60, label: 'Minutes', part: 'minute', onSettle: commit, loop: true });
   wheel.append(hours.col, h('div', { class: 'wheel-sep', 'aria-hidden': 'true' }, ':'), mins.col, h('div', { class: 'wheel-lens', 'aria-hidden': 'true' }));
 
   const clearBtn = allowUnset
@@ -222,6 +261,38 @@ export function timeField({ minutes, onChange, label, hint, name, fallback = nul
     mins.set(m % 60);
   };
   Object.defineProperty(wrap, 'value', { get: () => value });
+  return wrap;
+}
+
+/**
+ * Rolling date wheel: one column of days from minKey to maxKey, each shown
+ * as Today, Tomorrow, Yesterday or 'Sun 4 Oct'. onChange(key) when a new
+ * day comes to rest.
+ */
+export function dateField({ value, minKey, maxKey, todayKey, onChange, label, name }) {
+  const id = nextId('date');
+  const keys = [];
+  for (let k = minKey; k <= maxKey; k = addDays(k, 1)) keys.push(k);
+  const word = (k) => {
+    if (k === todayKey) return 'Today';
+    if (k === addDays(todayKey, 1)) return 'Tomorrow';
+    if (k === addDays(todayKey, -1)) return 'Yesterday';
+    return fmtDayShort(k);
+  };
+  const column = wheelColumn({
+    count: keys.length,
+    index: Math.max(0, keys.indexOf(value)),
+    label: label || 'Date',
+    part: 'date',
+    text: (i) => word(keys[i]),
+    keyOf: (i) => keys[i],
+    onSettle: () => onChange(keys[column.index()]),
+  });
+  const wrap = h('div', { class: 'time-wrap', dataset: { date: name || '' } },
+    label ? h('div', { class: 'label field-label', id }, label) : null,
+    h('div', { class: 'wheel date', role: 'group', 'aria-labelledby': label ? id : null, 'aria-label': label ? null : 'Date' },
+      column.col, h('div', { class: 'wheel-lens', 'aria-hidden': 'true' })));
+  wrap.set = (key) => column.set(Math.max(0, keys.indexOf(key)));
   return wrap;
 }
 

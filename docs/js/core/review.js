@@ -1,7 +1,7 @@
 // Weekly review (weeks run Sunday to Saturday). Pure functions only.
 
 import { addDays, minutesOfDay } from './time.js';
-import { CUTOFF_MIN, isWorkday, makeEvaluator, streaks } from './rules.js';
+import { CUTOFF_MIN, isPaused, isWorkday, makeEvaluator, streaks } from './rules.js';
 import { weekSummary } from './weight.js';
 
 export const TRIGGERS = ['hunger', 'boredom', 'social', 'stress', 'tired', 'other'];
@@ -18,13 +18,14 @@ export function ateBefore4pm(rec) {
 /**
  * Energy at 4 PM on workdays, split by whether eating started before 16:00.
  * Past days count only when their eating is known (a window, or no eating).
+ * Paused days are left out.
  */
 export function energySplit(keys, days, todayKey) {
   const without = [];
   const withEating = [];
   for (const key of keys) {
     const rec = days.get(key);
-    if (!rec || rec.energy4pm == null || !isWorkday(key, rec)) continue;
+    if (!rec || rec.energy4pm == null || !isWorkday(key, rec) || isPaused(rec)) continue;
     const known = rec.firstBite || rec.noEating || key === todayKey;
     if (!known) continue;
     (ateBefore4pm(rec) ? withEating : without).push(rec.energy4pm);
@@ -56,6 +57,9 @@ export function weekReview(data, { weekStartKey, todayKey, nowTs, startKey }) {
   const evals = keys.map((k) => ({ ...evaluate(k), future: k > todayKey }));
 
   const successCount = evals.filter((e) => e.result === 'success').length;
+  // Paused days are not tracked: they leave the counts and the averages.
+  const pausedCount = evals.filter((e) => e.result === 'paused').length;
+  const tracked = (day) => !isPaused(data.days.get(day));
   const closed = evals.filter((e) => e.state === 'closed');
   const avgWindowMs = mean(closed.map((e) => e.lengthMs));
 
@@ -71,11 +75,11 @@ export function weekReview(data, { weekStartKey, todayKey, nowTs, startKey }) {
   const energyAll = energySplit([...data.days.keys()], data.days, todayKey);
 
   // Training
-  const trainedDays = keys.map((k) => data.days.get(k)).filter((r) => r && r.trained === true);
+  const trainedDays = keys.map((k) => data.days.get(k)).filter((r) => r && !isPaused(r) && r.trained === true);
   const trainingTypes = rank(trainedDays, (r) => r.trainingType || 'unspecified');
 
   // Satiety
-  const meals = data.meals.filter((m) => inWeek.has(m.day));
+  const meals = data.meals.filter((m) => inWeek.has(m.day) && tracked(m.day));
   const withStop = meals.filter((m) => m.stop);
   const beforeFull = withStop.filter((m) => m.stop === 'before_full').length;
   const pairs = meals.filter((m) => m.fullnessNow != null && m.fullness20 != null);
@@ -83,7 +87,7 @@ export function weekReview(data, { weekStartKey, todayKey, nowTs, startKey }) {
   const avgAt20 = mean(meals.filter((m) => m.fullness20 != null).map((m) => m.fullness20));
 
   // Temptations
-  const temptations = data.temptations.filter((t) => inWeek.has(t.day));
+  const temptations = data.temptations.filter((t) => inWeek.has(t.day) && tracked(t.day));
   const decided = temptations.filter((t) => t.outcome);
   const held = decided.filter((t) => t.outcome === 'held').length;
 
@@ -91,6 +95,7 @@ export function weekReview(data, { weekStartKey, todayKey, nowTs, startKey }) {
     keys,
     days: evals,
     successCount,
+    pausedCount,
     avgWindowMs,
     closedCount: closed.length,
     streak,

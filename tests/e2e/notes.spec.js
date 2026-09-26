@@ -88,22 +88,33 @@ test('a wheel on More saves exactly the time rolled, though saving redraws the s
   await expect(wheel.locator('[data-part="minute"]')).toHaveAttribute('aria-valuenow', '5');
 });
 
-test('wheels roll with the arrow keys too, always in 24-hour time', async ({ page }) => {
+test('wheels roll with the arrow keys and wrap around like the iPhone clock', async ({ page }) => {
   await openAt(page, '2026-09-27T13:10');
   await seed(page, LAST_NIGHT);
   await tap(page, 'edit-last-bite');
   const hours = page.locator('[data-time="edit-last-bite"] [data-part="hour"]');
+  const minutes = page.locator('[data-time="edit-last-bite"] [data-part="minute"]');
+  const summary = sheet(page, 'last-bite-time').getByTestId('bite-summary');
   await expect(hours).toHaveAttribute('aria-valuenow', '21');
   await hours.focus();
   await page.keyboard.press('ArrowUp');
   await expect(hours).toHaveAttribute('aria-valuenow', '20');
-  await expect(sheet(page, 'last-bite-time').getByTestId('bite-summary')).toHaveText('Window 17:00 to 20:00, 3 h.');
-  // A tap on a visible number picks it.
-  await hours.locator('.wheel-item[data-value="21"]').click();
+  await expect(summary).toHaveText('Window 17:00 to 20:00, 3 h.');
+  // A tap on a number in view picks it.
+  await hours.locator('.wheel-item.near[data-value="21"]').click();
   await expect(hours).toHaveAttribute('aria-valuenow', '21');
-  await expect(sheet(page, 'last-bite-time').getByTestId('bite-summary')).toHaveText('Window 17:00 to 21:00, 4 h.');
-  const hourItems = hours.locator('.wheel-item');
-  await expect(hourItems).toHaveCount(24);
-  await expect(hourItems.first()).toHaveText('00');
-  await expect(hourItems.last()).toHaveText('23');
+  await expect(summary).toHaveText('Window 17:00 to 21:00, 4 h.');
+  // 23 rolls straight on to 00, past midnight.
+  await hours.focus();
+  for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowDown');
+  await expect(hours).toHaveAttribute('aria-valuetext', '00');
+  await expect(summary).toHaveText('Window 17:00 to 00:00 next day, 7 h.');
+  // And 00 back to 59 on the minutes: the hour stays.
+  await minutes.focus();
+  await page.keyboard.press('ArrowUp');
+  await expect(minutes).toHaveAttribute('aria-valuetext', '59');
+  await expect(summary).toHaveText('Window 17:00 to 00:59 next day, 7 h 59 min.');
+  // Numbers repeat above and below, always in 24-hour form.
+  await expect(hours.locator('.wheel-item.on')).toHaveText('00');
+  await expect(hours.locator('.wheel-item.near')).toHaveText(['23', '01']);
 });

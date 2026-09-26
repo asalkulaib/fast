@@ -4,7 +4,7 @@ import { h, hl, live } from './dom.js';
 import { button, choice, scale, timeField, TRAINING_OPTIONS, STOP_TEXT } from './components.js';
 import * as store from '../store.js';
 import {
-  MIN, fmtCountdown, fmtDayLong, fmtDuration, fmtMinutes, fmtTime, fmtWhen, isWorkweekday, minutesOfDay, now,
+  MIN, addDays, fmtCountdown, fmtDayLong, fmtDayShort, fmtDuration, fmtMinutes, fmtTime, fmtWhen, isWorkweekday, minutesOfDay, now,
 } from '../core/time.js';
 import {
   CUTOFF_MIN, LIMIT_MS, WINDOW_MS, canReopen, isWorkday, lastEatingSource, lastEatingTs, lateNightDay, plannedStartMin, timeOnOrAfter, windowPhase,
@@ -14,6 +14,7 @@ import { firstBite, forgotCloseDefault, showDoneEatingSheet, showFinishMealSheet
 import { showOutsideSheet } from './outside.js';
 import { showBiteTimeSheet, showOpeningSheet, showOutsideTimeSheet, showWindowTimesSheet } from './window-times.js';
 import { ringHero, stagesSection } from './stages.js';
+import { currentPause, endPause, pauseToday, showPauseSheet } from './pause.js';
 import { dayTypeText, header, liveNote, mealInProgress, mealsOfDay, nextWindowLine, note, notices, runningFullness, tapNote } from './shared.js';
 
 const days = (n) => `${n} ${n === 1 ? 'day' : 'days'}`;
@@ -40,6 +41,7 @@ export function renderToday(ctx, app) {
   else if (mode === 'forgot') main = forgotBlock(ctx, app, rec);
   else if (mode === 'closed') main = closedBlock(ctx, app, rec);
   else if (mode === 'noEating') main = noEatingBlock(ctx, app);
+  else if (mode === 'paused') main = pausedBlock(ctx, app);
   else main = beforeBlock(ctx, app);
 
   // The window on screen may be last night's (open, forgotten, or reopenable after midnight).
@@ -51,8 +53,9 @@ export function renderToday(ctx, app) {
     main,
     fasting(mode) ? stagesSection(ctx, app, lastEatingTs(ctx), { withRing: mode !== 'before' }) : null,
     streakSection(ctx),
-    checkinSection(ctx, app),
-    mealsSection(ctx, app, mealsKey),
+    // A paused day tracks nothing.
+    mode === 'paused' ? null : checkinSection(ctx, app),
+    mode === 'paused' ? null : mealsSection(ctx, app, mealsKey),
     dunes(),
   );
 }
@@ -86,6 +89,27 @@ function beforeBlock(ctx, app) {
       ? h('div', { class: 'gap' }, button('Eating late? Count it against last night', () => showOutsideSheet(app, { day: late }), { kind: 'secondary', name: 'late-night' }))
       : null,
     isWorkweekday(key) ? dayOffToggle(ctx, key) : null,
+    h('div', { class: 'gap-s' }, button('Pause today', () => pauseToday(app), { kind: 'secondary', name: 'pause-today' })),
+  );
+}
+
+// ---------- Paused ----------
+
+/** 'Thu 1 Oct' with its last space unbreakable, so '1 Oct' stays on one line. */
+const keepTogether = (text) => text.replace(/ (\S+)$/, '\u00A0$1');
+
+const FOR_REASON = { travel: 'For travel. ', illness: 'For illness. ', ramadan: 'For Ramadan. ' };
+
+function pausedBlock(ctx, app) {
+  const run = currentPause(ctx) || { from: ctx.todayKey, to: ctx.todayKey, reason: true };
+  const until = run.to;
+  return h('section', { class: 'section strong', 'data-block': 'paused' },
+    h('div', { class: 'label' }, 'Paused'),
+    h('h1', { class: 'display gap-s', 'data-testid': 'paused-until' }, until === ctx.todayKey ? 'Paused today' : `Paused until ${keepTogether(fmtDayShort(until))}`),
+    h('p', { class: 'gap' }, `${FOR_REASON[run.reason] || ''}Nothing is tracked, and your streak waits. Tracking resumes on ${fmtDayLong(addDays(until, 1))}.`),
+    h('div', { class: 'btn-row gap' },
+      button('End the pause', () => endPause(app, run), { kind: 'secondary', name: 'end-pause' }),
+      button('Change', () => showPauseSheet(app, { run }), { kind: 'secondary', name: 'change-pause' })),
   );
 }
 

@@ -21,14 +21,16 @@ Live app: https://asalkulaib.github.io/fast/
 - Eating after "I'm done eating" counts as outside the window and makes the day a miss. While you are still inside the 4 hours, you can reopen the window instead.
 - Between midnight and 04:00, late eating can be counted against the night before.
 - The streak counts consecutive successful days. A day with nothing logged breaks it, so Fast asks you to fill in any gap.
+- A paused day is not tracked: it is never a miss, and it neither counts towards the streak nor breaks it.
 
 ## Changing a time
 
-Every time in Fast is set on a rolling 24-hour wheel, like the iPhone clock.
+Every time in Fast is set on a rolling 24-hour wheel, like the iPhone clock. The hours and minutes wrap around, so 23 rolls straight on to 00.
 
 - On Today, tap Last bite (before your window) or First bite and Last bite (after it) to change that time.
 - While the window is open, tap Opened to move the opening time, or remove a window opened by mistake.
 - Any day can be corrected from Week: tap the day.
+- After a change is saved, the message above the tabs offers Undo for 10 seconds. Removing a window, a meal or an entry can be undone the same way.
 
 ## Fasting stages
 
@@ -45,7 +47,11 @@ Autophagy is described as uncertain instead of being given an hour: the evidence
 
 ## History
 
-The History tab charts, day by day, either your fasts or your eating windows, as bars or a line, over 7, 30 or 90 days. A day's fast runs from your last bite before it to that day's first bite. Tap a day to read its value, then Open this day to edit it. Show as a table lists every value. Fast remembers your choices.
+The History tab charts, day by day, either your fasts or your eating windows, as bars or a line, over 7, 30 or 90 days. A day's fast runs from your last bite before it to that day's first bite. Missed days show in clay. A solid line shows the 7-day trend and a dashed line the average; a legend names each. Paused days are shaded and left out. Tap a day to read its value and trend, then Open this day to edit it. Show as a table lists every value. Fast remembers your choices.
+
+## Pauses
+
+For travel, illness or Ramadan. On Today, Pause today pauses the day in one tap. In More, Pauses, Add a pause sets a from and an until date (up to 60 days, and it can start ahead, for example for Ramadan) with an optional reason. While a day is paused, Today shows Paused until the last day, with nothing to log. Paused days are left out of the Week and History counts. End a pause early from Today or from More; unpause a single day from Week by tapping it. A window still open must be closed before its day can be paused.
 
 ## Weight Shortcut
 
@@ -91,7 +97,7 @@ Everything lives only on the phone. More, Back up now saves a JSON file; keep it
 
 ## Start again
 
-More, Reset all history deletes every window, meal, check-in, temptation and weigh-in from the phone. It asks twice, and the first step offers a backup. Your planned times and reminder times stay. A backup made before the reset can bring everything back with Restore from a backup.
+More, Reset all history deletes every window, meal, check-in, pause, temptation and weigh-in from the phone. It asks twice, and the first step offers a backup. Your planned times and reminder times stay. A backup made before the reset can bring everything back with Restore from a backup.
 
 ## Redeploy after a change
 

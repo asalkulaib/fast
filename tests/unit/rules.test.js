@@ -43,6 +43,8 @@ test('time: formatting and parsing', () => {
   assert.equal(time.fmtTime(T('2026-09-20T07:05')), '07:05');
   assert.equal(time.fmtDayLong(FRI), 'Friday 25 September');
   assert.equal(time.fmtWhen(T('2026-09-24T21:05'), FRI), '21:05 yesterday');
+  assert.equal(time.fmtOnDay(T('2026-09-26T01:30'), FRI), '01:30 next day');
+  assert.equal(time.fmtOnDay(T('2026-09-25T23:10'), FRI), '23:10');
   assert.equal(time.floorToMinute(T('2026-09-20T17:30') + 59999), T('2026-09-20T17:30'));
 });
 

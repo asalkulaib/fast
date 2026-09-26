@@ -315,6 +315,7 @@ export function showMealEditSheet(app, mealId) {
           else finishedAt = timeOnOrAfter(startedAt, draft.finishMinutes);
         }
         const sameFinish = finishedAt === original.finishedAt;
+        const undo = store.undoPoint({ meals: [mealId] });
         await store.updateMeal(mealId, {
           name: draft.name || '',
           startedAt,
@@ -325,12 +326,18 @@ export function showMealEditSheet(app, mealId) {
           fullness20: draft.fullness20 ?? null,
           fullness20DueAt: sameFinish ? original.fullness20DueAt ?? null : finishedAt ? store.fullnessDueAt(finishedAt) : null,
         });
-        api.close();
+        await api.close();
+        app.flash('Meal saved.', { undo });
       }, { block: true, name: 'save-meal-edit' })),
       h('div', { class: 'gap-s' }, confirming
         ? h('div', { class: 'btn-row' },
           h('span', { class: 'small' }, 'Delete this meal?'),
-          button('Delete', async () => { await store.deleteMeal(mealId); api.close(); }, { kind: 'secondary', name: 'confirm-delete-meal' }),
+          button('Delete', async () => {
+            const undo = store.undoPoint({ meals: [mealId] });
+            await store.deleteMeal(mealId);
+            await api.close();
+            app.flash('Meal deleted.', { undo });
+          }, { kind: 'secondary', name: 'confirm-delete-meal' }),
           button('Keep', () => { confirming = false; api.rerender(); }, { kind: 'secondary' }))
         : button('Delete meal', () => { confirming = true; api.rerender(); }, { kind: 'secondary', name: 'delete-meal' })),
     );

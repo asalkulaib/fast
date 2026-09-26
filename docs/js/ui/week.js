@@ -5,6 +5,7 @@ import { button } from './components.js';
 import { addDays, fmtDayShort, fmtDuration, fmtTime, fmtWeekRange, weekStart, weekdayShort, keyParts } from '../core/time.js';
 import { weekReview } from '../core/review.js';
 import { header, note } from './shared.js';
+import { pauseWord } from './pause.js';
 
 const TRIGGER_WORD = { hunger: 'hunger', boredom: 'boredom', social: 'social', stress: 'stress', tired: 'tired', other: 'other' };
 const TYPE_WORD = { weights: 'weights', cardio: 'cardio', other: 'other', unspecified: 'type not set' };
@@ -24,6 +25,7 @@ function energyLine(label, part) {
 }
 
 function dayResult(d) {
+  if (d.result === 'paused') return { text: 'Paused', ok: false };
   if (d.future) return { text: '', ok: false };
   switch (d.result) {
     case 'success': return { text: d.state === 'noEating' ? 'No eating' : 'Success', ok: true };
@@ -62,8 +64,11 @@ export function renderWeek(ctx, app, weekKey) {
       h('div', { class: 'row' },
         h('div', { class: 'main' },
           h('div', { class: 'label' }, 'Successful days'),
-          h('div', { class: 'figure gap-s', 'data-testid': 'success-count' }, hl(String(r.successCount)), ' of 7')),
-        h('div', { class: 'margin' }, note('Best streak', days(r.streak.best)))),
+          // Paused days are not tracked, so they leave the count.
+          h('div', { class: 'figure gap-s', 'data-testid': 'success-count' }, hl(String(r.successCount)), ` of ${7 - r.pausedCount}`)),
+        h('div', { class: 'margin' },
+          note('Best streak', days(r.streak.best)),
+          r.pausedCount ? note('Paused', days(r.pausedCount)) : null)),
       h('div', { class: 'gap' },
         stat('Average window', r.avgWindowMs != null ? fmtDuration(r.avgWindowMs) : 'no windows yet', 'avg-window'),
         stat(isCurrent ? 'Streak' : 'Streak at week end', days(r.streak.current), 'streak'))),
@@ -106,7 +111,9 @@ export function renderWeek(ctx, app, weekKey) {
       h('ul', { class: 'days gap-s' }, r.days.map((d) => {
         const res = dayResult(d);
         const { d: dd } = keyParts(d.day);
-        const span = d.firstBite ? (d.lastBite ? `${fmtTime(d.firstBite)} to ${fmtTime(d.lastBite)}` : `from ${fmtTime(d.firstBite)}`) : '';
+        const span = d.result === 'paused'
+          ? (pauseWord(d.paused) || '')
+          : d.firstBite ? (d.lastBite ? `${fmtTime(d.firstBite)} to ${fmtTime(d.lastBite)}` : `from ${fmtTime(d.firstBite)}`) : '';
         return h('li', {},
           h('button', { type: 'button', class: 'dayrow', 'data-day': d.day, 'aria-label': `${fmtDayShort(d.day)} ${res.text}`, onclick: () => app.go(`day/${d.day}`) },
             h('span', { class: 'd' }, `${weekdayShort(d.day)} ${dd}`),

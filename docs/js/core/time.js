@@ -180,6 +180,17 @@ export function fmtTimer(ms) {
 }
 
 /** Time relative to today: '21:05', '21:05 yesterday', '21:05 Thu 24 Sep'. */
+/**
+ * A time as seen from a record's own day: 01:30 after midnight reads
+ * '01:30 next day', whatever today is.
+ */
+export function fmtOnDay(ts, key) {
+  const k = dayKey(ts);
+  if (k === key) return fmtTime(ts);
+  if (k === addDays(key, 1)) return `${fmtTime(ts)} next day`;
+  return `${fmtTime(ts)} ${fmtDayShort(k)}`;
+}
+
 export function fmtWhen(ts, todayKey) {
   const k = dayKey(ts);
   if (k === todayKey) return fmtTime(ts);

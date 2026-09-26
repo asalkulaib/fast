@@ -33,7 +33,7 @@ const ROUTES = ['today', 'week', 'day', 'history', 'weight', 'more', 'help'];
 let route = parseRoute(location.hash);
 let lastSignature = '';
 let lastStateKey = '';
-let flash = null; // { text, until }
+let flash = null; // { text, until, undo }
 let renderQueued = false;
 const prompted = new Set();
 
@@ -87,9 +87,7 @@ function render(fresh) {
   const ctx = context();
   const y = window.scrollY;
   const node = renderRoute(ctx);
-  const flashNode = flash && flash.until > ctx.nowTs
-    ? h('p', { class: 'flash', role: 'status', 'data-testid': 'flash' }, flash.text)
-    : null;
+  const flashNode = flash && flash.until > ctx.nowTs ? flashBar(flash) : null;
   view.classList.toggle('with-dunes', route.name === 'today' || (route.name === 'weight' && !ctx.weights.size));
   view.replaceChildren(...[flashNode, node].filter(Boolean));
   view.removeAttribute('aria-busy');
@@ -109,6 +107,21 @@ function render(fresh) {
     else b.removeAttribute('aria-current');
   }
   lastSignature = signatureOf(ctx);
+}
+
+/** The message bar above the tabs, with Undo when the change can be reversed. */
+function flashBar(f) {
+  return h('div', { class: 'flash', role: 'status', 'data-flash': '' },
+    h('span', { 'data-testid': 'flash' }, f.text),
+    f.undo ? button('Undo', () => undoLast(), { kind: 'secondary', name: 'undo' }) : null);
+}
+
+async function undoLast() {
+  const undo = flash && flash.undo;
+  if (!undo) return;
+  flash = null;
+  await undo();
+  showFlash('Undone.');
 }
 
 function scheduleRender() {
@@ -148,7 +161,7 @@ function tick() {
   if (document.hidden || !store.state.ready) return;
   const ctx = context();
   if (flash && flash.until <= ctx.nowTs) {
-    const el = view.querySelector('[data-testid="flash"]');
+    const el = view.querySelector('[data-flash]');
     flash = null;
     if (el) fadeOut(el).then(() => el.remove());
   }
@@ -164,15 +177,16 @@ function tick() {
 
 // ---------- Actions ----------
 
-function showFlash(text, ms = 8000) {
-  flash = { text, until: now() + ms };
+/** A short message; with undo, a change that one tap on Undo reverses. */
+function showFlash(text, { ms = 8000, undo = null } = {}) {
+  flash = { text, undo, until: now() + (undo ? Math.max(ms, 10000) : ms) };
   render(false);
 }
 
 async function importText(text) {
   const result = await importWeightText(text);
   app.ui.showPaste = !result.ok;
-  showFlash(result.ok ? result.message : `${result.message} Run the Fast Weight shortcut, then tap Import weight again.`, 12000);
+  showFlash(result.ok ? result.message : `${result.message} Run the Fast Weight shortcut, then tap Import weight again.`, { ms: 12000 });
   if (result.ok && navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText('').catch(() => {});
   }
@@ -190,7 +204,7 @@ async function importWeight() {
   if (route.name !== 'weight') app.go('weight');
   if (text == null) {
     app.ui.showPaste = true;
-    showFlash('The clipboard could not be read. Long-press the paste box below and tap Paste.', 12000);
+    showFlash('The clipboard could not be read. Long-press the paste box below and tap Paste.', { ms: 12000 });
     return;
   }
   await importText(text);

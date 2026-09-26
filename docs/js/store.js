@@ -2,7 +2,8 @@
 // Each change is written to IndexedDB first, then applied here and announced.
 
 import * as db from './db.js';
-import { now, dayKey, floorToMinute, fmtDayLong, fmtTime, MIN } from './core/time.js';
+import { now, addDays, dayKey, floorToMinute, fmtDayLong, fmtTime, MIN } from './core/time.js';
+import { isOpen } from './core/rules.js';
 
 export const DEFAULTS = {
   workdayStart: '17:30',
@@ -65,6 +66,47 @@ export function data() {
 
 const stamp = (ts) => floorToMinute(ts == null ? now() : ts);
 
+// ---------- Undo ----------
+
+/** The given records as they are now: [key, record or null] per store. */
+function snapshot({ days = [], meals = [], outside = [] }) {
+  return {
+    days: [...new Set(days)].map((k) => [k, state.days.get(k) || null]),
+    meals: [...new Set(meals)].map((id) => [id, state.meals.get(id) || null]),
+    outside: [...new Set(outside)].map((id) => [id, state.outside.get(id) || null]),
+  };
+}
+
+/** Puts records back as a snapshot saw them, in one transaction. */
+async function putBack(snap) {
+  const maps = { days: state.days, meals: state.meals, outside: state.outside };
+  const ops = [];
+  for (const name of Object.keys(maps)) {
+    for (const [key, rec] of snap[name]) ops.push(rec ? { store: name, put: rec } : { store: name, remove: key });
+  }
+  if (!ops.length) return;
+  await db.batch(ops);
+  for (const name of Object.keys(maps)) {
+    for (const [key, rec] of snap[name]) {
+      if (rec) maps[name].set(key, rec);
+      else maps[name].delete(key);
+    }
+  }
+  changed();
+}
+
+/**
+ * Remembers these records as they are now. The returned function puts them
+ * back, so the change that follows can be undone in one tap. Records are
+ * always replaced, never changed in place, so remembering them is enough.
+ */
+export function undoPoint(keys) {
+  const snap = snapshot(keys);
+  return () => putBack(snap);
+}
+
+export const mealIdsOf = (key) => [...state.meals.values()].filter((m) => m.day === key).map((m) => m.id);
+
 // ---------- Settings ----------
 
 export async function setSettings(values) {
@@ -105,17 +147,19 @@ export function openWindow(ts) {
 
 /**
  * Removes a window opened by mistake, together with the meals logged in it,
- * as if First bite had never been tapped. One transaction.
+ * as if First bite had never been tapped. One transaction. Resolves with { undo }.
  */
 export async function cancelWindow(key) {
   const old = state.days.get(key);
   if (!old) return;
   const meals = [...state.meals.values()].filter((m) => m.day === key);
+  const undo = undoPoint({ days: [key], meals: meals.map((m) => m.id) });
   const rec = { ...old, firstBite: null, lastBite: null, updatedAt: now() };
   await db.batch([{ store: 'days', put: rec }, ...meals.map((m) => ({ store: 'meals', remove: m.id }))]);
   state.days.set(key, rec);
   for (const m of meals) state.meals.delete(m.id);
   changed();
+  return { undo };
 }
 
 export const undoOpen = cancelWindow;
@@ -126,7 +170,7 @@ export const undoOpen = cancelWindow;
  * the first meal (the one that started at the old first bite) moves with it.
  * Meals still open end at a new last bite. Refuses times that would leave
  * another meal outside the window, or that would overwrite another day's
- * record. Resolves with { key } or { error }.
+ * record. Resolves with { key, undo } or { error }.
  */
 export async function adjustWindow(oldKey, firstTs, lastTs) {
   const old = state.days.get(oldKey);
@@ -163,12 +207,13 @@ export async function adjustWindow(oldKey, firstTs, lastTs) {
   const emptied = newKey === oldKey ? null : { ...old, firstBite: null, lastBite: null, updatedAt: at };
   if (emptied) ops.push({ store: 'days', put: emptied });
   for (const m of meals) ops.push({ store: 'meals', put: m });
+  const undo = undoPoint({ days: [oldKey, newKey], meals: meals.map((m) => m.id) });
   await db.batch(ops);
   state.days.set(newKey, rec);
   if (emptied) state.days.set(oldKey, emptied);
   for (const m of meals) state.meals.set(m.id, m);
   changed();
-  return { key: newKey };
+  return { key: newKey, undo };
 }
 
 /** Moves the first bite of a window (the first-bite sheet), keeping a valid last bite. */
@@ -207,6 +252,68 @@ export function clearWindow(key) {
 
 export function setNoEating(key, value) {
   return updateDay(key, value ? { noEating: true, firstBite: null, lastBite: null } : { noEating: false });
+}
+
+// ---------- Pauses ----------
+
+export function daysBetween(fromKey, toKey) {
+  const keys = [];
+  for (let k = fromKey; k <= toKey; k = addDays(k, 1)) keys.push(k);
+  return keys;
+}
+
+/** Whether a day record still holds anything once its pause is gone. */
+const holdsData = (r) => !!(r.firstBite || r.lastBite || r.noEating || r.dayOff || r.energy4pm != null || r.trained != null || r.trainingType);
+
+/**
+ * Pauses every day from fromKey to toKey, for a reason ('travel', 'illness',
+ * 'ramadan', 'other', or true for none). replacing: the days of a pause
+ * being changed; those outside the new dates are unpaused in the same
+ * transaction. Refuses dates with a window still open.
+ * Resolves with { undo } or { error }.
+ */
+export async function pauseDays(fromKey, toKey, reason, { replacing = [] } = {}) {
+  const keys = daysBetween(fromKey, toKey);
+  if (keys.some((k) => isOpen(state.days.get(k)))) return { error: 'A window is still open on one of those days. Close it first.' };
+  const dropped = replacing.filter((k) => k < fromKey || k > toKey);
+  const undo = undoPoint({ days: [...keys, ...dropped] });
+  const at = now();
+  const ops = keys.map((k) => ({ store: 'days', put: { ...(state.days.get(k) || { day: k }), day: k, paused: reason || true, updatedAt: at } }));
+  ops.push(...unpauseOps(dropped, at));
+  await db.batch(ops);
+  apply(ops);
+  return { undo };
+}
+
+/** Ends the pause on these days; a day left holding nothing is removed. Resolves with { undo }. */
+export async function unpauseDays(keys) {
+  const undo = undoPoint({ days: keys });
+  const ops = unpauseOps(keys, now());
+  if (ops.length) {
+    await db.batch(ops);
+    apply(ops);
+  }
+  return { undo };
+}
+
+function unpauseOps(keys, at) {
+  const ops = [];
+  for (const k of keys) {
+    const cur = state.days.get(k);
+    if (!cur || !cur.paused) continue;
+    const { paused, ...rest } = cur;
+    ops.push(holdsData(rest) ? { store: 'days', put: { ...rest, updatedAt: at } } : { store: 'days', remove: k });
+  }
+  return ops;
+}
+
+/** Applies day writes to the in-memory copy, then announces them. */
+function apply(ops) {
+  for (const op of ops) {
+    if ('remove' in op) state.days.delete(op.remove);
+    else state.days.set(op.put.day, op.put);
+  }
+  changed();
 }
 
 // ---------- Meals ----------

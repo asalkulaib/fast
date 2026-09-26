@@ -1,4 +1,4 @@
-// More: planned times, calendar reminders, exports, backup and restore.
+// More: planned times, pauses, calendar reminders, exports, backup and restore.
 
 import { h } from './dom.js';
 import { button, timeField } from './components.js';
@@ -8,6 +8,7 @@ import { icsTimes } from '../core/ics.js';
 import { VERSION } from '../version.js';
 import { ago, header, note } from './shared.js';
 import { openSheet, sheetHead } from './sheet.js';
+import { pausesSection } from './pause.js';
 
 function timeSetting(label, key, ctx) {
   return timeField({
@@ -25,7 +26,7 @@ function showResetSheet(app) {
   const confirmFirst = (api) => h('div', {},
     sheetHead(api, 'Reset'),
     h('p', { class: 'statement' }, 'Delete all history?'),
-    h('p', { class: 'gap' }, 'This removes every window, meal, check-in, temptation and weigh-in from this iPhone. Your planned times and reminders stay.'),
+    h('p', { class: 'gap' }, 'This removes every window, meal, check-in, pause, temptation and weigh-in from this iPhone. Your planned times and reminders stay.'),
     h('p', { class: 'small quiet gap-s' }, 'A backup first lets you bring everything back later.'),
     h('div', { class: 'stack gap-l' },
       button('Back up first', () => app.backup(), { kind: 'secondary', name: 'reset-backup' }),
@@ -92,6 +93,7 @@ export function renderMore(ctx, app) {
       h('div', { class: 'btn-pair gap' },
         timeSetting('Hold the line', 'holdTime', ctx),
         timeSetting('Training', 'trainingTime', ctx))),
+    pausesSection(ctx, app),
     h('section', { class: 'section', 'data-block': 'calendar' },
       h('div', { class: 'label' }, 'Calendar reminders'),
       h('p', { class: 'gap-s' },

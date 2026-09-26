@@ -6,14 +6,14 @@ import { h } from './dom.js';
 import { button, timeField } from './components.js';
 import { openSheet, sheetHead } from './sheet.js';
 import * as store from '../store.js';
-import { MIN, fmtDuration, fmtTime, fmtWhen, minutesOfDay, nearestTime, now } from '../core/time.js';
+import { MIN, fmtDuration, fmtOnDay, fmtTime, minutesOfDay, nearestTime, now } from '../core/time.js';
 import { timeOnOrAfter } from '../core/rules.js';
 import { resolveFirstBite } from './meal.js';
 import { mealsOfDay } from './shared.js';
 
 const meals = (n) => (n === 1 ? 'Its meal goes too.' : `Its ${n} meals go too.`);
 
-const span = (first, last, key) => `Window ${fmtTime(first)} to ${fmtWhen(last, key)}, ${fmtDuration(last - first)}.`;
+const span = (first, last, key) => `Window ${fmtTime(first)} to ${fmtOnDay(last, key)}, ${fmtDuration(last - first)}.`;
 
 /** While the window is open: change when it opened, or remove it. */
 export function showOpeningSheet(app, initialKey) {
@@ -38,7 +38,7 @@ export function showOpeningSheet(app, initialKey) {
         if (result.error) { draft.hint = result.error; api.rerender(); return; }
         key = result.key;
         await api.close();
-        app.flash(`The window now opens at ${fmtTime(ts)}.`);
+        app.flash(`The window now opens at ${fmtTime(ts)}.`, { undo: result.undo });
       }, { block: true, name: 'save-opening' })),
       h('section', { class: 'section gap-l' },
         h('div', { class: 'label' }, 'Opened by mistake?'),
@@ -47,9 +47,9 @@ export function showOpeningSheet(app, initialKey) {
             h('p', {}, `Remove the window opened at ${fmtTime(rec.firstBite)}?${logged ? ` ${meals(logged)}` : ''}`),
             h('div', { class: 'btn-row' },
               button('Remove window', async () => {
-                await store.cancelWindow(key);
+                const { undo } = await store.cancelWindow(key);
                 await api.close();
-                app.flash('Window removed. Tap First bite when you eat.');
+                app.flash('Window removed. Tap First bite when you eat.', { undo });
               }, { kind: 'secondary', name: 'confirm-remove-window' }),
               button('Keep it', () => { draft.confirm = false; api.rerender(); }, { kind: 'secondary', name: 'keep-window' })))
           : h('div', { class: 'gap-s' },
@@ -94,7 +94,7 @@ export function showBiteTimeSheet(app, initialKey, which) {
         if (result.error) { hintEl.textContent = result.error; return; }
         key = result.key;
         await api.close();
-        app.flash(`${title} saved: ${fmtTime(which === 'first' ? t.first : t.last)}.`);
+        app.flash(`${title} saved: ${fmtTime(which === 'first' ? t.first : t.last)}.`, { undo: result.undo });
       }, { block: true, name: `save-${which}-bite` })),
     );
   }, { name: `${which}-bite-time`, label: title });
@@ -116,9 +116,10 @@ export function showOutsideTimeSheet(app, id) {
       h('div', { class: 'gap' }, button('Save', async () => {
         const at = minutes === minutesOfDay(entry.at) ? entry.at : nearestTime(entry.at, minutes);
         if (at > now() + MIN) { hintEl.textContent = 'That time is still ahead.'; return; }
+        const undo = store.undoPoint({ outside: [id] });
         await store.updateOutside(id, { at });
         await api.close();
-        app.flash(`Last bite saved: ${fmtTime(at)}.`);
+        app.flash(`Last bite saved: ${fmtTime(at)}.`, { undo });
       }, { block: true, name: 'save-outside-bite' })),
     );
   }, { name: 'outside-bite-time', label: 'Last bite' });
@@ -160,7 +161,7 @@ export function showWindowTimesSheet(app, initialKey) {
         if (result.error) { hintEl.textContent = result.error; return; }
         key = result.key;
         await api.close();
-        app.flash('Window times saved.');
+        app.flash('Window times saved.', { undo: result.undo });
       }, { block: true, name: 'save-times' })),
     );
   }, { name: 'window-times', label: 'Window times' });

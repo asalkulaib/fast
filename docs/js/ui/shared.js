@@ -26,13 +26,14 @@ export function tapNote(title, value, onClick, name) {
 }
 
 export function dayTypeText(key, rec) {
+  if (rec && rec.paused) return 'Paused';
   if (rec && rec.dayOff) return 'Day off';
   return isWorkday(key, rec) ? 'Workday' : 'Weekend';
 }
 
-/** Screen header. The Tempted? button shows whenever no window is open. */
+/** Screen header. The Tempted? button shows whenever no window is open, except on a paused day. */
 export function header(ctx, app, { title, sub }) {
-  const tempted = !ctx.openRec
+  const tempted = !ctx.openRec && ctx.mode.mode !== 'paused'
     ? button('Tempted?', () => app.tempted(), { kind: 'secondary', name: 'tempted' })
     : null;
   return h('header', { class: 'head' },

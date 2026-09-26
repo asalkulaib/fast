@@ -1,7 +1,7 @@
 // Screenshots of every screen and state at 390 x 844 for design review, plus
 // a contrast audit of every visible piece of text in each state.
 import { mkdir, writeFile } from 'node:fs/promises';
-import { test, expect, openAt, seed, advance, tap, pick, choose, sheet, settings, ms } from './helpers.js';
+import { test, expect, openAt, seed, advance, tap, pick, choose, sheet, setDate, setTime, settings, ms } from './helpers.js';
 import { WEEK } from './seed-data.js';
 
 test.skip(({ browserName }) => browserName !== 'webkit', 'screens are reviewed in WebKit, the engine of iPhone Safari');
@@ -75,7 +75,7 @@ async function shot(page, name, { full = false } = {}) {
 
 const install = settings({ installedAt: ms('2026-09-20T08:00'), lastBackupAt: ms('2026-09-26T08:00'), lastImportAt: ms('2026-09-26T09:00') });
 
-/** Sixty days of windows up to Saturday 26 September; weekends open earlier; one day unlogged. */
+/** Sixty days of windows up to Saturday 26 September; weekends open earlier; one day unlogged, three paused. */
 function sixtyDays() {
   const DAY = 86_400_000;
   const base = ms('2026-07-29T00:00');
@@ -83,6 +83,10 @@ function sixtyDays() {
   for (let i = 0; i < 60; i++) {
     if (i === 12) continue;
     const key = new Date(base + i * DAY + 3 * 3_600_000).toISOString().slice(0, 10);
+    if (i >= 44 && i <= 46) {
+      days.push({ day: key, paused: 'travel' });
+      continue;
+    }
     const weekend = [5, 6].includes(new Date(`${key}T12:00:00Z`).getUTCDay());
     const start = (weekend ? 13 * 60 : 16 * 60 + 30) + ((i * 37) % 150);
     const length = 150 + ((i * 53) % 110);
@@ -292,4 +296,41 @@ test('weight: empty, import page', async ({ page }) => {
   await page.goto('./import/#w=2026-09-20:104.6,2026-09-21:104.3,2026-09-22:104.1');
   await expect(page.getByTestId('import-result')).toBeVisible();
   await shot(page, '37-import-page');
+});
+
+test('pauses and undo', async ({ page }) => {
+  // Today on a paused day, then the week around it.
+  await openAt(page, '2026-09-30T12:00');
+  await seed(page, {
+    days: [...WEEK.days, ...['2026-09-29', '2026-09-30', '2026-10-01'].map((day) => ({ day, paused: 'travel' }))],
+    meals: WEEK.meals,
+    settings: install,
+  });
+  await shot(page, '50-today-paused');
+  await page.locator('.tab[data-tab="week"]').click();
+  await shot(page, '51-week-paused', { full: true });
+  await page.locator('.dayrow[data-day="2026-09-29"]').click();
+  await shot(page, '52-day-paused');
+  // More: the list, and the sheet for a new pause.
+  await page.locator('.tab[data-tab="more"]').click();
+  await page.locator('[data-block="pauses"]').scrollIntoViewIfNeeded();
+  await shot(page, '53-more-pauses');
+  await tap(page, 'add-pause');
+  await setDate(page, 'pause-from', '2027-02-08');
+  await setDate(page, 'pause-to', '2027-03-09');
+  await choose(page, 'pause-reason', 'ramadan');
+  await shot(page, '54-pause-sheet');
+  await tap(page, 'save-pause');
+  await expect(sheet(page, 'pause')).toHaveCount(0);
+  await expect(page.getByTestId('flash')).toHaveText('Paused: Mon 8 Feb to Tue 9 Mar.');
+  await shot(page, '55-flash-undo');
+});
+
+test('undo bar after a time change', async ({ page }) => {
+  await openAt(page, '2026-09-27T13:10');
+  await seed(page, { ...WEEK, settings: install });
+  await tap(page, 'edit-last-bite');
+  await setTime(page, 'edit-last-bite', '22:10');
+  await tap(page, 'save-last-bite');
+  await shot(page, '56-today-undo-bar');
 });

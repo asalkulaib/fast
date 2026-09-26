@@ -279,7 +279,6 @@ sup.fn {
 }
 
 .screen .stat,
-.screen p.flash,
 .sheet .phrases {
   max-width: none;
 }
@@ -556,6 +555,11 @@ sup.fn {
 
 .wheel.unset .wheel-item.on {
   color: var(--text-quiet);
+}
+
+/* A date wheel: one column of days. */
+.wheel.date {
+  grid-template-columns: 150px;
 }
 
 .wheel-sep {
@@ -885,11 +889,28 @@ sup.fn {
   color: var(--text-body);
 }
 
+/* Messages sit in a bar just above the tabs, so they show wherever the
+   screen is scrolled; Undo sits at its right. */
 .flash {
-  padding: var(--s3) 0;
-  margin-bottom: var(--s3);
-  border-bottom: 1px solid var(--rule-quiet);
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
+  z-index: 9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  column-gap: var(--s4);
+  min-height: 52px;
+  padding: var(--s2) var(--gutter-r) var(--s2) var(--gutter-l);
+  background: var(--bg-raised);
+  border-top: 1px solid var(--rule);
   color: var(--text-display);
+  line-height: 1.4;
+}
+
+.flash .btn-2 {
+  flex: none;
 }
 
 /* ---------- Tab bar ---------- */
@@ -1161,6 +1182,51 @@ sup.fn {
 .chart .chart-end {
   fill: var(--text-display);
   font-size: 12px;
+}
+
+/* Chart legend: swatches beside words, so no mark relies on colour alone. */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--s4);
+  row-gap: var(--s1);
+  margin-top: var(--s2);
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--text-quiet);
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  column-gap: 6px;
+}
+
+.swatch {
+  display: inline-block;
+  width: 14px;
+  height: 10px;
+}
+
+.swatch.miss {
+  background: var(--clay);
+}
+
+.swatch.trend {
+  height: 2px;
+  background: var(--text-body);
+}
+
+.swatch.avg {
+  height: 0;
+  border-top: 1px dashed var(--text-display);
+}
+
+.swatch.paused {
+  background: var(--bg-raised);
+  outline: 1px solid var(--rule-quiet);
+  outline-offset: -1px;
 }
 
 .chart-readout {
