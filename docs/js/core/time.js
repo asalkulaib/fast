@@ -118,18 +118,6 @@ export function fmtMinutes(min) {
   return `${pad(Math.floor(m / 60))}:${pad(m % 60)}`;
 }
 
-/** Parses 'HH:MM', 'H:MM', 'HHMM' or 'HMM' into minutes, or null. */
-export function parseClock(text) {
-  const s = String(text || '').trim();
-  let h, m;
-  let match = s.match(/^(\d{1,2})[:.h ]?(\d{2})$/);
-  if (match) { h = Number(match[1]); m = Number(match[2]); }
-  else if ((match = s.match(/^(\d{1,2})$/))) { h = Number(match[1]); m = 0; }
-  else return null;
-  if (h > 23 || m > 59) return null;
-  return h * 60 + m;
-}
-
 export const weekdayName = (key) => WEEKDAYS[weekday(key)];
 export const weekdayShort = (key) => WEEKDAYS[weekday(key)].slice(0, 3);
 

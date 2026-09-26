@@ -14,6 +14,17 @@ export function liveNote(title, fn) {
   return h('div', { class: 'note' }, h('b', {}, title), live('span', {}, fn));
 }
 
+/** A margin note you tap to change its time. */
+export function tapNote(title, value, onClick, name) {
+  return h('button', {
+    type: 'button',
+    class: 'note tap',
+    'data-action': name,
+    'aria-label': `${title}, ${value}. Change`,
+    onclick: onClick,
+  }, h('b', {}, title), h('span', { class: 'tap-value' }, value));
+}
+
 export function dayTypeText(key, rec) {
   if (rec && rec.dayOff) return 'Day off';
   return isWorkday(key, rec) ? 'Workday' : 'Weekend';

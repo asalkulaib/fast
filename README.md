@@ -7,7 +7,7 @@ Live app: https://asalkulaib.github.io/fast/
 ## Use it on your iPhone
 
 1. Open the link above in Safari.
-2. Tap Share. In iOS 26 it sits inside the â€¢â€¢â€¢ button at the bottom right.
+2. Tap Share. In iOS 26 it sits inside the three-dot button at the bottom right.
 3. Scroll down and tap Add to Home Screen.
 4. Keep Open as Web App switched on and tap Add.
 5. From now on, open Fast from its Home Screen icon. The Home Screen app keeps its own data, separate from Safari.
@@ -22,9 +22,17 @@ Live app: https://asalkulaib.github.io/fast/
 - Between midnight and 04:00, late eating can be counted against the night before.
 - The streak counts consecutive successful days. A day with nothing logged breaks it, so Fast asks you to fill in any gap.
 
+## Changing a time
+
+Every time in Fast is set on a rolling 24-hour wheel, like the iPhone clock.
+
+- On Today, tap Last bite (before your window) or First bite and Last bite (after it) to change that time.
+- While the window is open, tap Opened to move the opening time, or remove a window opened by mistake.
+- Any day can be corrected from Week: tap the day.
+
 ## Fasting stages
 
-While you fast, Today shows a 24-hour stage bar timed from your last bite. The hours are typical, not exact, and never a target. Past 24 hours the bar stays full.
+While you fast, Today shows a 24-hour ring timed from your last bite, with the time fasted and the stage in its centre. An icon marks each stage: a plate while digesting, a drop as blood sugar settles, a flame for the metabolic switch and a bolt for ketones. The current stage's icon is gold. Before your window the ring leads Today; after it, the ring sits below the result. The hours are typical, not exact, and never a target. Past 24 hours the ring stays full.
 
 | Stage | Typical time | Based on |
 |---|---|---|
@@ -34,6 +42,10 @@ While you fast, Today shows a 24-hour stage bar timed from your last bite. The h
 | Ketones climbing | 24 h and beyond | [Pan et al., 2000](https://journals.sagepub.com/doi/10.1097/00004647-200010000-00012); [Ho et al., J Clin Invest 1988](https://pmc.ncbi.nlm.nih.gov/articles/PMC329619/) |
 
 Autophagy is described as uncertain instead of being given an hour: the evidence comes mostly from cell and animal studies ([Bagherniya et al., 2018](https://pubmed.ncbi.nlm.nih.gov/30172870/); [Bensalem et al., 2025](https://pubmed.ncbi.nlm.nih.gov/40345145)).
+
+## History
+
+The History tab charts, day by day, either your fasts or your eating windows, as bars or a line, over 7, 30 or 90 days. A day's fast runs from your last bite before it to that day's first bite. Tap a day to read its value, then Open this day to edit it. Show as a table lists every value. Fast remembers your choices.
 
 ## Weight Shortcut
 
@@ -76,6 +88,10 @@ More, Add to Calendar creates four repeating alerts: hold the line at 13:00 and 
 ## Backups
 
 Everything lives only on the phone. More, Back up now saves a JSON file; keep it in Files or iCloud Drive. Fast reminds you after 7 days without a backup. More, Restore from a backup brings everything back. Export CSV files gives windows, meals, weight (the only place raw weights appear), check-ins and temptations for Excel.
+
+## Start again
+
+More, Reset all history deletes every window, meal, check-in, temptation and weigh-in from the phone. It asks twice, and the first step offers a backup. Your planned times and reminder times stay. A backup made before the reset can bring everything back with Restore from a backup.
 
 ## Redeploy after a change
 

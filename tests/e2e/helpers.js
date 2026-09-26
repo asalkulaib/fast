@@ -66,10 +66,27 @@ export const tap = async (page, name) => act(page, name).click();
 export const pick = (page, scale, value) => page.locator(`button[data-scale="${scale}"][data-value="${value}"]:visible`).first().click();
 export const choose = (page, name, value) => page.locator(`button[data-choice="${name}"][data-value="${value}"]:visible`).first().click();
 
+/**
+ * Rolls a time wheel to HH:MM the way a finger does: touch, roll, come to rest.
+ * Saving can redraw the screen between finding a column and rolling it; a
+ * roll that landed on a column no longer on screen is made again.
+ */
 export async function setTime(page, name, hhmm) {
-  const input = page.locator(`input[data-time="${name}"]:visible`).first();
-  await input.fill(hhmm);
-  await input.press('Enter');
+  const [hh, mm] = hhmm.split(':').map(Number);
+  const wheel = page.locator(`[data-time="${name}"]:visible`).first();
+  for (const [part, value] of [['hour', hh], ['minute', mm]]) {
+    await expect(async () => {
+      const rolled = await wheel.locator(`[data-part="${part}"]`).evaluate((col, v) => {
+        if (!col.isConnected) return false;
+        col.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+        col.scrollTop = v * col.querySelector('.wheel-item').offsetHeight;
+        col.dispatchEvent(new Event('scroll'));
+        col.dispatchEvent(new Event('scrollend'));
+        return true;
+      }, value);
+      expect(rolled).toBe(true);
+    }).toPass({ timeout: 5000 });
+  }
 }
 
 export const sheet = (page, name) => page.locator(`[data-sheet="${name}"]`);

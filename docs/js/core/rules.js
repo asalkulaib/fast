@@ -196,6 +196,23 @@ export function canReopen(rec, nowTs) {
   return !!(rec && rec.firstBite && rec.lastBite && nowTs - rec.firstBite < WINDOW_MS);
 }
 
+/**
+ * Where the latest eating on record comes from, so its time can be edited:
+ * { ts, kind: 'window' | 'open' | 'meal' | 'outside', day, id? }, or null.
+ * On a tie the window's own last bite wins.
+ */
+export function lastEatingSource({ days, meals, outside }) {
+  let best = null;
+  const take = (ts, src) => { if (ts && (!best || ts > best.ts)) best = { ts, ...src }; };
+  for (const r of days.values()) {
+    take(r.lastBite, { kind: 'window', day: r.day });
+    if (r.firstBite && !r.lastBite) take(r.firstBite, { kind: 'open', day: r.day });
+  }
+  for (const m of meals) take(m.finishedAt || m.startedAt, { kind: 'meal', day: m.day, id: m.id });
+  for (const o of outside) take(o.at, { kind: 'outside', day: o.day, id: o.id });
+  return best;
+}
+
 /** Latest eating time on record for a day (for time since last bite). */
 export function lastEatingTs({ days, meals, outside }) {
   let last = null;

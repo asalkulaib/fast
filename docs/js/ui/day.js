@@ -6,7 +6,7 @@ import { button, choice, scale, timeField, TRAINING_OPTIONS, TRIGGER_OPTIONS, OU
 import { openSheet, sheetHead } from './sheet.js';
 import * as store from '../store.js';
 import { at, fmtDayLong, fmtDuration, fmtTime, fmtWhen, isWorkweekday, minutesOfDay, nearestTime, now, weekStart } from '../core/time.js';
-import { isWorkday, timeOnOrAfter } from '../core/rules.js';
+import { isWorkday, plannedStartMin, timeOnOrAfter } from '../core/rules.js';
 import { showLogMealSheet, showMealEditSheet } from './meal.js';
 import { AMOUNT_OPTIONS, showOutsideSheet } from './outside.js';
 import { mealMeta } from './today.js';
@@ -78,24 +78,34 @@ function windowSection(ctx, app, key, rec) {
             button('No eating this day', () => store.setNoEating(key, true), { kind: 'secondary', name: 'no-eating' })));
       }
     } else {
-      const firstTs = draft.first != null ? at(key, draft.first) : null;
-      const lastTs = firstTs != null && draft.last != null ? timeOnOrAfter(firstTs, draft.last) : null;
+      const firstTs = () => (draft.first != null ? at(key, draft.first) : null);
+      const lastTs = () => (firstTs() != null && draft.last != null ? timeOnOrAfter(firstTs(), draft.last) : null);
+      const summaryText = () => (lastTs() != null
+        ? `${fmtTime(firstTs())} to ${fmtWhen(lastTs(), key)}, ${fmtDuration(lastTs() - firstTs())}.`
+        : 'With no last bite, the window stays open.');
+      // The wheels update the summary in place, so rolling never redraws them.
+      const summary = h('p', { class: 'quiet small gap-s', 'data-testid': 'day-summary' }, summaryText());
+      const hintEl = h('p', { class: 'small', 'data-testid': 'day-hint' }, draft.hint);
+      const planned = plannedStartMin(key, rec, ctx.settings);
       children.push(
         h('div', { class: 'btn-pair gap-s' },
-          timeField({ label: 'First bite', minutes: draft.first, name: 'day-first', onChange: (m) => { draft.first = m; draw(); } }),
-          timeField({ label: 'Last bite', minutes: draft.last, name: 'day-last', hint: draft.last == null ? 'open' : '', onChange: (m) => { draft.last = m; draw(); } })),
-        h('p', { class: 'quiet small gap-s' }, lastTs != null ? `${fmtTime(firstTs)} to ${fmtWhen(lastTs, key)}, ${fmtDuration(lastTs - firstTs)}.` : 'Leave the last bite empty while the window is open.'),
-        draft.hint ? h('p', { class: 'small' }, draft.hint) : null,
+          timeField({ label: 'First bite', minutes: draft.first, fallback: planned, name: 'day-first', onChange: (m) => { draft.first = m; summary.textContent = summaryText(); } }),
+          timeField({ label: 'Last bite', minutes: draft.last, fallback: (draft.first ?? planned) + 180, name: 'day-last', allowUnset: true, hint: draft.last == null ? 'Open' : '', onChange: (m) => { draft.last = m; summary.textContent = summaryText(); } })),
+        summary,
+        hintEl,
         h('div', { class: 'gap' }, button('Save window', async () => {
-          if (firstTs == null) { draft.hint = 'Add the first bite time.'; draw(); return; }
-          if (firstTs > now() || (lastTs != null && lastTs > now())) { draft.hint = 'That time is still ahead.'; draw(); return; }
+          const setHint = (text) => { draft.hint = text; hintEl.textContent = text; };
+          const first = firstTs();
+          const last = lastTs();
+          if (first == null) { setHint('Roll the first bite to its time.'); return; }
+          if (first > now() || (last != null && last > now())) { setHint('That time is still ahead.'); return; }
           if (rec.firstBite) {
             // An existing window: meals are kept consistent with the new times.
-            const result = await store.adjustWindow(key, firstTs, lastTs);
-            if (result.error) { draft.hint = result.error; draw(); }
+            const result = await store.adjustWindow(key, first, last);
+            if (result.error) setHint(result.error);
             return;
           }
-          await store.setWindowTimes(key, firstTs, lastTs);
+          await store.setWindowTimes(key, first, last);
         }, { block: true, name: 'save-window' })),
         rec.firstBite
           ? h('div', { class: 'gap-s' }, draft.confirmClear

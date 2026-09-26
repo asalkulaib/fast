@@ -215,6 +215,29 @@ h3 {
   color: var(--text-quiet);
 }
 
+/* A margin note that opens its time for editing: the value takes the
+   secondary-button colour over a hairline, the signs that it can be tapped. */
+.note.tap {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 0 4px;
+  text-align: left;
+}
+
+.note.tap .tap-value {
+  color: var(--text-label);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--rule);
+  text-underline-offset: 4px;
+  transition: color 250ms ease-out;
+}
+
+.note.tap:active .tap-value {
+  color: var(--accent-strong);
+}
+
 /* Footnote numeral and gloss. */
 sup.fn {
   font-family: var(--font-ui);
@@ -457,15 +480,6 @@ sup.fn {
   color: var(--text-quiet);
 }
 
-.field.time {
-  width: 5.2em;
-  font-family: var(--font-ui);
-  font-weight: 500;
-  font-size: 22px;
-  letter-spacing: 0.02em;
-  font-variant-numeric: tabular-nums lining-nums;
-}
-
 .field-label {
   display: block;
   margin-bottom: var(--s1);
@@ -476,14 +490,104 @@ sup.fn {
   color: var(--text-quiet);
 }
 
-.time-row {
-  display: flex;
-  align-items: flex-end;
-  gap: var(--s4);
+/* ---------- Rolling time wheel ---------- */
+
+.wheel {
+  --row: 36px;
+  position: relative;
+  display: inline-grid;
+  grid-template-columns: 56px 16px 56px;
+  height: calc(var(--row) * 5);
+  margin-top: var(--s1);
 }
 
-.time-row .field-hint {
-  padding-bottom: 8px;
+.wheel-col {
+  height: 100%;
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  outline: none;
+}
+
+.wheel-col::-webkit-scrollbar {
+  display: none;
+}
+
+.wheel-col:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.wheel-pad {
+  height: calc(var(--row) * 2);
+}
+
+.wheel-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--row);
+  scroll-snap-align: center;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--text-quiet);
+  font-variant-numeric: tabular-nums lining-nums;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.wheel-item.far {
+  font-size: 15px;
+}
+
+.wheel-item.near {
+  font-size: 17px;
+}
+
+.wheel-item.on {
+  font-size: 22px;
+  color: var(--accent);
+}
+
+.wheel.unset .wheel-item.on {
+  color: var(--text-quiet);
+}
+
+.wheel-sep {
+  align-self: center;
+  text-align: center;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 20px;
+  color: var(--text-quiet);
+}
+
+.wheel-lens {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(var(--row) * 2);
+  height: var(--row);
+  border-top: 1px solid var(--rule-quiet);
+  border-bottom: 1px solid var(--rule-quiet);
+  pointer-events: none;
+}
+
+.time-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--s4);
+  min-height: 0;
+}
+
+.time-foot .field-hint:empty {
+  display: none;
 }
 
 /* A paste target that never shows what is pasted. */
@@ -797,7 +901,7 @@ sup.fn {
   bottom: 0;
   z-index: 10;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   padding-bottom: env(safe-area-inset-bottom);
   background: var(--bg-raised);
   border-top: 1px solid var(--rule-quiet);
@@ -809,7 +913,7 @@ sup.fn {
   font-family: var(--font-ui);
   font-weight: 500;
   font-size: 13px;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--text-quiet);
   border-top: 2px solid transparent;
@@ -956,31 +1060,91 @@ sup.fn {
   fill: var(--accent);
 }
 
-.stage-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: var(--s3);
+/* ---------- Fasting ring ---------- */
+
+.ring-wrap {
+  position: relative;
+  width: min(300px, 100%);
+  margin: 0 auto;
 }
 
-.stage-elapsed {
-  font-size: 17px;
-  color: var(--text-display);
+.ring-wrap.compact {
+  width: min(240px, 100%);
+  margin-top: var(--s3);
 }
 
-.stage-bar {
+.ring {
   display: block;
   width: 100%;
   height: auto;
-  overflow: visible;
 }
 
-.stage-bar text {
-  font-family: var(--font-ui);
-  font-weight: 500;
-  font-size: 11px;
-  fill: var(--text-quiet);
+.ring-centre {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;
+}
+
+.ring-time {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 34px;
+  line-height: 1.05;
+  color: var(--text-display);
   font-variant-numeric: tabular-nums lining-nums;
+}
+
+.ring-stage {
+  max-width: 150px;
+  margin-top: var(--s2);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 20px;
+  line-height: 1.15;
+  color: var(--accent);
+}
+
+.ring-wrap.compact .ring-time {
+  font-size: 28px;
+}
+
+.ring-wrap.compact .ring-stage {
+  max-width: 120px;
+  font-size: 17px;
+}
+
+.ring-hero .quiet {
+  text-align: center;
+  max-width: none;
+}
+
+.stage-icon {
+  fill: none;
+  stroke: var(--text-quiet);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.stage-icon.now {
+  stroke: var(--accent);
+}
+
+.stage-title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+}
+
+.stage-row-icon {
+  width: 22px;
+  height: 22px;
+  flex: none;
 }
 
 .stage-row {

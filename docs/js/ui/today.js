@@ -7,14 +7,14 @@ import {
   MIN, fmtCountdown, fmtDayLong, fmtDuration, fmtMinutes, fmtTime, fmtWhen, isWorkweekday, minutesOfDay, now,
 } from '../core/time.js';
 import {
-  CUTOFF_MIN, LIMIT_MS, WINDOW_MS, canReopen, isWorkday, lastEatingTs, lateNightDay, plannedStartMin, timeOnOrAfter, windowPhase,
+  CUTOFF_MIN, LIMIT_MS, WINDOW_MS, canReopen, isWorkday, lastEatingSource, lastEatingTs, lateNightDay, plannedStartMin, timeOnOrAfter, windowPhase,
 } from '../core/rules.js';
 import { dunes } from './art.js';
 import { firstBite, forgotCloseDefault, showDoneEatingSheet, showFinishMealSheet, showLogMealSheet, showMealEditSheet } from './meal.js';
 import { showOutsideSheet } from './outside.js';
-import { showOpeningSheet, showWindowTimesSheet } from './window-times.js';
-import { stagesSection } from './stages.js';
-import { dayTypeText, header, liveNote, mealInProgress, mealsOfDay, nextWindowLine, note, notices, runningFullness } from './shared.js';
+import { showBiteTimeSheet, showOpeningSheet, showOutsideTimeSheet, showWindowTimesSheet } from './window-times.js';
+import { ringHero, stagesSection } from './stages.js';
+import { dayTypeText, header, liveNote, mealInProgress, mealsOfDay, nextWindowLine, note, notices, runningFullness, tapNote } from './shared.js';
 
 const days = (n) => `${n} ${n === 1 ? 'day' : 'days'}`;
 
@@ -24,7 +24,7 @@ export function signature(ctx) {
   if (mode === 'open') parts.push(windowPhase(rec, ctx.nowTs));
   if (mode === 'closed') parts.push(canReopen(rec, ctx.nowTs));
   parts.push(runningFullness(ctx).length);
-  // While fasting, redraw the stage bar every 5 minutes and at each new stage.
+  // While fasting, redraw the ring every 5 minutes; each stage starts on a 5-minute mark.
   const last = fasting(mode) ? lastEatingTs(ctx) : null;
   if (last) parts.push(Math.floor((ctx.nowTs - last) / (5 * MIN)));
   return parts.join('|');
@@ -44,11 +44,12 @@ export function renderToday(ctx, app) {
 
   // The window on screen may be last night's (open, forgotten, or reopenable after midnight).
   const mealsKey = (mode === 'open' || mode === 'forgot' || mode === 'closed') ? rec.day : ctx.todayKey;
+  // Before the window the ring leads the main block; after it, it sits below.
   return h('div', { class: 'today', 'data-mode': mode },
     header(ctx, app, { title: fmtDayLong(ctx.todayKey), sub: dayTypeText(ctx.todayKey, todayRec) }),
     notices(ctx, app),
     main,
-    fasting(mode) ? stagesSection(ctx, app, lastEatingTs(ctx)) : null,
+    fasting(mode) ? stagesSection(ctx, app, lastEatingTs(ctx), { withRing: mode !== 'before' }) : null,
     streakSection(ctx),
     checkinSection(ctx, app),
     mealsSection(ctx, app, mealsKey),
@@ -63,16 +64,21 @@ function beforeBlock(ctx, app) {
   const rec = ctx.days.get(key);
   const planned = plannedStartMin(key, rec, ctx.settings);
   const workdayEarly = isWorkday(key, rec) && minutesOfDay(ctx.nowTs) < CUTOFF_MIN;
-  const last = lastEatingTs(ctx);
+  const lastSrc = lastEatingSource(ctx);
+  const last = lastSrc ? lastSrc.ts : null;
   const late = lateNightDay(ctx);
+  const plannedLine = h('p', { class: 'gap' }, 'Window planned for ', hl(fmtMinutes(planned)), '.');
   return h('section', { class: 'section strong', 'data-block': 'before' },
     h('div', { class: 'row' },
       h('div', { class: 'main' },
         h('div', { class: 'label' }, 'Before the window'),
-        h('h1', { class: 'display gap-s' }, 'Fasting'),
-        h('p', { class: 'gap' }, 'Window planned for ', hl(fmtMinutes(planned)), '.')),
+        // With a last bite on record the ring leads; before any, a plain title.
+        last ? null : h('h1', { class: 'display gap-s' }, 'Fasting'),
+        last ? null : plannedLine),
       h('div', { class: 'margin' },
-        last ? note('Last bite', fmtWhen(last, key)) : null)),
+        last ? tapNote('Last bite', fmtWhen(last, key), () => editLastBite(app, lastSrc), 'edit-last-bite') : null)),
+    last ? ringHero(ctx, last) : null,
+    last ? plannedLine : null,
     workdayEarly ? h('p', { class: 'statement gap', 'data-testid': 'firm-reminder' }, 'Opening before 16:00 makes today a miss.') : null,
     h('div', { class: 'gap-l' }, button('First bite', () => firstBite(app.ctx(), app), { big: true, name: 'first-bite' })),
     h('p', { class: 'quiet small gap' }, 'Until then: water, sparkling water, black coffee, espresso, plain tea.'),
@@ -81,6 +87,14 @@ function beforeBlock(ctx, app) {
       : null,
     isWorkweekday(key) ? dayOffToggle(ctx, key) : null,
   );
+}
+
+/** Opens the time of whatever was eaten last: a window's last bite, or an entry outside it. */
+function editLastBite(app, src) {
+  if (src.kind === 'window') return showBiteTimeSheet(app, src.day, 'last');
+  if (src.kind === 'outside') return showOutsideTimeSheet(app, src.id);
+  if (src.kind === 'meal') return showMealEditSheet(app, src.id);
+  return showOpeningSheet(app, src.day);
 }
 
 function dayOffToggle(ctx, key) {
@@ -106,7 +120,7 @@ function openBlock(ctx, app, rec) {
     h('div', { class: 'row' },
       h('div', { class: 'main' }, h('div', { class: 'label' }, 'Window open')),
       h('div', { class: 'margin' },
-        note('Opened', fmtWhen(rec.firstBite, ctx.todayKey)),
+        tapNote('Opened', fmtWhen(rec.firstBite, ctx.todayKey), () => showOpeningSheet(app, rec.day), 'edit-opened'),
         note('Closes', fmtTime(closesAt)))),
     h('div', { class: 'gap' },
       live('div', { class: 'countdown', 'data-testid': 'countdown', role: 'timer' }, (t) => fmtCountdown(closesAt - t)),
@@ -151,10 +165,16 @@ function forgotBlock(ctx, app, rec) {
       h('div', { class: 'label' }, 'Window still open'),
       h('p', { class: 'statement gap-s' }, `Your window from ${fmtWhen(rec.firstBite, ctx.todayKey)} is still open.`),
       h('p', { class: 'gap' }, 'When was your last bite?'),
-      h('div', { class: 'gap' }, timeField({ minutes: draft.minutes, name: 'forgot-last-bite', onChange: (m) => { draft.minutes = m; } })),
+      h('div', { class: 'gap' }, timeField({
+        minutes: draft.minutes,
+        fallback: minutesOfDay(rec.firstBite + WINDOW_MS),
+        hint: draft.minutes == null ? 'Roll to your last bite.' : '',
+        name: 'forgot-last-bite',
+        onChange: (m) => { draft.minutes = m; },
+      })),
       draft.hint ? h('p', { class: 'quiet small gap-s' }, draft.hint) : null,
       h('div', { class: 'gap-l' }, button('Close the window', async () => {
-        if (draft.minutes == null) { draft.hint = 'Enter the time of your last bite, like 21:00.'; draw(); return; }
+        if (draft.minutes == null) { draft.hint = 'Roll the wheel to the time of your last bite.'; draw(); return; }
         const last = timeOnOrAfter(rec.firstBite, draft.minutes);
         if (last > now()) { draft.hint = 'That time is still ahead.'; draw(); return; }
         // Closing also ends any meal left open, at the last bite.
@@ -184,8 +204,8 @@ function closedBlock(ctx, app, rec) {
         h('div', { class: 'label' }, 'Window closed'),
         h('h1', { class: `display gap-s ${success ? 'hl' : 'clay'}`, 'data-testid': 'window-length' }, fmtDuration(e.lengthMs))),
       h('div', { class: 'margin' },
-        note('First bite', fmtTime(rec.firstBite)),
-        note('Last bite', fmtWhen(rec.lastBite, ctx.todayKey)))),
+        tapNote('First bite', fmtTime(rec.firstBite), () => showBiteTimeSheet(app, rec.day, 'first'), 'edit-first-bite'),
+        tapNote('Last bite', fmtWhen(rec.lastBite, ctx.todayKey), () => showBiteTimeSheet(app, rec.day, 'last'), 'edit-last-bite'))),
     success
       ? h('p', { class: 'statement gap', 'data-testid': 'result' }, 'Success. All eating inside the window.')
       : h('div', { class: 'gap', 'data-testid': 'result' }, e.reasons.map((r) => h('p', { class: 'statement clay' }, reasonLine(r, e)))),

@@ -7,6 +7,7 @@ import { fmtMinutes, toMinutes } from '../core/time.js';
 import { icsTimes } from '../core/ics.js';
 import { VERSION } from '../version.js';
 import { ago, header, note } from './shared.js';
+import { openSheet, sheetHead } from './sheet.js';
 
 function timeSetting(label, key, ctx) {
   return timeField({
@@ -15,6 +16,41 @@ function timeSetting(label, key, ctx) {
     name: key,
     onChange: (m) => store.setSettings({ [key]: fmtMinutes(m) }),
   });
+}
+
+const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+/** Reset asks twice: what goes (with a backup offer), then that it is final. */
+function showResetSheet(app) {
+  const confirmFirst = (api) => h('div', {},
+    sheetHead(api, 'Reset'),
+    h('p', { class: 'statement' }, 'Delete all history?'),
+    h('p', { class: 'gap' }, 'This removes every window, meal, check-in, temptation and weigh-in from this iPhone. Your planned times and reminders stay.'),
+    h('p', { class: 'small quiet gap-s' }, 'A backup first lets you bring everything back later.'),
+    h('div', { class: 'stack gap-l' },
+      button('Back up first', () => app.backup(), { kind: 'secondary', name: 'reset-backup' }),
+      button('Continue', () => api.replace(confirmFinal), { block: true, name: 'reset-continue' }),
+      button('Keep my data', () => api.close(), { kind: 'secondary', name: 'reset-keep' })));
+
+  const confirmFinal = (api) => {
+    const d = store.data();
+    const windows = [...d.days.values()].filter((r) => r.firstBite).length;
+    return h('div', {},
+      sheetHead(api, 'Reset'),
+      h('p', { class: 'statement', 'data-testid': 'reset-final' }, 'This cannot be undone.'),
+      h('p', { class: 'gap' },
+        `${plural(windows, 'window')}, ${plural(d.meals.length, 'meal')}, ${plural(d.weights.size, 'weigh-in')} and ${plural(d.temptations.length, 'temptation')} will be deleted for good.`),
+      h('div', { class: 'stack gap-l' },
+        button('Delete all history', async () => {
+          await store.resetHistory();
+          await api.close();
+          app.go('today');
+          app.flash('All history deleted.');
+        }, { block: true, name: 'reset-confirm' }),
+        button('Keep my data', () => api.close(), { kind: 'secondary', name: 'reset-keep' })));
+  };
+
+  openSheet(confirmFirst, { name: 'reset', label: 'Reset' });
 }
 
 export function isStandalone() {
@@ -87,6 +123,10 @@ export function renderMore(ctx, app) {
     h('section', { class: 'section', 'data-block': 'help' },
       h('div', { class: 'label' }, 'Help'),
       h('div', { class: 'gap-s' }, button('Weight Shortcut and Home Screen setup', () => app.go('help'), { kind: 'secondary', name: 'help' }))),
+    h('section', { class: 'section', 'data-block': 'reset' },
+      h('div', { class: 'label' }, 'Reset'),
+      h('p', { class: 'small gap-s' }, 'Delete all history and start again. Your planned times and reminders stay.'),
+      h('div', { class: 'gap-s' }, button('Reset all history', () => showResetSheet(app), { kind: 'secondary', name: 'reset' }))),
     h('div', { class: 'row gap-l' },
       h('div', { class: 'main' }),
       h('div', { class: 'margin' }, note('Version', VERSION))),

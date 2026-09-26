@@ -68,8 +68,17 @@ const stamp = (ts) => floorToMinute(ts == null ? now() : ts);
 // ---------- Settings ----------
 
 export async function setSettings(values) {
-  await db.putMany('settings', Object.entries(values).map(([key, value]) => ({ key, value })));
+  // In memory first, so a redraw while the write is under way already shows
+  // the new value (a time wheel rebuilt from the old one would undo a roll).
+  const before = Object.fromEntries(Object.keys(values).map((k) => [k, state.settings[k]]));
   Object.assign(state.settings, values);
+  try {
+    await db.putMany('settings', Object.entries(values).map(([key, value]) => ({ key, value })));
+  } catch (err) {
+    Object.assign(state.settings, before);
+    changed();
+    throw err;
+  }
   changed();
 }
 
@@ -310,6 +319,22 @@ export async function saveWeights(entries) {
   await db.putMany('weights', [...entries].map(([date, kg]) => ({ date, kg, importedAt: at })));
   for (const [date, kg] of entries) state.weights.set(date, kg);
   await setSettings({ lastImportAt: at });
+}
+
+// ---------- Reset ----------
+
+/**
+ * Deletes all history (windows, meals, eating outside the window,
+ * temptations, weigh-ins) and keeps the settings. Tracking starts again now.
+ */
+export async function resetHistory() {
+  const kept = { ...state.settings, installedAt: now(), lastBackupAt: null, lastImportAt: null };
+  await db.replaceAll({
+    days: [], meals: [], outside: [], temptations: [], weights: [],
+    settings: Object.entries(kept).map(([key, value]) => ({ key, value })),
+  });
+  await load();
+  changed();
 }
 
 // ---------- Restore ----------

@@ -1,7 +1,7 @@
-// Shared controls: rating scales, choices, the 24-hour time field, fields.
+// Shared controls: rating scales, choices, the rolling 24-hour time wheel, fields.
 
 import { h } from './dom.js';
-import { fmtMinutes, parseClock } from '../core/time.js';
+import { minutesOfDay, now } from '../core/time.js';
 
 let uid = 0;
 const nextId = (p) => `${p}-${++uid}`;
@@ -65,63 +65,163 @@ export function choice({ options, value, onChange, label, cols = 3, name }) {
   return h('div', { class: 'choice-wrap' }, label ? h('div', { class: 'label field-label', id: labelId }, label) : null, grid);
 }
 
+// ---------- Rolling time wheel ----------
+
+const ROW = 36; // px per row; five rows show, the middle one is selected
+
 /**
- * 24-hour time field (HH:MM). Always 24-hour, whatever the phone's setting.
- * onChange(minutes) fires with a valid time; invalid input restores the last value.
+ * One rolling column (hours or minutes). Scroll-snap does the rolling; the
+ * value is committed when it comes to rest, or at once on a tap or arrow key.
+ * Our own positioning never counts as a choice: only touch, wheel or keys do.
  */
-export function timeField({ minutes, onChange, label, hint, name }) {
-  const id = nextId('time');
-  let current = minutes;
-  const input = h('input', {
-    id,
-    class: 'field time',
-    type: 'text',
-    inputmode: 'numeric',
-    autocomplete: 'off',
-    autocorrect: 'off',
-    spellcheck: 'false',
-    maxlength: '5',
-    placeholder: 'HH:MM',
-    'aria-label': label || 'Time',
-    dataset: { time: name || '' },
-    value: current == null ? '' : fmtMinutes(current),
+function wheelColumn({ count, index, label, part, onSettle }) {
+  const col = h('div', {
+    class: 'wheel-col',
+    tabindex: '0',
+    role: 'spinbutton',
+    'aria-label': label,
+    'aria-valuemin': '0',
+    'aria-valuemax': String(count - 1),
+    'data-part': part,
   });
-  const hintEl = h('span', { class: 'field-hint' }, hint || '');
-  const commit = () => {
-    const parsed = parseClock(input.value.replace(/[^\d:.]/g, ''));
-    if (parsed == null) {
-      input.value = current == null ? '' : fmtMinutes(current);
-      if (input.value !== '' || current != null) hintEl.textContent = 'Use 24-hour time, like 17:30.';
-      return;
+  const items = Array.from({ length: count }, (_, i) => h('div', { class: 'wheel-item', 'data-value': String(i), 'aria-hidden': 'true' }, String(i).padStart(2, '0')));
+  col.append(h('div', { class: 'wheel-pad', 'aria-hidden': 'true' }), ...items, h('div', { class: 'wheel-pad', 'aria-hidden': 'true' }));
+
+  let current = index;
+  let shown = -1;
+  let touched = false;
+  let timer = null;
+  const clamp = (i) => Math.max(0, Math.min(count - 1, i));
+  const nearest = () => clamp(Math.round(col.scrollTop / ROW));
+  const paint = (i) => {
+    if (i === shown) return;
+    for (const j of [shown - 2, shown - 1, shown, shown + 1, shown + 2]) if (items[j]) items[j].className = 'wheel-item';
+    for (const [j, cls] of [[i - 2, 'far'], [i - 1, 'near'], [i, 'on'], [i + 1, 'near'], [i + 2, 'far']]) {
+      if (items[j]) items[j].className = `wheel-item ${cls}`;
     }
-    input.value = fmtMinutes(parsed);
-    hintEl.textContent = hint || '';
-    if (parsed !== current) {
-      current = parsed;
-      onChange(parsed);
+    shown = i;
+    col.setAttribute('aria-valuenow', String(i));
+    col.setAttribute('aria-valuetext', String(i).padStart(2, '0'));
+  };
+  const choose = (i) => {
+    paint(i);
+    if (i !== current) {
+      current = i;
+      onSettle();
     }
   };
-  input.addEventListener('input', () => {
-    const digits = input.value.replace(/\D/g, '').slice(0, 4);
-    if (!input.value.includes(':') && digits.length === 4) input.value = `${digits.slice(0, 2)}:${digits.slice(2)}`;
+  const settle = () => {
+    clearTimeout(timer);
+    timer = null;
+    // Saving redraws the screen; a column already replaced has no position to read.
+    if (touched && col.isConnected) choose(nearest());
+  };
+  col.addEventListener('scroll', () => {
+    if (!col.isConnected) return;
+    paint(nearest());
+    clearTimeout(timer);
+    timer = setTimeout(settle, 140);
+  }, { passive: true });
+  col.addEventListener('scrollend', settle);
+  for (const type of ['pointerdown', 'touchstart', 'wheel']) col.addEventListener(type, () => { touched = true; }, { passive: true });
+  col.addEventListener('keydown', (e) => {
+    if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+    e.preventDefault();
+    touched = true;
+    const i = clamp(shown + (e.key === 'ArrowDown' ? 1 : -1));
+    col.scrollTop = i * ROW;
+    choose(i);
   });
-  input.addEventListener('change', commit);
-  input.addEventListener('blur', commit);
-  input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      input.blur();
+  items.forEach((it, j) => it.addEventListener('click', () => {
+    touched = true;
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    col.scrollTo({ top: j * ROW, behavior: reduce ? 'auto' : 'smooth' });
+    choose(j);
+  }));
+
+  // Position once the column is on screen and has a size.
+  const place = () => {
+    col.scrollTop = current * ROW;
+    paint(current);
+  };
+  const ro = new ResizeObserver(() => {
+    if (col.clientHeight > 0) {
+      if (!touched) place();
+      ro.disconnect();
     }
   });
-  input.addEventListener('focus', () => input.select());
-  const wrap = h('div', { class: 'time-wrap' },
-    label ? h('label', { class: 'label field-label', for: id }, label) : null,
-    h('div', { class: 'time-row' }, input, hintEl),
+  ro.observe(col);
+  paint(current);
+
+  return {
+    col,
+    index: () => current,
+    set(i) {
+      current = clamp(i);
+      touched = false;
+      place();
+    },
+  };
+}
+
+/**
+ * 24-hour time wheel: hours and minutes that roll, like the iPhone clock,
+ * always in 24-hour form. onChange(minutes) fires when a new time settles.
+ * minutes may be null (not set yet): the wheel then shows `fallback` quietly
+ * until it is rolled. With allowUnset, a Clear button sets it back to null.
+ */
+export function timeField({ minutes, onChange, label, hint, name, fallback = null, allowUnset = false }) {
+  const id = nextId('time');
+  let value = minutes;
+  const start = minutes ?? fallback ?? minutesOfDay(now());
+  const wheel = h('div', { class: `wheel${value == null ? ' unset' : ''}`, role: 'group', 'aria-labelledby': label ? id : null, 'aria-label': label ? null : 'Time' });
+  const hintEl = h('div', { class: 'field-hint' }, value == null ? (hint || 'Roll to set.') : hint || '');
+  const commit = () => {
+    const m = hours.index() * 60 + mins.index();
+    wheel.classList.remove('unset');
+    hintEl.textContent = hint || '';
+    if (clearBtn) clearBtn.hidden = false;
+    if (m !== value) {
+      value = m;
+      onChange(m);
+    }
+  };
+  const hours = wheelColumn({ count: 24, index: Math.floor(start / 60), label: 'Hours', part: 'hour', onSettle: commit });
+  const mins = wheelColumn({ count: 60, index: start % 60, label: 'Minutes', part: 'minute', onSettle: commit });
+  wheel.append(hours.col, h('div', { class: 'wheel-sep', 'aria-hidden': 'true' }, ':'), mins.col, h('div', { class: 'wheel-lens', 'aria-hidden': 'true' }));
+
+  const clearBtn = allowUnset
+    ? h('button', {
+      type: 'button',
+      class: 'btn-2',
+      'data-action': `clear-${name || 'time'}`,
+      hidden: value == null,
+      onclick: () => {
+        value = null;
+        wheel.classList.add('unset');
+        hintEl.textContent = hint || 'Roll to set.';
+        clearBtn.hidden = true;
+        onChange(null);
+      },
+    }, 'Clear')
+    : null;
+
+  const wrap = h('div', { class: 'time-wrap', dataset: { time: name || '' } },
+    label ? h('div', { class: 'label field-label', id }, label) : null,
+    wheel,
+    h('div', { class: 'time-foot' }, hintEl, clearBtn),
   );
   wrap.set = (m) => {
-    current = m;
-    input.value = m == null ? '' : fmtMinutes(m);
+    value = m;
+    if (m == null) {
+      wheel.classList.add('unset');
+      return;
+    }
+    wheel.classList.remove('unset');
+    hours.set(Math.floor(m / 60));
+    mins.set(m % 60);
   };
+  Object.defineProperty(wrap, 'value', { get: () => value });
   return wrap;
 }
 

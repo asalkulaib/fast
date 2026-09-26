@@ -1,5 +1,6 @@
 // Screenshots of every screen and state at 390 x 844 for design review, plus
 // a contrast audit of every visible piece of text in each state.
+import { mkdir, writeFile } from 'node:fs/promises';
 import { test, expect, openAt, seed, advance, tap, pick, choose, sheet, settings, ms } from './helpers.js';
 import { WEEK } from './seed-data.js';
 
@@ -36,7 +37,7 @@ async function audit(page) {
       const text = node.textContent.trim();
       if (!text) continue;
       const el = node.parentElement;
-      if (el.closest('[hidden], button[disabled], [aria-hidden="true"]')) continue;
+      if (el.closest('[hidden], button[disabled]')) continue;
       const cs = getComputedStyle(el);
       if (cs.visibility === 'hidden' || cs.display === 'none' || Number(cs.opacity) === 0) continue;
       const rect = el.getBoundingClientRect();
@@ -53,19 +54,51 @@ async function audit(page) {
   });
 }
 
+/** The project sits in a synced folder that can hold a file for a moment: retry the write. */
+async function save(path, png) {
+  await mkdir(DIR, { recursive: true });
+  for (let i = 0; ; i++) {
+    try {
+      return await writeFile(path, png);
+    } catch (err) {
+      if (i >= 5) throw err;
+      await new Promise((r) => setTimeout(r, 300));
+    }
+  }
+}
+
 async function shot(page, name, { full = false } = {}) {
   await page.waitForTimeout(450); // let fades settle
-  await page.screenshot({ path: `${DIR}/${name}.png`, fullPage: full });
+  await save(`${DIR}/${name}.png`, await page.screenshot({ fullPage: full }));
   expect(await audit(page), `contrast on ${name}`).toEqual([]);
 }
 
 const install = settings({ installedAt: ms('2026-09-20T08:00'), lastBackupAt: ms('2026-09-26T08:00'), lastImportAt: ms('2026-09-26T09:00') });
+
+/** Sixty days of windows up to Saturday 26 September; weekends open earlier; one day unlogged. */
+function sixtyDays() {
+  const DAY = 86_400_000;
+  const base = ms('2026-07-29T00:00');
+  const days = [];
+  for (let i = 0; i < 60; i++) {
+    if (i === 12) continue;
+    const key = new Date(base + i * DAY + 3 * 3_600_000).toISOString().slice(0, 10);
+    const weekend = [5, 6].includes(new Date(`${key}T12:00:00Z`).getUTCDay());
+    const start = (weekend ? 13 * 60 : 16 * 60 + 30) + ((i * 37) % 150);
+    const length = 150 + ((i * 53) % 110);
+    const firstBite = base + i * DAY + start * 60_000;
+    days.push({ day: key, firstBite, lastBite: firstBite + length * 60_000 });
+  }
+  return days;
+}
 
 test('today: before the window', async ({ page }) => {
   await openAt(page, '2026-09-27T13:10');
   await seed(page, { ...WEEK, settings: install });
   await shot(page, '01-today-before-workday');
   await shot(page, '01b-today-before-full', { full: true });
+  await tap(page, 'edit-last-bite');
+  await shot(page, '01f-last-bite-sheet');
 });
 
 test('today: fasting stages', async ({ page }) => {
@@ -224,13 +257,38 @@ test('week, day, weight, more, help', async ({ page }) => {
   await page.locator('.tab[data-tab="more"]').click();
   await shot(page, '34-more');
   await shot(page, '34b-more-full', { full: true });
+  await tap(page, 'reset');
+  await shot(page, '38-reset-first');
+  await tap(page, 'reset-continue');
+  await shot(page, '39-reset-final');
+  await tap(page, 'reset-keep');
   await tap(page, 'help');
   await shot(page, '35-help', { full: true });
+});
+
+test('history: fast and feast, bars and line, ranges, table', async ({ page }) => {
+  await openAt(page, '2026-09-26T23:00', '#history');
+  await seed(page, { days: sixtyDays(), settings: install });
+  await shot(page, '40-history-fast-bars-30');
+  await choose(page, 'history-chart', 'line');
+  await shot(page, '41-history-fast-line-30');
+  await choose(page, 'history-metric', 'feast');
+  await choose(page, 'history-range', '90');
+  await shot(page, '42-history-feast-line-90');
+  await choose(page, 'history-chart', 'bars');
+  await shot(page, '42b-history-feast-bars-90');
+  await choose(page, 'history-range', '7');
+  await page.getByTestId('history-chart').locator('rect[data-day="2026-09-23"]').click();
+  await shot(page, '43-history-feast-bars-7');
+  await tap(page, 'history-toggle-table');
+  await shot(page, '44-history-table', { full: true });
 });
 
 test('weight: empty, import page', async ({ page }) => {
   await openAt(page, '2026-09-27T09:00', '#weight');
   await shot(page, '36-weight-empty');
+  await page.locator('.tab[data-tab="history"]').click();
+  await shot(page, '45-history-empty');
   await page.goto('./import/#w=2026-09-20:104.6,2026-09-21:104.3,2026-09-22:104.1');
   await expect(page.getByTestId('import-result')).toBeVisible();
   await shot(page, '37-import-page');

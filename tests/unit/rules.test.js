@@ -40,14 +40,6 @@ test('time: formatting and parsing', () => {
   assert.equal(time.fmtCountdown(30000), '0:01');
   assert.equal(time.fmtCountdown(0), '0:00');
   assert.equal(time.fmtTimer(9 * MIN + 59500), '10:00');
-  assert.equal(time.parseClock('17:30'), 1050);
-  assert.equal(time.parseClock('1730'), 1050);
-  assert.equal(time.parseClock('7:05'), 425);
-  assert.equal(time.parseClock('705'), 425);
-  assert.equal(time.parseClock('9'), 540);
-  assert.equal(time.parseClock('24:00'), null);
-  assert.equal(time.parseClock('12:60'), null);
-  assert.equal(time.parseClock('abc'), null);
   assert.equal(time.fmtTime(T('2026-09-20T07:05')), '07:05');
   assert.equal(time.fmtDayLong(FRI), 'Friday 25 September');
   assert.equal(time.fmtWhen(T('2026-09-24T21:05'), FRI), '21:05 yesterday');

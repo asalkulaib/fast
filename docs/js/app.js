@@ -13,6 +13,7 @@ import { buildBackup, backupFileName, describeBackup, parseBackup } from './core
 import { renderToday, signature as todaySignature } from './ui/today.js';
 import { renderWeek } from './ui/week.js';
 import { renderDay } from './ui/day.js';
+import { renderHistory } from './ui/history.js';
 import { renderWeight } from './ui/weight.js';
 import { renderMore } from './ui/more.js';
 import { renderHelp } from './ui/help.js';
@@ -28,7 +29,7 @@ const view = document.getElementById('view');
 const tabbar = document.getElementById('tabbar');
 const sheetRoot = document.getElementById('sheet-root');
 
-const ROUTES = ['today', 'week', 'day', 'weight', 'more', 'help'];
+const ROUTES = ['today', 'week', 'day', 'history', 'weight', 'more', 'help'];
 let route = parseRoute(location.hash);
 let lastSignature = '';
 let lastStateKey = '';
@@ -73,6 +74,7 @@ function renderRoute(ctx) {
   switch (route.name) {
     case 'week': return renderWeek(ctx, app, route.arg);
     case 'day': return renderDay(ctx, app, route.arg);
+    case 'history': return renderHistory(ctx, app);
     case 'weight': return renderWeight(ctx, app);
     case 'more': return renderMore(ctx, app);
     case 'help': return renderHelp(ctx, app);
@@ -249,7 +251,7 @@ async function restoreFrom(file) {
 }
 
 export const app = {
-  ui: { showPaste: false, showTable: false },
+  ui: { showPaste: false, showTable: false, showHistoryTable: false },
   ctx: context,
   go(path) {
     const target = `#${path}`;

@@ -88,6 +88,29 @@ export function showFirstBiteSheet(app, initialKey) {
   let key = initialKey;
   const draft = { name: '', hungerBefore: null };
   let hint = '';
+  // The wheel saves as soon as it comes to rest; a refused time rolls back.
+  const firstBiteField = (rec) => {
+    const hintEl = h('p', { class: 'small gap-s', 'data-testid': 'first-bite-hint' }, hint);
+    const field = timeField({
+      label: 'First bite at',
+      minutes: minutesOfDay(rec.firstBite),
+      name: 'first-bite',
+      onChange: async (m) => {
+        const ts = resolveFirstBite(key, m);
+        const moved = ts == null ? { error: 'That time is still ahead.' } : await store.moveFirstBite(key, ts);
+        if (moved.error) {
+          hint = moved.error;
+          const cur = store.state.days.get(key);
+          if (cur && cur.firstBite) field.set(minutesOfDay(cur.firstBite));
+        } else {
+          key = moved.key;
+          hint = '';
+        }
+        hintEl.textContent = hint;
+      },
+    });
+    return h('section', { class: 'section gap-l' }, field, hintEl);
+  };
   openSheet((api) => {
     const ctx = app.ctx();
     const rec = ctx.days.get(key);
@@ -98,24 +121,7 @@ export function showFirstBiteSheet(app, initialKey) {
         h('p', { class: 'statement' }, 'Protein and vegetables first.'),
         h('p', { class: 'statement' }, 'Eat slowly.'),
         h('p', { class: 'statement' }, 'Pause halfway.')),
-      h('section', { class: 'section gap-l' },
-        timeField({
-          label: 'First bite at',
-          minutes: minutesOfDay(rec.firstBite),
-          name: 'first-bite',
-          hint,
-          onChange: async (m) => {
-            const ts = resolveFirstBite(key, m);
-            if (ts == null) {
-              hint = 'That time is still ahead.';
-            } else {
-              const moved = await store.moveFirstBite(key, ts);
-              if (moved.error) hint = moved.error;
-              else { key = moved.key; hint = ''; }
-            }
-            api.rerender();
-          },
-        })),
+      firstBiteField(rec),
       nameSection(ctx, draft, api),
       h('section', { class: 'section' }, hungerScale(draft)),
       h('div', { class: 'gap' }, button('Start eating', async () => {
@@ -210,8 +216,20 @@ export function showDoneEatingSheet(app, windowKey) {
   openSheet((api) => {
     const rec = store.state.days.get(windowKey);
     if (!rec || !rec.firstBite) return h('div', {}, sheetHead(api, "I'm done eating"), h('p', {}, 'No window is open.'));
-    const lastBite = timeOnOrAfter(rec.firstBite, draft.minutes);
-    const future = lastBite > now() + MIN;
+    const lastBite = () => timeOnOrAfter(rec.firstBite, draft.minutes);
+    const future = () => lastBite() > now() + MIN;
+    const summaryText = () => (future()
+      ? 'That time is still ahead.'
+      : `Window ${fmtTime(rec.firstBite)} to ${fmtTime(lastBite())}, ${fmtDuration(lastBite() - rec.firstBite)}.`);
+    // The summary follows the wheel without redrawing the sheet.
+    const summary = h('p', { class: 'quiet small gap-s', 'data-testid': 'done-summary' }, summaryText());
+    const closeBtn = button('Close the window', async () => {
+      if (future()) return;
+      const last = lastBite();
+      if (open) await store.finishMeal(open.id, { finishedAt: Math.max(last, open.startedAt), stop: draft.stop, fullnessNow: draft.fullnessNow });
+      await store.closeWindow(windowKey, last);
+      api.close();
+    }, { block: true, name: 'close-window', disabled: future() });
     return h('div', {},
       sheetHead(api, "I'm done eating"),
       open
@@ -221,15 +239,13 @@ export function showDoneEatingSheet(app, windowKey) {
           h('section', { class: 'section' }, fullnessScale(draft)))
         : null,
       h('section', { class: 'section' },
-        timeField({ label: 'Last bite at', minutes: draft.minutes, name: 'last-bite', onChange: (m) => { draft.minutes = m; api.rerender(); } }),
-        h('p', { class: 'quiet small gap-s' },
-          future ? 'That time is still ahead.' : `Window ${fmtTime(rec.firstBite)} to ${fmtTime(lastBite)}, ${fmtDuration(lastBite - rec.firstBite)}.`)),
-      h('div', { class: 'gap' }, button('Close the window', async () => {
-        if (future) return;
-        if (open) await store.finishMeal(open.id, { finishedAt: Math.max(lastBite, open.startedAt), stop: draft.stop, fullnessNow: draft.fullnessNow });
-        await store.closeWindow(windowKey, lastBite);
-        api.close();
-      }, { block: true, name: 'close-window', disabled: future })),
+        timeField({ label: 'Last bite at', minutes: draft.minutes, name: 'last-bite', onChange: (m) => {
+          draft.minutes = m;
+          summary.textContent = summaryText();
+          closeBtn.disabled = future();
+        } }),
+        summary),
+      h('div', { class: 'gap' }, closeBtn),
     );
   }, { name: 'done-eating', label: "I'm done eating" });
 }
@@ -283,7 +299,7 @@ export function showMealEditSheet(app, mealId) {
       h('section', { class: 'section' },
         h('div', { class: 'btn-pair' },
           timeField({ label: 'Started', minutes: draft.minutes, name: 'edit-start', onChange: (m) => { draft.minutes = m; } }),
-          timeField({ label: 'Finished', minutes: draft.finishMinutes, name: 'edit-finish', onChange: (m) => { draft.finishMinutes = m; } }))),
+          timeField({ label: 'Finished', minutes: draft.finishMinutes, name: 'edit-finish', allowUnset: true, fallback: draft.minutes, hint: draft.finishMinutes == null ? 'Still eating' : '', onChange: (m) => { draft.finishMinutes = m; } }))),
       h('section', { class: 'section' }, hungerScale(draft)),
       h('section', { class: 'section' }, stopChoice(draft)),
       h('section', { class: 'section' }, fullnessScale(draft)),
