@@ -6,7 +6,8 @@ import { button, choice, scale, TRIGGER_OPTIONS } from './components.js';
 import { openSheet } from './sheet.js';
 import * as store from '../store.js';
 import { HOUR, MIN, at, fmtDuration, fmtMinutes, fmtTime, fmtTimer, minutesOfDay, now } from '../core/time.js';
-import { CUTOFF_MIN, WINDOW_MS, isWorkday, lateNightDay, plannedStartMin } from '../core/rules.js';
+import { CUTOFF_MIN, isWorkday, lateNightDay, plannedStartMin } from '../core/rules.js';
+import { SUMMIT, climbers } from '../core/climb.js';
 import { energySplit } from '../core/review.js';
 import { openWindowNow } from './meal.js';
 import { nextWindowLine, note } from './shared.js';
@@ -121,13 +122,19 @@ function gains(ctx, sit) {
   const streak = ctx.streak.current;
   const days = (n) => `${n} ${n === 1 ? 'day' : 'days'}`;
   const lastRes = sit.lastDay ? ctx.evaluate(sit.lastDay).result : null;
-  if (sit.kind === 'after' && lastRes === 'success') out.push(`Today stays a success. Your streak: ${days(streak)}.`);
+  const fast = climbers(ctx).fast;
+  if (fast.on) {
+    // The fast climber on Uhud: a step for each successful day.
+    const place = `Your fast climber is on step ${fast.step} of ${SUMMIT} up Uhud.`;
+    if ((sit.kind === 'after' || sit.kind === 'late') && lastRes === 'success') out.push(`${sit.kind === 'late' ? 'Last night' : 'Today'} stays a success. ${place}`);
+    else out.push(`${place} Today's window, kept, is one more step.`);
+  } else if (sit.kind === 'after' && lastRes === 'success') out.push(`Today stays a success. Your streak: ${days(streak)}.`);
   else if (sit.kind === 'late' && lastRes === 'success') out.push(`Last night stays a success. Your streak: ${days(streak)}.`);
   else if (streak > 0) out.push(`Your streak: ${days(streak)}, ${streak + 1} if today holds.`);
   else out.push('Today can start a new streak.');
   if (waiting) {
     const start = plannedStartMin(today, rec, ctx.settings);
-    out.push(`A window that fits today: ${fmtMinutes(start)} to ${fmtMinutes(start + 240)}.`);
+    out.push(`A window that fits today: ${fmtMinutes(start)} to ${fmtMinutes(start + ctx.windowMsFor(today) / MIN)}.`);
   }
   return out;
 }
@@ -199,7 +206,7 @@ function render(app, api, id) {
             live('span', {}, (ts) => `That is ${fmtDuration(Math.max(0, plannedTs - ts))} away.`))
           : h('p', { class: 'statement' }, 'Your planned time has come. Open the window when you sit down to eat.');
       } else if (sit.kind === 'open') {
-        lead = h('p', { class: 'statement' }, `Your window is open until ${fmtTime(ctx.openRec.firstBite + WINDOW_MS)}. Eat inside it.`);
+        lead = h('p', { class: 'statement' }, `Your window is open until ${fmtTime(ctx.openRec.firstBite + ctx.windowMsFor(ctx.openRec.day))}. Eat inside it.`);
       } else {
         lead = h('p', { class: 'statement' }, nextWindowLine(ctx, sit.lastDay));
       }
@@ -265,15 +272,16 @@ function render(app, api, id) {
     case 'cant': {
       const blocks = [];
       if (sit.kind === 'open') {
-        blocks.push(h('p', { class: 'statement' }, `Your window is open until ${fmtTime(ctx.openRec.firstBite + WINDOW_MS)}. Eat inside it.`));
+        blocks.push(h('p', { class: 'statement' }, `Your window is open until ${fmtTime(ctx.openRec.firstBite + ctx.windowMsFor(ctx.openRec.day))}. Eat inside it.`));
       }
       if (sit.kind === 'before' || sit.kind === 'late') {
+        const clock = `${Math.round(ctx.windowMsFor(today) / (60 * MIN))}-hour clock`;
         const workdayEarly = isWorkday(today, todayRec) && minutesOfDay(ctx.nowTs) < CUTOFF_MIN;
         blocks.push(h('section', { class: 'section flush' },
           h('p', { class: 'statement' }, 'Open the window now'),
-          h('p', { class: 'gap-s' }, 'This starts your 4-hour clock. Everything you eat fits by ', hl(fmtTime(ctx.nowTs + WINDOW_MS)), '.'),
+          h('p', { class: 'gap-s' }, `This starts your ${clock}. Everything you eat fits by `, hl(fmtTime(ctx.nowTs + ctx.windowMsFor(today))), '.'),
           workdayEarly ? h('p', { class: 'gap-s' }, 'Today is a workday and it is before 16:00, so today will count as a miss.') : null,
-          h('div', { class: 'gap' }, button('Start the 4-hour clock', openNow, { block: true, name: 'open-now' }))));
+          h('div', { class: 'gap' }, button(`Start the ${clock}`, openNow, { block: true, name: 'open-now' }))));
       }
       if (sit.kind === 'after' || sit.kind === 'late') {
         blocks.push(h('section', { class: blocks.length ? 'section' : 'section flush' },
@@ -310,7 +318,7 @@ function render(app, api, id) {
     default: {
       let line;
       if (sit.kind === 'before') line = `Your window opens at ${fmtMinutes(plannedStartMin(today, todayRec, ctx.settings))}.`;
-      else if (sit.kind === 'open') line = `Your window is open until ${fmtTime(ctx.openRec.firstBite + WINDOW_MS)}.`;
+      else if (sit.kind === 'open') line = `Your window is open until ${fmtTime(ctx.openRec.firstBite + ctx.windowMsFor(ctx.openRec.day))}.`;
       else line = nextWindowLine(ctx, sit.lastDay);
       return h('div', {}, head,
         h('h1', { class: 'display' }, 'Held.'),

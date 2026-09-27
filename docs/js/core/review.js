@@ -3,6 +3,7 @@
 import { addDays, minutesOfDay } from './time.js';
 import { CUTOFF_MIN, isPaused, isWorkday, makeEvaluator, streaks } from './rules.js';
 import { weekSummary } from './weight.js';
+import { LEFT_WANTING, dayFullness, mealsByDay } from './fullness.js';
 
 export const TRIGGERS = ['hunger', 'boredom', 'social', 'stress', 'tired', 'other'];
 
@@ -53,7 +54,7 @@ function rank(items, keyOf) {
 export function weekReview(data, { weekStartKey, todayKey, nowTs, startKey }) {
   const keys = Array.from({ length: 7 }, (_, i) => addDays(weekStartKey, i));
   const inWeek = new Set(keys);
-  const evaluate = makeEvaluator({ days: data.days, outside: data.outside, nowTs, todayKey, startKey });
+  const evaluate = makeEvaluator({ days: data.days, outside: data.outside, nowTs, todayKey, startKey, settings: data.settings });
   const evals = keys.map((k) => ({ ...evaluate(k), future: k > todayKey }));
 
   const successCount = evals.filter((e) => e.result === 'success').length;
@@ -85,6 +86,9 @@ export function weekReview(data, { weekStartKey, todayKey, nowTs, startKey }) {
   const pairs = meals.filter((m) => m.fullnessNow != null && m.fullness20 != null);
   const avgRise = mean(pairs.map((m) => m.fullness20 - m.fullnessNow));
   const avgAt20 = mean(meals.filter((m) => m.fullness20 != null).map((m) => m.fullness20));
+  // Fullness counts on every day, paused ones included.
+  const byDay = mealsByDay(data.meals);
+  const leftWantingDays = keys.filter((k) => dayFullness(byDay.get(k) || [], data.days.get(k)) === LEFT_WANTING).length;
 
   // Temptations
   const temptations = data.temptations.filter((t) => inWeek.has(t.day) && tracked(t.day));
@@ -111,6 +115,7 @@ export function weekReview(data, { weekStartKey, todayKey, nowTs, startKey }) {
       pairs: pairs.length,
       avgRise,
       avgAt20,
+      leftWantingDays,
     },
     temptations: {
       count: temptations.length,

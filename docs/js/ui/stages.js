@@ -1,7 +1,8 @@
 // Fasting stages on Today: a 24-hour ring timed from the last bite, shown
-// only while fasting. Never a goal: no targets, no pass or fail.
-// The hours already fasted fill the ring in warm rock; a gold marker shows
-// the present; a line icon marks each stage, the current one in gold.
+// only while fasting. The hours already fasted fill the ring in warm rock; a
+// gold marker shows the present; a cream tick marks the fasting goal (the
+// day less the eating window); a line icon marks each stage, the current
+// one in gold. The stages themselves are never a target.
 
 import { h, s, live } from './dom.js';
 import { button } from './components.js';
@@ -20,6 +21,7 @@ const FILL = '#C58E50'; // --rock-400: time already fasted
 const TRACK = '#4B2E14'; // --rock-700: time still ahead on the ring
 const SURFACE = '#05060B'; // --bg: halo around the marker
 const MARK = '#F0B25C'; // --accent: now
+const GOAL = '#E4D2B2'; // --text-body: the fasting goal
 
 // Where each icon sits: beside its stage's arc, and the open-ended last
 // stage at the 24-hour mark where it begins (the top of the ring).
@@ -43,7 +45,7 @@ function arc(h0, h1, stroke) {
   });
 }
 
-function ringSvg(state) {
+function ringSvg(state, goalHours) {
   const now = Math.min(state.elapsedMs / HOUR, SCALE_HOURS);
   const arcs = [];
   for (const st of STAGES.filter((x) => x.from < SCALE_HOURS)) {
@@ -59,6 +61,12 @@ function ringSvg(state) {
     stroke: color, 'stroke-width': w, 'stroke-linecap': 'butt', 'data-testid': testid || null,
     'data-hours': testid ? (state.elapsedMs / HOUR).toFixed(1) : null,
   });
+  const [gx, gy] = point(goalHours, R - WIDTH / 2 - 1);
+  const [hx, hy] = point(goalHours, R + WIDTH / 2 + 1);
+  const goal = s('line', {
+    x1: gx.toFixed(2), y1: gy.toFixed(2), x2: hx.toFixed(2), y2: hy.toFixed(2),
+    stroke: GOAL, 'stroke-width': 2, 'data-testid': 'goal-tick', 'data-hours': String(goalHours),
+  });
   const icons = STAGES.map((st) => {
     const [x, y] = point(ICON_AT[st.key], ICON_R);
     return stageIcon(st.key, { x, y, size: 22, current: st.key === state.stage.key });
@@ -68,11 +76,11 @@ function ringSvg(state) {
     viewBox: `0 0 ${SIZE} ${SIZE}`,
     'aria-hidden': 'true',
     focusable: 'false',
-  }, ...arcs, marker(SURFACE, 8), marker(MARK, 3, 'stage-marker'), ...icons);
+  }, ...arcs, goal, marker(SURFACE, 8), marker(MARK, 3, 'stage-marker'), ...icons);
 }
 
 /** The ring with the time fasted and the stage in its centre. */
-function fastingRing(state, lastBiteTs, compact) {
+function fastingRing(state, lastBiteTs, compact, goalHours) {
   return h('div', {
     class: `ring-wrap${compact ? ' compact' : ''}`,
     role: 'img',
@@ -80,16 +88,24 @@ function fastingRing(state, lastBiteTs, compact) {
     'data-stage': state.stage.key,
     'aria-label': `Fasting for ${fmtDuration(state.elapsedMs)}. Stage: ${state.stage.name}.`,
   },
-    ringSvg(state),
+    ringSvg(state, goalHours),
     h('div', { class: 'ring-centre', 'aria-hidden': 'true' },
       live('div', { class: 'ring-time', 'data-testid': 'fasting-for' }, (t) => fmtElapsed(t - lastBiteTs)),
       h('div', { class: 'ring-stage', 'data-testid': 'stage-name' }, state.stage.name)));
 }
 
-function nextLine(state, lastBiteTs) {
-  if (!state.next) return null;
-  return h('p', { class: 'quiet small gap', 'data-testid': 'stage-next' },
-    live('span', {}, (t) => `Next: ${state.next.name.toLowerCase()}, in about ${fmtDuration(Math.max(0, state.next.from * HOUR - (t - lastBiteTs)))}.`));
+/** How far the fast is from its goal, live. */
+/** Under the ring, live: how far the fasting goal is, then the next stage. */
+function ringLines(state, lastBiteTs, goalHours) {
+  return h('p', { class: 'quiet small gap ring-lines' },
+    live('span', { 'data-testid': 'goal-line' }, (t) => {
+      const left = goalHours * HOUR - (t - lastBiteTs);
+      return left > 0 ? `Fasting goal ${goalHours} h: ${fmtDuration(left)} to go.` : `Fasting goal of ${goalHours} h reached.`;
+    }),
+    state.next
+      ? [h('br'), live('span', { 'data-testid': 'stage-next' },
+        (t) => `Next: ${state.next.name.toLowerCase()}, in about ${fmtDuration(Math.max(0, state.next.from * HOUR - (t - lastBiteTs)))}.`)]
+      : null);
 }
 
 let shownStage = null;
@@ -106,7 +122,9 @@ function markStage(el, state, renderTs) {
 /** Before the window: the ring leads Today. */
 export function ringHero(ctx, lastBiteTs) {
   const state = fastingState(lastBiteTs, ctx.nowTs);
-  return markStage(h('div', { class: 'ring-hero gap' }, fastingRing(state, lastBiteTs, false), nextLine(state, lastBiteTs)), state, ctx.nowTs);
+  const goalHours = 24 - Math.round(ctx.windowMsFor(ctx.todayKey) / HOUR);
+  return markStage(h('div', { class: 'ring-hero gap' },
+    fastingRing(state, lastBiteTs, false, goalHours), ringLines(state, lastBiteTs, goalHours)), state, ctx.nowTs);
 }
 
 /**
@@ -116,9 +134,10 @@ export function ringHero(ctx, lastBiteTs) {
 export function stagesSection(ctx, app, lastBiteTs, { withRing }) {
   if (!lastBiteTs) return null;
   const state = fastingState(lastBiteTs, ctx.nowTs);
+  const goalHours = 24 - Math.round(ctx.windowMsFor(ctx.todayKey) / HOUR);
   return markStage(h('section', { class: 'section', 'data-block': 'stages', 'data-stage': state.stage.key },
     withRing
-      ? [h('div', { class: 'label' }, 'Fasting'), fastingRing(state, lastBiteTs, true), nextLine(state, lastBiteTs)]
+      ? [h('div', { class: 'label' }, 'Fasting'), fastingRing(state, lastBiteTs, true, goalHours), ringLines(state, lastBiteTs, goalHours)]
       : h('div', { class: 'label' }, state.stage.name),
     h('p', { class: 'gap-s' }, state.stage.text),
     h('div', { class: 'gap-s' }, button('About the stages', () => showStagesSheet(), { kind: 'secondary', name: 'about-stages' })),

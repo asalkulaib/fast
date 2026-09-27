@@ -1,7 +1,7 @@
 // Screenshots of every screen and state at 390 x 844 for design review, plus
 // a contrast audit of every visible piece of text in each state.
 import { mkdir, writeFile } from 'node:fs/promises';
-import { test, expect, openAt, seed, advance, tap, pick, choose, sheet, setDate, setTime, settings, ms } from './helpers.js';
+import { test, expect, openAt, seed, advance, tap, pick, choose, sheet, setDate, setPick, setTime, settings, ms } from './helpers.js';
 import { WEEK } from './seed-data.js';
 
 test.skip(({ browserName }) => browserName !== 'webkit', 'screens are reviewed in WebKit, the engine of iPhone Safari');
@@ -333,4 +333,38 @@ test('undo bar after a time change', async ({ page }) => {
   await setTime(page, 'edit-last-bite', '22:10');
   await tap(page, 'save-last-bite');
   await shot(page, '56-today-undo-bar');
+});
+
+test('start screen, Begin fast and goals', async ({ page }) => {
+  await openAt(page, '2026-09-27T09:00');
+  await shot(page, '60-start-new-user');
+  await tap(page, 'begin-fast');
+  await tap(page, 'fast-last');
+  await shot(page, '61-begin-fast-sheet');
+  await tap(page, 'save-fast');
+  await expect(sheet(page, 'begin-fast')).toHaveCount(0);
+  await shot(page, '62-today-fast-begun');
+  await tap(page, 'edit-goal');
+  await choose(page, 'goal', 'custom');
+  await setPick(page, 'goal-hours', 6);
+  await shot(page, '63-goal-sheet');
+  await tap(page, 'close-sheet');
+  await page.locator('.tab[data-tab="more"]').click();
+  await shot(page, '64-more-goal');
+});
+
+test('the Uhud climb and the fullness of the day', async ({ page }) => {
+  // Forty days: every one a success, every other one left wanting.
+  const days = [];
+  for (let i = 0; i < 40; i++) {
+    const key = new Date(Date.UTC(2026, 7, 17 + i)).toISOString().slice(0, 10);
+    days.push({ day: key, firstBite: ms(`${key}T17:00`), lastBite: ms(`${key}T20:30`), fullness: i % 2 ? 'full' : 'before_full' });
+  }
+  days[39] = { ...days[39], fullness: undefined };
+  await openAt(page, '2026-09-25T22:00');
+  await seed(page, { days, settings: install });
+  await page.locator('[data-block="climb"]').scrollIntoViewIfNeeded();
+  await shot(page, '65-today-climb');
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await shot(page, '66-today-fullness-card');
 });

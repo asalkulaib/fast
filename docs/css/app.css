@@ -452,6 +452,20 @@ sup.fn {
   gap: var(--s3);
 }
 
+/* First bite and Begin fast: two equal ways in. */
+.start-actions .btn.big {
+  padding: 0 var(--s2);
+  font-size: 18px;
+}
+
+/* Quick times above a wheel: a wrapping row of text buttons. */
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--s4);
+  row-gap: 0;
+}
+
 /* ---------- Inputs ---------- */
 
 .field {
@@ -1079,6 +1093,32 @@ sup.fn {
 
 .chart .latest {
   fill: var(--accent);
+}
+
+/* ---------- Jebel Uhud ---------- */
+
+.uhud {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.climber-name {
+  display: inline-flex;
+  align-items: center;
+  column-gap: var(--s2);
+}
+
+.climber-key {
+  width: 14px;
+  height: 17px;
+  flex: none;
+}
+
+/* Arabic glosses keep their own letter shapes: no spacing, no capitals. */
+.ar {
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 /* ---------- Fasting ring ---------- */

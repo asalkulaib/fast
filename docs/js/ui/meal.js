@@ -50,7 +50,7 @@ const hungerScale = (draft) => scale({
 
 const stopChoice = (draft) => choice({
   options: STOP_OPTIONS, value: draft.stop, onChange: (v) => { draft.stop = v; },
-  label: 'How did you stop?', cols: 3, name: 'stop',
+  label: 'How did you finish?', cols: 3, name: 'stop',
 });
 
 const fullnessScale = (draft, key = 'fullnessNow', label = 'Fullness now') => scale({
@@ -89,27 +89,32 @@ export function showFirstBiteSheet(app, initialKey) {
   const draft = { name: '', hungerBefore: null };
   let hint = '';
   // The wheel saves as soon as it comes to rest; a refused time rolls back.
+  // Presets move the first bite back in one tap.
   const firstBiteField = (rec) => {
     const hintEl = h('p', { class: 'small gap-s', 'data-testid': 'first-bite-hint' }, hint);
+    const move = async (ts) => {
+      const moved = ts == null ? { error: 'That time is still ahead.' } : await store.moveFirstBite(key, ts);
+      if (moved.error) {
+        hint = moved.error;
+        const cur = store.state.days.get(key);
+        if (cur && cur.firstBite) field.set(minutesOfDay(cur.firstBite));
+      } else {
+        key = moved.key;
+        hint = '';
+        field.set(minutesOfDay(ts));
+      }
+      hintEl.textContent = hint;
+    };
     const field = timeField({
       label: 'First bite at',
       minutes: minutesOfDay(rec.firstBite),
       name: 'first-bite',
-      onChange: async (m) => {
-        const ts = resolveFirstBite(key, m);
-        const moved = ts == null ? { error: 'That time is still ahead.' } : await store.moveFirstBite(key, ts);
-        if (moved.error) {
-          hint = moved.error;
-          const cur = store.state.days.get(key);
-          if (cur && cur.firstBite) field.set(minutesOfDay(cur.firstBite));
-        } else {
-          key = moved.key;
-          hint = '';
-        }
-        hintEl.textContent = hint;
-      },
+      onChange: (m) => move(resolveFirstBite(key, m)),
     });
-    return h('section', { class: 'section gap-l' }, field, hintEl);
+    const presets = h('div', { class: 'presets gap-s', role: 'group', 'aria-label': 'Quick times' },
+      [[0, 'Now'], [30, '30 min ago'], [60, '1 h ago'], [120, '2 h ago']].map(([mins, label]) =>
+        button(label, () => move(now() - mins * MIN), { kind: 'secondary', name: `first-bite-${mins}` })));
+    return h('section', { class: 'section gap-l' }, presets, field, hintEl);
   };
   openSheet((api) => {
     const ctx = app.ctx();

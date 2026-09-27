@@ -15,13 +15,18 @@ Live app: https://asalkulaib.github.io/fast/
 ## The rules Fast follows
 
 - Kuwait time (UTC+3). Workdays are Sunday to Thursday, weekends Friday and Saturday.
-- The first bite opens the window and starts a 4-hour countdown. A window belongs to the day of its first bite, even when it runs past midnight.
-- A day succeeds when all eating falls within 4 hours of the first bite, with 15 minutes of grace. Beyond 4 h 15 min it is a miss, shown as the time over 4 hours.
+- Your goal is an eating window: 16:8, 18:6, 20:4 (the default), 23:1, or any whole number of hours from 1 to 12. The fasting goal is the rest of the 24 hours. Change it in More, Goal, or by tapping Goal on Today. A change applies from that day on; past days keep the goal they had.
+- The first bite opens the window and starts the countdown of your eating window. A window belongs to the day of its first bite, even when it runs past midnight.
+- A day succeeds when all eating falls within the window goal, with 15 minutes of grace. Beyond that it is a miss, shown as the time over the goal.
 - On a workday, a window that opens before 16:00 is a miss. A day marked as a day off follows weekend rules.
-- Eating after "I'm done eating" counts as outside the window and makes the day a miss. While you are still inside the 4 hours, you can reopen the window instead.
+- Eating after "I'm done eating" counts as outside the window and makes the day a miss. While you are still inside the window goal, you can reopen the window instead.
 - Between midnight and 04:00, late eating can be counted against the night before.
-- The streak counts consecutive successful days. A day with nothing logged breaks it, so Fast asks you to fill in any gap.
-- A paused day is not tracked: it is never a miss, and it neither counts towards the streak nor breaks it.
+- The streak counts consecutive successful days, shown in Week. A day with nothing logged breaks it, so Fast asks you to fill in any gap.
+- A paused day is not tracked for fasting: it is never a miss, and it neither counts towards the streak nor breaks it. Fullness still counts.
+
+## Starting: First bite or Begin fast
+
+Before your window, Today offers two equal buttons. First bite starts the eating window now; its sheet has quick times (30 min, 1 h, 2 h ago) to start it earlier. Begin fast is for a fast already under way, for example on your first day with Fast or after a pause: pick Now, 1 or 2 hours ago, last night, or any time on the wheel, so none of the fast is lost. Tap Fast began on Today to adjust it later. A fast start never changes the result of the day it falls on, and it cannot be earlier than the last bite on record.
 
 ## Changing a time
 
@@ -32,9 +37,22 @@ Every time in Fast is set on a rolling 24-hour wheel, like the iPhone clock. The
 - Any day can be corrected from Week: tap the day.
 - After a change is saved, the message above the tabs offers Undo for 10 seconds. Removing a window, a meal or an entry can be undone the same way.
 
+## Fullness (شبع)
+
+When you finish a meal, Fast asks how you finished: Left wanting (the goal), Satisfied, or Overfull. A day counts as left wanting only when every meal was. When the day's meals were not rated, and on paused days, Today asks once how the day's eating ended. Fullness is logged every day, holidays and pauses included. The 1 to 10 ratings and the 20-minute check stay as before.
+
+## Jebel Uhud
+
+Today shows your progress as a climb up Jebel Uhud, in place of the streak. Two climbers take their own paths:
+
+- The fast climber moves up one step for each successful day.
+- The fullness climber moves up one step for each day left wanting.
+
+Thirty steps reach the summit. A climber who arrives stays there, and a new one starts from the base, so the summit fills with every completed climb; the tallies read, for example, "Fasts: 2 summits · Fullness: 4 summits". A missed day holds a climber in place; nothing slips back. On paused days the fast climber waits while the fullness climber keeps climbing. In More, Jebel Uhud, either climber can be switched off: it is hidden and does not track, and switched on again it resumes where it stopped. With both off, Today shows the streak again.
+
 ## Fasting stages
 
-While you fast, Today shows a 24-hour ring timed from your last bite, with the time fasted and the stage in its centre. An icon marks each stage: a plate while digesting, a drop as blood sugar settles, a flame for the metabolic switch and a bolt for ketones. The current stage's icon is gold. Before your window the ring leads Today; after it, the ring sits below the result. The hours are typical, not exact, and never a target. Past 24 hours the ring stays full.
+While you fast, Today shows a 24-hour ring timed from your last bite (or from when you began your fast), with the time fasted and the stage in its centre. A cream tick marks your fasting goal, and the line below says how far it is. An icon marks each stage: a plate while digesting, a drop as blood sugar settles, a flame for the metabolic switch and a bolt for ketones. The current stage's icon is gold. Before your window the ring leads Today; after it, the ring sits below the result. The hours are typical, not exact, and never a target. Past 24 hours the ring stays full.
 
 | Stage | Typical time | Based on |
 |---|---|---|
@@ -51,7 +69,7 @@ The History tab charts, day by day, either your fasts or your eating windows, as
 
 ## Pauses
 
-For travel, illness or Ramadan. On Today, Pause today pauses the day in one tap. In More, Pauses, Add a pause sets a from and an until date (up to 60 days, and it can start ahead, for example for Ramadan) with an optional reason. While a day is paused, Today shows Paused until the last day, with nothing to log. Paused days are left out of the Week and History counts. End a pause early from Today or from More; unpause a single day from Week by tapping it. A window still open must be closed before its day can be paused.
+For travel, illness, holidays, leave or Ramadan. On Today, Pause today pauses the day in one tap. In More, Pauses, Add a pause sets a from and an until date (up to 60 days, and it can start ahead, for example for Ramadan) with an optional reason. While a day is paused, Today shows Paused until the last day, with no window to log; only the day's fullness is asked. Paused days are left out of the Week and History counts. End a pause early from Today or from More; unpause a single day from Week by tapping it. A window still open must be closed before its day can be paused.
 
 ## Weight Shortcut
 

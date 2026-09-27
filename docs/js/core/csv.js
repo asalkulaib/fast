@@ -1,10 +1,14 @@
 // CSV exports for Excel: UTF-8 with BOM, CRLF line ends, ISO dates, 24-hour times.
 
-import { dayKey, fmtTime, minutesOfDay, weekdayName } from './time.js';
-import { CUTOFF_MIN, isWorkday, makeEvaluator } from './rules.js';
+import { MIN, dayKey, fmtDuration, fmtTime, minutesOfDay, weekdayName } from './time.js';
+import { CUTOFF_MIN, GRACE_MS, isWorkday, makeEvaluator } from './rules.js';
+import { FULLNESS_WORD, dayFullness, mealsByDay } from './fullness.js';
 
-const REASON_TEXT = { early: 'opened before 16:00', over: 'over 4 h 15 min', outside: 'ate outside the window' };
-const STOP_TEXT = { before_full: 'before full', full: 'full', stuffed: 'stuffed' };
+const reasonText = (r, e) => ({
+  early: 'opened before 16:00',
+  over: `over ${fmtDuration(e.windowMs + GRACE_MS)}`,
+  outside: 'ate outside the window',
+}[r]);
 const OUTCOME_TEXT = { held: 'held', opened_early: 'opened window early', ate_little: 'ate a little outside the window', ate_outside: 'ate outside the window' };
 
 export function csvCell(value) {
@@ -33,7 +37,8 @@ function dayType(key, rec) {
  * Returns [{ name, text }] for windows, meals, weight, check-ins and temptations.
  */
 export function buildCsvFiles(data, { nowTs, todayKey, startKey }) {
-  const evaluate = makeEvaluator({ days: data.days, outside: data.outside, nowTs, todayKey, startKey });
+  const evaluate = makeEvaluator({ days: data.days, outside: data.outside, nowTs, todayKey, startKey, settings: data.settings });
+  const byDay = mealsByDay(data.meals);
   const dayKeys = [...data.days.keys()].sort();
   const outsideKeys = new Set(data.outside.map((o) => o.day));
   const windowKeys = [...new Set([...dayKeys.filter((k) => {
@@ -42,7 +47,7 @@ export function buildCsvFiles(data, { nowTs, todayKey, startKey }) {
   }), ...outsideKeys])].sort();
 
   const windows = toCsv(
-    ['date', 'weekday', 'day_type', 'first_bite', 'last_bite', 'last_bite_date', 'length_min', 'result', 'reasons', 'over_by_min', 'opened_before_16', 'outside_eating'],
+    ['date', 'weekday', 'day_type', 'first_bite', 'last_bite', 'last_bite_date', 'length_min', 'result', 'reasons', 'over_by_min', 'opened_before_16', 'outside_eating', 'fullness', 'window_goal_min'],
     windowKeys.map((k) => {
       const rec = data.days.get(k);
       const e = evaluate(k);
@@ -53,10 +58,12 @@ export function buildCsvFiles(data, { nowTs, todayKey, startKey }) {
         time(e.firstBite), time(e.lastBite), e.lastBite ? dayKey(e.lastBite) : null,
         e.firstBite && e.lastBite ? minutes(e.lengthMs) : null,
         result,
-        e.reasons.map((r) => REASON_TEXT[r]).join('; ') || null,
+        e.reasons.map((r) => reasonText(r, e)).join('; ') || null,
         e.overByMs ? minutes(e.overByMs) : null,
         e.firstBite ? (minutesOfDay(e.firstBite) < CUTOFF_MIN ? 'yes' : 'no') : null,
         e.outsideCount,
+        FULLNESS_WORD[dayFullness(byDay.get(k) || [], rec)] || null,
+        Math.round(e.windowMs / MIN),
       ];
     }),
   );
@@ -64,7 +71,7 @@ export function buildCsvFiles(data, { nowTs, todayKey, startKey }) {
   const mealRows = [
     ...data.meals.map((m) => ({ sort: m.startedAt, row: [
       m.day, 'meal', m.name || null, time(m.startedAt), time(m.finishedAt), m.hungerBefore ?? null,
-      m.stop ? STOP_TEXT[m.stop] : null, m.fullnessNow ?? null, m.fullness20 ?? null, null, null,
+      m.stop ? FULLNESS_WORD[m.stop] : null, m.fullnessNow ?? null, m.fullness20 ?? null, null, null,
     ] })),
     ...data.outside.map((o) => ({ sort: o.at, row: [
       o.day, 'outside the window', null, time(o.at), null, null, null, null, null, o.trigger || null, o.amount || null,

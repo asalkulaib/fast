@@ -6,7 +6,7 @@ import { requestPersistence } from './db.js';
 import { h, fadeIn, fadeOut, updateLive } from './ui/dom.js';
 import { button } from './ui/components.js';
 import { now, dayKey, isDayKey, fmtDayLong } from './core/time.js';
-import { makeEvaluator, streaks, todayMode, trackingStart } from './core/rules.js';
+import { makeEvaluator, streaks, todayMode, trackingStart, windowMsFor } from './core/rules.js';
 import { buildIcs, icsTimes } from './core/ics.js';
 import { buildCsvFiles } from './core/csv.js';
 import { buildBackup, backupFileName, describeBackup, parseBackup } from './core/backup.js';
@@ -51,8 +51,8 @@ function context() {
   const todayKey = dayKey(nowTs);
   const d = store.data();
   const startKey = trackingStart({ ...d, installedAt: d.settings.installedAt }, todayKey);
-  const evaluate = makeEvaluator({ days: d.days, outside: d.outside, nowTs, todayKey, startKey });
-  const mode = todayMode({ days: d.days, todayKey, nowTs });
+  const evaluate = makeEvaluator({ days: d.days, outside: d.outside, nowTs, todayKey, startKey, settings: d.settings });
+  const mode = todayMode({ days: d.days, todayKey, nowTs, settings: d.settings });
   return {
     ...d,
     nowTs,
@@ -60,6 +60,8 @@ function context() {
     startKey,
     evaluate,
     mode,
+    // The eating-window goal in force on a day, in ms.
+    windowMsFor: (key) => windowMsFor(key, d.settings),
     openRec: mode.mode === 'open' || mode.mode === 'forgot' ? mode.rec : null,
     streak: streaks(evaluate, todayKey, startKey),
   };

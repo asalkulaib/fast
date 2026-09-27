@@ -9,12 +9,13 @@
 
 import { HOUR, addDays, dayKey } from './time.js';
 
-/** Every moment of eating on record, oldest first. */
+/** Every moment of eating on record, and every fast start set with Begin fast, oldest first. */
 function eatingTimes({ days, meals, outside }) {
   const times = [];
   for (const r of days.values()) {
     if (r.firstBite) times.push(r.firstBite);
     if (r.lastBite) times.push(r.lastBite);
+    if (r.fastFrom) times.push(r.fastFrom);
   }
   for (const m of meals) {
     if (m.startedAt) times.push(m.startedAt);
@@ -48,6 +49,8 @@ function latestBefore(sorted, ts) {
 export function dailySeries(data, fromKey, toKey) {
   const times = eatingTimes(data);
   const pausedKeys = [...data.days.values()].filter((r) => r.paused).map((r) => r.day);
+  // A fast started on a paused day began after that day's unrecorded eating.
+  const fastStarts = new Set([...data.days.values()].map((r) => r.fastFrom).filter(Boolean));
   const out = [];
   for (let k = fromKey; k <= toKey; k = addDays(k, 1)) {
     const rec = data.days.get(k);
@@ -59,7 +62,7 @@ export function dailySeries(data, fromKey, toKey) {
     }
     if (rec && rec.firstBite) {
       const before = latestBefore(times, rec.firstBite);
-      const from = before == null ? null : dayKey(before);
+      const from = before == null ? null : fastStarts.has(before) ? addDays(dayKey(before), 1) : dayKey(before);
       if (before != null && !pausedKeys.some((p) => p >= from && p < k)) fastMs = rec.firstBite - before;
       if (rec.lastBite) feastMs = rec.lastBite - rec.firstBite;
     }

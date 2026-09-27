@@ -18,7 +18,7 @@ test('CSV export: five files for Excel', async ({ page }) => {
   }
   const windows = files[0].text.trim().split('\r\n');
   expect(windows).toHaveLength(8);
-  expect(windows[2]).toBe('2026-09-21,Monday,workday,15:00,18:00,2026-09-21,180,miss,opened before 16:00,,yes,0');
+  expect(windows[2]).toBe('2026-09-21,Monday,workday,15:00,18:00,2026-09-21,180,miss,opened before 16:00,,yes,0,,240');
   const weight = files[2].text.trim().split('\r\n');
   expect(weight).toEqual(['date,kg', '2026-09-14,106', '2026-09-16,105.5', '2026-09-18,105', '2026-09-21,104.9', '2026-09-23,104.7', '2026-09-25,104.5']);
   expect(files[1].text).toContain('2026-09-24,outside the window,,22:00,,,,,,boredom,little');

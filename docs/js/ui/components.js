@@ -296,6 +296,27 @@ export function dateField({ value, minKey, maxKey, todayKey, onChange, label, na
   return wrap;
 }
 
+/**
+ * A rolling wheel over a short list of options ([{ value, label }]).
+ * onChange(value) when a new option comes to rest.
+ */
+export function optionWheel({ options, value, onChange, label, name }) {
+  const id = nextId('pick');
+  const column = wheelColumn({
+    count: options.length,
+    index: Math.max(0, options.findIndex((o) => o.value === value)),
+    label: label || 'Choice',
+    part: 'option',
+    text: (i) => options[i].label,
+    keyOf: (i) => String(options[i].value),
+    onSettle: () => onChange(options[column.index()].value),
+  });
+  return h('div', { class: 'time-wrap', dataset: { pick: name || '' } },
+    label ? h('div', { class: 'label field-label', id }, label) : null,
+    h('div', { class: 'wheel date', role: 'group', 'aria-labelledby': label ? id : null, 'aria-label': label ? null : 'Choice' },
+      column.col, h('div', { class: 'wheel-lens', 'aria-hidden': 'true' })));
+}
+
 export function textField({ value, onInput, label, placeholder, name }) {
   const id = nextId('text');
   const input = h('input', {
@@ -351,13 +372,14 @@ export const TRIGGER_OPTIONS = [
   { value: 'other', label: 'Other' },
 ];
 
+// How a meal ended (fullness, شبع). The stored values stay as before.
 export const STOP_OPTIONS = [
-  { value: 'before_full', label: 'Before full' },
-  { value: 'full', label: 'Full' },
-  { value: 'stuffed', label: 'Stuffed' },
+  { value: 'before_full', label: 'Left wanting' },
+  { value: 'full', label: 'Satisfied' },
+  { value: 'stuffed', label: 'Overfull' },
 ];
 
-export const STOP_TEXT = { before_full: 'before full', full: 'full', stuffed: 'stuffed' };
+export const STOP_TEXT = { before_full: 'left wanting', full: 'satisfied', stuffed: 'overfull' };
 
 export const TRAINING_OPTIONS = [
   { value: 'weights', label: 'Weights' },

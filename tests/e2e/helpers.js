@@ -107,6 +107,24 @@ export async function setDate(page, name, key) {
   }).toPass({ timeout: 5000 });
 }
 
+/** Rolls an option wheel (such as the goal's hours) to a value. */
+export async function setPick(page, name, value) {
+  const col = page.locator(`[data-pick="${name}"]:visible [data-part="option"]`).first();
+  await expect(async () => {
+    const rolled = await col.evaluate((c, v) => {
+      if (!c.isConnected) return false;
+      const item = c.querySelector(`.wheel-item[data-key="${v}"]`);
+      if (!item) throw new Error(`${v} is not on this wheel`);
+      c.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      c.scrollTop = Number(item.dataset.value) * item.offsetHeight;
+      c.dispatchEvent(new Event('scroll'));
+      c.dispatchEvent(new Event('scrollend'));
+      return true;
+    }, String(value));
+    expect(rolled).toBe(true);
+  }).toPass({ timeout: 5000 });
+}
+
 export const sheet = (page, name) => page.locator(`[data-sheet="${name}"]`);
 
 /** Settings row helper for seeding. */

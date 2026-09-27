@@ -6,19 +6,20 @@ import { button, choice, scale, timeField, TRAINING_OPTIONS, TRIGGER_OPTIONS, OU
 import { openSheet, sheetHead } from './sheet.js';
 import * as store from '../store.js';
 import { at, fmtDayLong, fmtDuration, fmtOnDay, fmtTime, isWorkweekday, minutesOfDay, nearestTime, now, weekStart } from '../core/time.js';
-import { isOpen, isPaused, isWorkday, plannedStartMin, timeOnOrAfter } from '../core/rules.js';
+import { GRACE_MS, isOpen, isPaused, isWorkday, plannedStartMin, timeOnOrAfter } from '../core/rules.js';
 import { showLogMealSheet, showMealEditSheet } from './meal.js';
 import { AMOUNT_OPTIONS, showOutsideSheet } from './outside.js';
 import { mealMeta } from './today.js';
 import { pauseWord } from './pause.js';
+import { fullnessCard } from './fullness.js';
 import { dayTypeText, header, mealsOfDay, outsideOfDay, temptationsOfDay } from './shared.js';
 
-const REASON = { early: 'opened before 16:00', over: 'over 4 h 15 min', outside: 'ate outside the window' };
+const reasonText = (r, e) => ({ early: 'opened before 16:00', over: `over ${fmtDuration(e.windowMs + GRACE_MS)}`, outside: 'ate outside the window' }[r]);
 
 function resultLine(e) {
   switch (e.result) {
     case 'success': return h('p', { class: 'gap-s' }, hl(e.state === 'noEating' ? 'Success: no eating.' : 'Success.'));
-    case 'miss': return h('p', { class: 'gap-s' }, `Miss: ${e.reasons.map((r) => REASON[r]).join(', ')}.`);
+    case 'miss': return h('p', { class: 'gap-s' }, `Miss: ${e.reasons.map((r) => reasonText(r, e)).join(', ')}.`);
     case 'pending': return h('p', { class: 'gap-s quiet' }, e.state === 'open' ? 'Window open.' : 'In progress.');
     case 'unlogged': return h('p', { class: 'gap-s quiet' }, 'Nothing logged yet.');
     case 'paused': return h('p', { class: 'gap-s' }, 'Paused: not tracked.');
@@ -46,6 +47,8 @@ export function renderDay(ctx, app, key) {
       h('div', { class: 'label' }, 'Day off'),
       h('p', { class: 'small gap-s' }, rec.dayOff ? 'Weekend rules apply to this day.' : 'A workday: the 16:00 rule applies.'),
       button(rec.dayOff ? 'Make it a workday again' : 'Mark as a day off', () => store.updateDay(key, { dayOff: !rec.dayOff }), { kind: 'secondary', name: 'toggle-day-off' })) : null,
+    // Fullness counts on every day, paused ones included.
+    past && (paused || rec.firstBite || mealsOfDay(ctx, key).length) ? fullnessCard(ctx, key, { question: 'How did the day\'s eating end?' }) : null,
     tracked ? mealsSection(ctx, app, key, rec) : null,
     tracked ? outsideSection(ctx, app, key) : null,
     tracked ? checkinSection(ctx, key, rec) : null,
@@ -67,7 +70,7 @@ function pausedSection(app, key, rec) {
 function pauseSection(app, key) {
   return h('section', { class: 'section', 'data-block': 'day-pause' },
     h('div', { class: 'label' }, 'Pause'),
-    h('p', { class: 'small gap-s' }, 'Travel, illness or Ramadan: a paused day is not tracked, and your streak waits.'),
+    h('p', { class: 'small gap-s' }, 'Travel, illness or Ramadan: fasting is not tracked on a paused day, and the fast climber waits. Fullness still counts.'),
     button('Pause this day', async () => {
       const res = await store.pauseDays(key, key, true);
       if (res.error) app.flash(res.error);

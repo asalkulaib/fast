@@ -4,10 +4,10 @@ import { h, hl, live } from './dom.js';
 import { button, choice, scale, timeField, TRAINING_OPTIONS, STOP_TEXT } from './components.js';
 import * as store from '../store.js';
 import {
-  MIN, addDays, fmtCountdown, fmtDayLong, fmtDayShort, fmtDuration, fmtMinutes, fmtTime, fmtWhen, isWorkweekday, minutesOfDay, now,
+  HOUR, MIN, addDays, fmtCountdown, fmtDayLong, fmtDayShort, fmtDuration, fmtMinutes, fmtTime, fmtWhen, isWorkweekday, minutesOfDay, now,
 } from '../core/time.js';
 import {
-  CUTOFF_MIN, LIMIT_MS, WINDOW_MS, canReopen, isWorkday, lastEatingSource, lastEatingTs, lateNightDay, plannedStartMin, timeOnOrAfter, windowPhase,
+  CUTOFF_MIN, GRACE_MS, canReopen, goalLabel, isWorkday, lastEatingSource, lastEatingTs, lateNightDay, plannedStartMin, timeOnOrAfter, windowPhase,
 } from '../core/rules.js';
 import { dunes } from './art.js';
 import { firstBite, forgotCloseDefault, showDoneEatingSheet, showFinishMealSheet, showLogMealSheet, showMealEditSheet } from './meal.js';
@@ -15,15 +15,20 @@ import { showOutsideSheet } from './outside.js';
 import { showBiteTimeSheet, showOpeningSheet, showOutsideTimeSheet, showWindowTimesSheet } from './window-times.js';
 import { ringHero, stagesSection } from './stages.js';
 import { currentPause, endPause, pauseToday, showPauseSheet } from './pause.js';
+import { showBeginFastSheet } from './begin-fast.js';
+import { showGoalSheet } from './goal.js';
+import { climbSection } from './climb.js';
+import { fullnessCard } from './fullness.js';
 import { dayTypeText, header, liveNote, mealInProgress, mealsOfDay, nextWindowLine, note, notices, runningFullness, tapNote } from './shared.js';
 
 const days = (n) => `${n} ${n === 1 ? 'day' : 'days'}`;
+const hoursWord = (ms) => { const n = Math.round(ms / HOUR); return `${n} ${n === 1 ? 'hour' : 'hours'}`; };
 
 export function signature(ctx) {
   const { mode, rec } = ctx.mode;
   const parts = [mode, ctx.todayKey, minutesOfDay(ctx.nowTs) >= CUTOFF_MIN, !!lateNightDay(ctx)];
-  if (mode === 'open') parts.push(windowPhase(rec, ctx.nowTs));
-  if (mode === 'closed') parts.push(canReopen(rec, ctx.nowTs));
+  if (mode === 'open') parts.push(windowPhase(rec, ctx.nowTs, ctx.windowMsFor(rec.day)));
+  if (mode === 'closed') parts.push(canReopen(rec, ctx.nowTs, ctx.windowMsFor(rec.day)));
   parts.push(runningFullness(ctx).length);
   // While fasting, redraw the ring every 5 minutes; each stage starts on a 5-minute mark.
   const last = fasting(mode) ? lastEatingTs(ctx) : null;
@@ -47,12 +52,16 @@ export function renderToday(ctx, app) {
   // The window on screen may be last night's (open, forgotten, or reopenable after midnight).
   const mealsKey = (mode === 'open' || mode === 'forgot' || mode === 'closed') ? rec.day : ctx.todayKey;
   // Before the window the ring leads the main block; after it, it sits below.
+  // How the day's eating ended: asked once the window is closed, and on paused days.
+  const fullnessKey = mode === 'closed' ? rec.day : mode === 'paused' ? ctx.todayKey : null;
   return h('div', { class: 'today', 'data-mode': mode },
     header(ctx, app, { title: fmtDayLong(ctx.todayKey), sub: dayTypeText(ctx.todayKey, todayRec) }),
     notices(ctx, app),
     main,
+    fullnessKey ? fullnessCard(ctx, fullnessKey) : null,
     fasting(mode) ? stagesSection(ctx, app, lastEatingTs(ctx), { withRing: mode !== 'before' }) : null,
-    streakSection(ctx),
+    // The climb up Uhud takes the streak's place; with both climbers off, the streak returns.
+    climbSection(ctx) || streakSection(ctx),
     // A paused day tracks nothing.
     mode === 'paused' ? null : checkinSection(ctx, app),
     mode === 'paused' ? null : mealsSection(ctx, app, mealsKey),
@@ -71,6 +80,14 @@ function beforeBlock(ctx, app) {
   const last = lastSrc ? lastSrc.ts : null;
   const late = lateNightDay(ctx);
   const plannedLine = h('p', { class: 'gap' }, 'Window planned for ', hl(fmtMinutes(planned)), '.');
+  const goalNote = tapNote('Goal', goalLabel(ctx.windowMsFor(key)), () => showGoalSheet(app), 'edit-goal');
+  // From Begin fast, a start before the last bite on record leads to that bite.
+  const beginFast = () => showBeginFastSheet(app, {
+    onBite: () => {
+      const src = lastEatingSource(app.ctx(), { fastStarts: false });
+      if (src) editLastBite(app, src);
+    },
+  });
   return h('section', { class: 'section strong', 'data-block': 'before' },
     h('div', { class: 'row' },
       h('div', { class: 'main' },
@@ -79,11 +96,18 @@ function beforeBlock(ctx, app) {
         last ? null : h('h1', { class: 'display gap-s' }, 'Fasting'),
         last ? null : plannedLine),
       h('div', { class: 'margin' },
-        last ? tapNote('Last bite', fmtWhen(last, key), () => editLastBite(app, lastSrc), 'edit-last-bite') : null)),
+        lastSrc && lastSrc.kind === 'fast'
+          ? tapNote('Fast began', fmtWhen(last, key), beginFast, 'edit-fast-start')
+          : last ? tapNote('Last bite', fmtWhen(last, key), () => editLastBite(app, lastSrc), 'edit-last-bite') : goalNote)),
     last ? ringHero(ctx, last) : null,
-    last ? plannedLine : null,
+    // Under the ring, the goal sits in the margin beside the planned time.
+    last ? h('div', { class: 'row gap' }, h('div', { class: 'main' }, plannedLine), h('div', { class: 'margin' }, goalNote)) : null,
+    last ? null : h('p', { class: 'quiet small gap-s', 'data-testid': 'begin-fast-hint' }, 'Already fasting? Tap Begin fast and set when it began, so none of it is lost.'),
     workdayEarly ? h('p', { class: 'statement gap', 'data-testid': 'firm-reminder' }, 'Opening before 16:00 makes today a miss.') : null,
-    h('div', { class: 'gap-l' }, button('First bite', () => firstBite(app.ctx(), app), { big: true, name: 'first-bite' })),
+    // Two equal ways in: eating now, or a fast already under way.
+    h('div', { class: 'btn-pair start-actions gap-l' },
+      button('First bite', () => firstBite(app.ctx(), app), { big: true, block: true, name: 'first-bite' }),
+      button('Begin fast', beginFast, { big: true, block: true, name: 'begin-fast' })),
     h('p', { class: 'quiet small gap' }, 'Until then: water, sparkling water, black coffee, espresso, plain tea.'),
     late
       ? h('div', { class: 'gap' }, button('Eating late? Count it against last night', () => showOutsideSheet(app, { day: late }), { kind: 'secondary', name: 'late-night' }))
@@ -106,7 +130,7 @@ function pausedBlock(ctx, app) {
   return h('section', { class: 'section strong', 'data-block': 'paused' },
     h('div', { class: 'label' }, 'Paused'),
     h('h1', { class: 'display gap-s', 'data-testid': 'paused-until' }, until === ctx.todayKey ? 'Paused today' : `Paused until ${keepTogether(fmtDayShort(until))}`),
-    h('p', { class: 'gap' }, `${FOR_REASON[run.reason] || ''}Nothing is tracked, and your streak waits. Tracking resumes on ${fmtDayLong(addDays(until, 1))}.`),
+    h('p', { class: 'gap' }, `${FOR_REASON[run.reason] || ''}Fasting is not tracked and the fast climber waits; fullness still counts. Tracking resumes on ${fmtDayLong(addDays(until, 1))}.`),
     h('div', { class: 'btn-row gap' },
       button('End the pause', () => endPause(app, run), { kind: 'secondary', name: 'end-pause' }),
       button('Change', () => showPauseSheet(app, { run }), { kind: 'secondary', name: 'change-pause' })),
@@ -135,8 +159,9 @@ function dayOffToggle(ctx, key) {
 // ---------- Window open ----------
 
 function openBlock(ctx, app, rec) {
-  const closesAt = rec.firstBite + WINDOW_MS;
-  const phase = windowPhase(rec, ctx.nowTs);
+  const windowMs = ctx.windowMsFor(rec.day);
+  const closesAt = rec.firstBite + windowMs;
+  const phase = windowPhase(rec, ctx.nowTs, windowMs);
   const e = ctx.evaluate(rec.day);
   const eating = mealInProgress(ctx, rec.day);
   const minsLeft = (t, end) => `${Math.max(0, Math.ceil((end - t) / MIN))} min`;
@@ -148,12 +173,12 @@ function openBlock(ctx, app, rec) {
         note('Closes', fmtTime(closesAt)))),
     h('div', { class: 'gap' },
       live('div', { class: 'countdown', 'data-testid': 'countdown', role: 'timer' }, (t) => fmtCountdown(closesAt - t)),
-      h('div', { class: 'label countdown-caption' }, 'left of 4 hours')),
+      h('div', { class: 'label countdown-caption' }, `left of ${hoursWord(windowMs)}`)),
     phase === 'warn'
       ? h('p', { class: 'gap-l', 'data-testid': 'warn-30' }, live('span', { class: 'hl' }, (t) => minsLeft(t, closesAt)), ` left. The window closes at ${fmtTime(closesAt)}.`)
       : null,
     phase === 'grace'
-      ? h('p', { class: 'gap-l', 'data-testid': 'grace' }, 'Four hours are up. ', live('span', { class: 'hl' }, (t) => minsLeft(t, rec.firstBite + LIMIT_MS)), ' of grace left.')
+      ? h('p', { class: 'gap-l', 'data-testid': 'grace' }, `Your ${hoursWord(windowMs)} are up. `, live('span', { class: 'hl' }, (t) => minsLeft(t, rec.firstBite + windowMs + GRACE_MS)), ' of grace left.')
       : null,
     phase === 'over'
       ? h('p', { class: 'statement clay gap-l', 'data-testid': 'over' }, live('span', {}, (t) => `Over by ${fmtDuration(t - closesAt)}`))
@@ -191,7 +216,7 @@ function forgotBlock(ctx, app, rec) {
       h('p', { class: 'gap' }, 'When was your last bite?'),
       h('div', { class: 'gap' }, timeField({
         minutes: draft.minutes,
-        fallback: minutesOfDay(rec.firstBite + WINDOW_MS),
+        fallback: minutesOfDay(rec.firstBite + ctx.windowMsFor(rec.day)),
         hint: draft.minutes == null ? 'Roll to your last bite.' : '',
         name: 'forgot-last-bite',
         onChange: (m) => { draft.minutes = m; },
@@ -221,7 +246,7 @@ function reasonLine(reason, e) {
 function closedBlock(ctx, app, rec) {
   const e = ctx.evaluate(rec.day);
   const success = e.result === 'success';
-  const reopen = canReopen(rec, ctx.nowTs);
+  const reopen = canReopen(rec, ctx.nowTs, ctx.windowMsFor(rec.day));
   return h('section', { class: 'section strong', 'data-block': 'closed', 'data-result': e.result },
     h('div', { class: 'row' },
       h('div', { class: 'main' },
@@ -235,7 +260,7 @@ function closedBlock(ctx, app, rec) {
       : h('div', { class: 'gap', 'data-testid': 'result' }, e.reasons.map((r) => h('p', { class: 'statement clay' }, reasonLine(r, e)))),
     reopen
       ? h('div', { class: 'btn-row gap' },
-        h('span', { class: 'small quiet' }, 'Still inside your 4 hours.'),
+        h('span', { class: 'small quiet' }, 'Still inside your window.'),
         button('Reopen window', () => store.reopenWindow(rec.day), { kind: 'secondary', name: 'reopen' }))
       : null,
     h('div', { class: 'btn-row gap' },

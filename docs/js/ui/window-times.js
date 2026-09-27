@@ -27,7 +27,7 @@ export function showOpeningSheet(app, initialKey) {
     const logged = mealsOfDay(ctx, key).length;
     return h('div', {},
       sheetHead(api, 'Window opened'),
-      h('p', {}, 'Set the time of your first bite. The countdown, the 4 hours and the 16:00 rule follow it.'),
+      h('p', {}, 'Set the time of your first bite. The countdown, your eating window and the 16:00 rule follow it.'),
       h('section', { class: 'section gap' },
         timeField({ label: 'First bite at', minutes: draft.minutes, name: 'opened-at', onChange: (m) => { draft.minutes = m; } })),
       draft.hint ? h('p', { class: 'small', 'data-testid': 'times-hint' }, draft.hint) : null,

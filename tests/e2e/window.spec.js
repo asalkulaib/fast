@@ -63,7 +63,7 @@ test('a normal window: first bite, a meal, the 20-minute check, done eating', as
   await expect(page.getByTestId('window-length')).toHaveText('3 h 30 min');
   await expect(page.locator('[data-block="closed"]')).toHaveAttribute('data-result', 'success');
   await expect(page.getByTestId('result')).toHaveText('Success. All eating inside the window.');
-  await expect(page.getByTestId('streak')).toHaveText('1 day');
+  await expect(page.getByTestId('climb-fast').locator('.stat-value')).toHaveText('1 of 30');
   await expect(page.getByTestId('next-window')).toHaveText("Tomorrow's window opens at 17:30.");
 
   const db = await readDb(page);
@@ -100,7 +100,7 @@ test('4 h 20 min is a miss, shown as over by 20 min', async ({ page }) => {
   await expect(page.getByTestId('window-length')).toHaveClass(/clay/);
   await expect(page.locator('[data-block="closed"]')).toHaveAttribute('data-result', 'miss');
   await expect(page.getByTestId('result')).toHaveText('Over by 20 min.');
-  await expect(page.getByTestId('streak')).toHaveText('0 days');
+  await expect(page.getByTestId('climb-fast').locator('.stat-value')).toHaveText('0 of 30'); // a miss holds the climber
 });
 
 test('a workday window opening at 15:30 is a miss even when short', async ({ page }) => {
@@ -137,7 +137,7 @@ test('weekend windows can move earlier or later', async ({ page }) => {
   await closeWindowAt(page);
   await expect(page.getByTestId('window-length')).toHaveText('3 h 45 min');
   await expect(page.locator('[data-block="closed"]')).toHaveAttribute('data-result', 'success');
-  await expect(page.getByTestId('streak')).toHaveText('2 days');
+  await expect(page.getByTestId('climb-fast').locator('.stat-value')).toHaveText('2 of 30');
 });
 
 test('eating after the window closes is recorded with its trigger and makes the day a miss', async ({ page }) => {

@@ -9,6 +9,9 @@ import { VERSION } from '../version.js';
 import { ago, header, note } from './shared.js';
 import { openSheet, sheetHead } from './sheet.js';
 import { pausesSection } from './pause.js';
+import { goalSection } from './goal.js';
+import { choice } from './components.js';
+import { DEFAULT_CLIMB } from '../core/climb.js';
 
 function timeSetting(label, key, ctx) {
   return timeField({
@@ -54,6 +57,23 @@ function showResetSheet(app) {
   openSheet(confirmFirst, { name: 'reset', label: 'Reset' });
 }
 
+/** Each climber on Uhud can be switched off; switched on again, it resumes where it stopped. */
+function climbSettings(ctx) {
+  const cfg = { ...DEFAULT_CLIMB, ...(ctx.settings.climb || {}) };
+  const toggle = (kind, label) => choice({
+    label,
+    options: [{ value: true, label: 'On' }, { value: false, label: 'Off' }],
+    value: cfg[kind].on,
+    cols: 2,
+    name: `climb-${kind}`,
+    onChange: (on) => store.setClimber(kind, on, ctx.todayKey),
+  });
+  return h('section', { class: 'section', 'data-block': 'climb-settings' },
+    h('div', { class: 'label' }, 'Jebel Uhud'),
+    h('p', { class: 'small gap-s' }, 'A climber switched off is hidden and does not track. Switched on again, it resumes where it stopped.'),
+    h('div', { class: 'btn-pair gap' }, toggle('fast', 'Fast climber'), toggle('fullness', 'Fullness climber')));
+}
+
 export function isStandalone() {
   return matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 }
@@ -81,7 +101,8 @@ export function renderMore(ctx, app) {
     header(ctx, app, { title: 'More' }),
     h('section', { class: 'section strong' },
       h('h1', { class: 'display' }, 'Settings'),
-      h('p', { class: 'gap' }, 'Planned times drive reminders and the Tempted? flow. Success depends only on your 4 hours.')),
+      h('p', { class: 'gap' }, 'Planned times drive reminders and the Tempted? flow. Success depends only on your eating window.')),
+    goalSection(ctx, app),
     h('section', { class: 'section', 'data-block': 'planned' },
       h('div', { class: 'label' }, 'Planned window start'),
       h('div', { class: 'btn-pair gap' },
@@ -94,6 +115,7 @@ export function renderMore(ctx, app) {
         timeSetting('Hold the line', 'holdTime', ctx),
         timeSetting('Training', 'trainingTime', ctx))),
     pausesSection(ctx, app),
+    climbSettings(ctx),
     h('section', { class: 'section', 'data-block': 'calendar' },
       h('div', { class: 'label' }, 'Calendar reminders'),
       h('p', { class: 'gap-s' },

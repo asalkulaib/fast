@@ -3,7 +3,8 @@
 
 import * as db from './db.js';
 import { now, addDays, dayKey, floorToMinute, fmtDayLong, fmtTime, MIN } from './core/time.js';
-import { isOpen } from './core/rules.js';
+import { DEFAULT_WINDOW_HOURS, isOpen, lastBiteTs } from './core/rules.js';
+import { DEFAULT_CLIMB, switchClimber } from './core/climb.js';
 
 export const DEFAULTS = {
   workdayStart: '17:30',
@@ -16,6 +17,8 @@ export const DEFAULTS = {
   icsSequence: 0,
   icsTimes: null,
   persisted: null,
+  goalChanges: [], // [{ from: 'YYYY-MM-DD', hours }]: the eating-window goal from that day on
+  climb: DEFAULT_CLIMB,
 };
 
 export const FULLNESS_DELAY = 20 * MIN;
@@ -262,8 +265,9 @@ export function daysBetween(fromKey, toKey) {
   return keys;
 }
 
-/** Whether a day record still holds anything once its pause is gone. */
-const holdsData = (r) => !!(r.firstBite || r.lastBite || r.noEating || r.dayOff || r.energy4pm != null || r.trained != null || r.trainingType);
+/** Whether a day record still holds anything once a field is gone. */
+const holdsData = (r) => !!(r.firstBite || r.lastBite || r.noEating || r.dayOff || r.energy4pm != null || r.trained != null
+  || r.trainingType || r.paused || r.fullness || r.fastFrom);
 
 /**
  * Pauses every day from fromKey to toKey, for a reason ('travel', 'illness',
@@ -314,6 +318,59 @@ function apply(ops) {
     else state.days.set(op.put.day, op.put);
   }
   changed();
+}
+
+// ---------- Goal ----------
+
+/**
+ * Sets the eating-window goal (hours) from a day on. Earlier days keep the
+ * goal they had. Resolves with { undo }.
+ */
+export async function setGoal(hours, fromKey) {
+  const before = state.settings.goalChanges || [];
+  const kept = before.filter((c) => c.from < fromKey);
+  const previous = kept.length ? kept[kept.length - 1].hours : DEFAULT_WINDOW_HOURS;
+  await setSettings({ goalChanges: previous === hours ? kept : [...kept, { from: fromKey, hours }] });
+  return { undo: () => setSettings({ goalChanges: before }) };
+}
+
+// ---------- Begin fast ----------
+
+/**
+ * Sets when the current fast began. A start set earlier for the same fast
+ * (after the last bite on record) gives way to this one. The day it falls
+ * on keeps its result. Resolves with { undo }.
+ */
+export async function beginFast(ts) {
+  const t = stamp(ts);
+  const key = dayKey(t);
+  const lastBite = lastBiteTs(data());
+  const stale = [...state.days.values()]
+    .filter((r) => r.fastFrom && r.day !== key && (lastBite == null || r.fastFrom > lastBite))
+    .map((r) => r.day);
+  const undo = undoPoint({ days: [key, ...stale] });
+  const at = now();
+  const ops = [{ store: 'days', put: { ...(state.days.get(key) || { day: key }), day: key, fastFrom: t, updatedAt: at } }];
+  for (const k of stale) {
+    const { fastFrom, ...rest } = state.days.get(k);
+    ops.push(holdsData(rest) ? { store: 'days', put: { ...rest, updatedAt: at } } : { store: 'days', remove: k });
+  }
+  await db.batch(ops);
+  apply(ops);
+  return { undo };
+}
+
+// ---------- Fullness and the climb ----------
+
+/** The day's own fullness rating: 'before_full', 'full', 'stuffed', or null to clear. */
+export function setDayFullness(key, value) {
+  return updateDay(key, { fullness: value });
+}
+
+/** Switches a climber ('fast' or 'fullness') on or off from a day. */
+export function setClimber(kind, on, todayKey) {
+  const cur = { ...DEFAULT_CLIMB, ...(state.settings.climb || {}) };
+  return setSettings({ climb: { ...cur, [kind]: switchClimber(cur[kind], on, todayKey) } });
 }
 
 // ---------- Meals ----------

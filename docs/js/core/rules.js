@@ -4,17 +4,43 @@
 //   { day: 'YYYY-MM-DD', firstBite: ms|null, lastBite: ms|null,
 //     noEating: bool, dayOff: bool, energy4pm: 1-5|null,
 //     trained: bool|null, trainingType: string|null,
-//     paused: 'travel'|'illness'|'ramadan'|'other'|true (absent when not paused) }
+//     paused: 'travel'|'illness'|'ramadan'|'other'|true (absent when not paused),
+//     fullness: 'before_full'|'full'|'stuffed' (the day's own rating, when asked),
+//     fastFrom: ms (when a fast began, set with Begin fast) }
+//
+// The eating window is a goal: 4 hours (20:4) unless changed. A change
+// applies from its day on, so past days keep the goal they had.
 
 import { HOUR, MIN, addDays, dayKey, dayStart, minutesOfDay, isWorkweekday, toMinutes } from './time.js';
 
-export const WINDOW_MS = 4 * HOUR;
+export const DEFAULT_WINDOW_HOURS = 4;
+export const WINDOW_MS = DEFAULT_WINDOW_HOURS * HOUR; // the default goal, 20:4
 export const GRACE_MS = 15 * MIN;
 export const LIMIT_MS = WINDOW_MS + GRACE_MS;
 export const WARN_MS = 30 * MIN;
 export const CUTOFF_MIN = 16 * 60; // workday rule: the window may open at 16:00 or later
-export const FORGOT_MS = 6 * HOUR; // an open window this old asks for its last bite
+export const FORGOT_AFTER_MS = 2 * HOUR; // an open window this long past its goal asks for its last bite
 export const LATE_NIGHT_END_MIN = 4 * 60; // 00:00 to 04:00 can be logged against last night
+
+/** Goals as hours of eating in 24: 16:8, 18:6, 20:4 and one meal a day, 23:1. */
+export const GOAL_PRESETS = [8, 6, 4, 1];
+export const GOAL_HOURS_MAX = 12;
+
+/**
+ * The eating-window goal in force on a day, in ms: the latest change on or
+ * before it (settings.goalChanges: [{ from: 'YYYY-MM-DD', hours }], oldest first).
+ */
+export function windowMsFor(key, settings) {
+  let hours = DEFAULT_WINDOW_HOURS;
+  for (const c of (settings && settings.goalChanges) || []) if (c.from <= key) hours = c.hours;
+  return hours * HOUR;
+}
+
+/** '20:4' for a 4-hour window: fasting hours, then eating hours. */
+export function goalLabel(windowMs) {
+  const hours = Math.round(windowMs / HOUR);
+  return `${24 - hours}:${hours}`;
+}
 
 export const PAUSE_REASONS = ['travel', 'illness', 'ramadan', 'other'];
 
@@ -66,12 +92,13 @@ export function plannedStartMin(key, rec, settings) {
  *       | 'unlogged' (a past day with nothing logged) | 'none' (outside tracking)
  *       | 'paused' (not tracked, whatever is logged)
  * reasons for a miss: 'early' (workday window opened before 16:00),
- *                     'over' (longer than 4 h 15 min), 'outside' (ate outside the window)
+ *                     'over' (longer than the goal plus 15 min), 'outside' (ate outside the window)
  */
-export function evaluateDay(key, rec, outsideCount, nowTs, todayKey, startKey) {
+export function evaluateDay(key, rec, outsideCount, nowTs, todayKey, startKey, windowMs = WINDOW_MS) {
   const workday = isWorkday(key, rec);
   const base = {
     day: key,
+    windowMs,
     workday,
     dayOff: !!(rec && rec.dayOff),
     weekend: !isWorkweekday(key),
@@ -88,7 +115,7 @@ export function evaluateDay(key, rec, outsideCount, nowTs, todayKey, startKey) {
     const end = open ? Math.max(nowTs, rec.firstBite) : rec.lastBite;
     const lengthMs = Math.max(0, end - rec.firstBite);
     const openedEarly = workday && minutesOfDay(rec.firstBite) < CUTOFF_MIN;
-    const over = lengthMs > LIMIT_MS;
+    const over = lengthMs > windowMs + GRACE_MS;
     const reasons = [];
     if (openedEarly) reasons.push('early');
     if (over) reasons.push('over');
@@ -99,7 +126,7 @@ export function evaluateDay(key, rec, outsideCount, nowTs, todayKey, startKey) {
       firstBite: rec.firstBite,
       lastBite: rec.lastBite || null,
       lengthMs,
-      overByMs: over ? lengthMs - WINDOW_MS : 0,
+      overByMs: over ? lengthMs - windowMs : 0,
       openedEarly,
       reasons,
       result: reasons.length ? 'miss' : open ? 'pending' : 'success',
@@ -125,12 +152,12 @@ export function countByDay(items) {
 }
 
 /** Builds a cached evaluator for any day. */
-export function makeEvaluator({ days, outside, nowTs, todayKey, startKey }) {
+export function makeEvaluator({ days, outside, nowTs, todayKey, startKey, settings }) {
   const outsideByDay = countByDay(outside);
   const cache = new Map();
   return (key) => {
     if (!cache.has(key)) {
-      cache.set(key, evaluateDay(key, days.get(key), outsideByDay.get(key) || 0, nowTs, todayKey, startKey));
+      cache.set(key, evaluateDay(key, days.get(key), outsideByDay.get(key) || 0, nowTs, todayKey, startKey, windowMsFor(key, settings)));
     }
     return cache.get(key);
   };
@@ -138,7 +165,7 @@ export function makeEvaluator({ days, outside, nowTs, todayKey, startKey }) {
 
 /**
  * Current streak as of endKey and the best streak up to endKey.
- * Pending days (today, or last night's window still inside its 4 hours)
+ * Pending days (today, or last night's window still inside its goal)
  * and paused days are neutral: they neither count nor break a run.
  */
 export function streaks(evaluate, endKey, startKey) {
@@ -164,11 +191,17 @@ export function streaks(evaluate, endKey, startKey) {
   return { current, best: Math.max(best, current) };
 }
 
-/** The first day the app tracks: install day, or the earliest data if older. */
+/**
+ * The first day the app tracks: install day, or the earliest data if older.
+ * A day that only holds when a fast began (Begin fast) is not data: a first
+ * fast begun last night does not make last night a tracked day.
+ */
 export function trackingStart({ days, meals, outside, temptations, installedAt }, todayKey) {
   let start = installedAt ? dayKey(installedAt) : todayKey;
   const consider = (k) => { if (k && k < start) start = k; };
-  for (const k of days.keys()) consider(k);
+  for (const [k, r] of days) {
+    if (r.firstBite || r.lastBite || r.noEating || r.paused || r.dayOff || r.fullness || r.energy4pm != null || r.trained != null) consider(k);
+  }
   for (const m of meals) consider(m.day);
   for (const o of outside) consider(o.day);
   for (const t of temptations) consider(t.day);
@@ -184,10 +217,10 @@ export function openWindows(days) {
  * What the Today screen shows.
  * mode: 'open' | 'forgot' | 'closed' | 'noEating' | 'paused' | 'before'
  */
-export function todayMode({ days, todayKey, nowTs }) {
+export function todayMode({ days, todayKey, nowTs, settings }) {
   const open = openWindows(days)[0];
   if (open) {
-    if (nowTs - open.firstBite >= FORGOT_MS) return { mode: 'forgot', rec: open };
+    if (nowTs - open.firstBite >= windowMsFor(open.day, settings) + FORGOT_AFTER_MS) return { mode: 'forgot', rec: open };
     return { mode: 'open', rec: open };
   }
   const rec = days.get(todayKey);
@@ -195,9 +228,9 @@ export function todayMode({ days, todayKey, nowTs }) {
   if (hasWindow(rec)) return { mode: 'closed', rec };
   if (rec && rec.noEating) return { mode: 'noEating', rec };
   // Just after midnight, last night's window stays on screen while it can
-  // still be reopened inside its 4 hours.
+  // still be reopened inside its window.
   const late = lateNightDay({ days, todayKey, nowTs });
-  if (late && canReopen(days.get(late), nowTs)) return { mode: 'closed', rec: days.get(late) };
+  if (late && canReopen(days.get(late), nowTs, windowMsFor(late, settings))) return { mode: 'closed', rec: days.get(late) };
   return { mode: 'before', rec };
 }
 
@@ -214,34 +247,39 @@ export function lateNightDay({ days, todayKey, nowTs }) {
 }
 
 /** Phase of an open window: 'window' | 'warn' | 'grace' | 'over'. */
-export function windowPhase(rec, nowTs) {
+export function windowPhase(rec, nowTs, windowMs = WINDOW_MS) {
   const elapsed = nowTs - rec.firstBite;
-  if (elapsed > LIMIT_MS) return 'over';
-  if (elapsed >= WINDOW_MS) return 'grace';
-  if (WINDOW_MS - elapsed <= WARN_MS) return 'warn';
+  if (elapsed > windowMs + GRACE_MS) return 'over';
+  if (elapsed >= windowMs) return 'grace';
+  if (windowMs - elapsed <= WARN_MS) return 'warn';
   return 'window';
 }
 
-/** Whether a closed window can still be reopened (inside its 4 hours). */
-export function canReopen(rec, nowTs) {
-  return !!(rec && rec.firstBite && rec.lastBite && nowTs - rec.firstBite < WINDOW_MS);
+/** Whether a closed window can still be reopened (inside its goal). */
+export function canReopen(rec, nowTs, windowMs = WINDOW_MS) {
+  return !!(rec && rec.firstBite && rec.lastBite && nowTs - rec.firstBite < windowMs);
+}
+
+/** Whether any day from fromKey to toKey is paused. */
+export function pausedBetween(days, fromKey, toKey) {
+  for (const r of days.values()) if (r.paused && r.day >= fromKey && r.day <= toKey) return true;
+  return false;
 }
 
 /** Whether a paused day falls between a moment and today: eating then went unrecorded. */
 export function pausedSince(days, ts, todayKey) {
-  if (!todayKey) return false;
-  const from = dayKey(ts);
-  for (const r of days.values()) if (r.paused && r.day >= from && r.day <= todayKey) return true;
-  return false;
+  return !!todayKey && pausedBetween(days, dayKey(ts), todayKey);
 }
 
 /**
- * Where the latest eating on record comes from, so its time can be edited:
- * { ts, kind: 'window' | 'open' | 'meal' | 'outside', day, id? }, or null.
+ * Where the current fast began, so its time can be edited: the latest eating
+ * on record, or a start set with Begin fast.
+ * { ts, kind: 'window' | 'open' | 'meal' | 'outside' | 'fast', day, id? }, or null.
  * On a tie the window's own last bite wins. Unknown (null) when a pause
- * came after it, since eating during a pause is not recorded.
+ * came after it, since eating during a pause is not recorded; a fast
+ * started on a paused day itself still counts.
  */
-export function lastEatingSource({ days, meals, outside, todayKey }) {
+export function lastEatingSource({ days, meals, outside, todayKey }, { fastStarts = true } = {}) {
   let best = null;
   const take = (ts, src) => { if (ts && (!best || ts > best.ts)) best = { ts, ...src }; };
   for (const r of days.values()) {
@@ -250,7 +288,20 @@ export function lastEatingSource({ days, meals, outside, todayKey }) {
   }
   for (const m of meals) take(m.finishedAt || m.startedAt, { kind: 'meal', day: m.day, id: m.id });
   for (const o of outside) take(o.at, { kind: 'outside', day: o.day, id: o.id });
-  return best && !pausedSince(days, best.ts, todayKey) ? best : null;
+  if (fastStarts) for (const r of days.values()) take(r.fastFrom, { kind: 'fast', day: r.day });
+  if (!best) return null;
+  const from = best.kind === 'fast' ? addDays(dayKey(best.ts), 1) : dayKey(best.ts);
+  return todayKey && pausedBetween(days, from, todayKey) ? null : best;
+}
+
+/** The latest eating on record (windows, meals, eating outside), ignoring fast starts; null when none. */
+export function lastBiteTs({ days, meals, outside }) {
+  let last = null;
+  const take = (t) => { if (t && (last === null || t > last)) last = t; };
+  for (const r of days.values()) { take(r.lastBite); if (r.firstBite && !r.lastBite) take(r.firstBite); }
+  for (const m of meals) take(m.finishedAt || m.startedAt);
+  for (const o of outside) take(o.at);
+  return last;
 }
 
 /** Latest eating time on record (for time since last bite), or null. */

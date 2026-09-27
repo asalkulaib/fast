@@ -77,11 +77,11 @@ test('csv: five files with the expected rows', () => {
   assert.deepEqual(files.map((f) => f.name), ['fast-windows.csv', 'fast-meals.csv', 'fast-weight.csv', 'fast-checkins.csv', 'fast-temptations.csv']);
   const rows = (name) => files.find((f) => f.name === name).text.replace('﻿', '').trim().split('\r\n');
   const windows = rows('fast-windows.csv');
-  assert.equal(windows[0], 'date,weekday,day_type,first_bite,last_bite,last_bite_date,length_min,result,reasons,over_by_min,opened_before_16,outside_eating');
-  assert.equal(windows[1], '2026-09-20,Sunday,workday,17:30,21:50,2026-09-20,260,miss,over 4 h 15 min; ate outside the window,20,no,1');
-  assert.equal(windows[2], '2026-09-25,Friday,weekend,23:00,01:30,2026-09-26,150,success,,,no,0');
+  assert.equal(windows[0], 'date,weekday,day_type,first_bite,last_bite,last_bite_date,length_min,result,reasons,over_by_min,opened_before_16,outside_eating,fullness,window_goal_min');
+  assert.equal(windows[1], '2026-09-20,Sunday,workday,17:30,21:50,2026-09-20,260,miss,over 4 h 15 min; ate outside the window,20,no,1,left wanting,240');
+  assert.equal(windows[2], '2026-09-25,Friday,weekend,23:00,01:30,2026-09-26,150,success,,,no,0,,240');
   const meals = rows('fast-meals.csv');
-  assert.equal(meals[1], '2026-09-20,meal,"Dinner, with rice",17:30,18:00,7,before full,6,7,,');
+  assert.equal(meals[1], '2026-09-20,meal,"Dinner, with rice",17:30,18:00,7,left wanting,6,7,,');
   assert.equal(meals[2], '2026-09-20,outside the window,,22:30,,,,,,boredom,little');
   assert.deepEqual(rows('fast-weight.csv'), ['date,kg', '2026-09-20,104.6', '2026-09-21,104.3']);
   assert.deepEqual(rows('fast-checkins.csv'), ['date,weekday,day_type,energy_4pm,trained,training_type', '2026-09-20,Sunday,workday,4,yes,weights']);
