@@ -51,7 +51,7 @@ function context() {
   const todayKey = dayKey(nowTs);
   const d = store.data();
   const startKey = trackingStart({ ...d, installedAt: d.settings.installedAt }, todayKey);
-  const evaluate = makeEvaluator({ days: d.days, outside: d.outside, nowTs, todayKey, startKey, settings: d.settings });
+  const evaluate = makeEvaluator({ days: d.days, outside: d.outside, meals: d.meals, nowTs, todayKey, startKey, settings: d.settings });
   const mode = todayMode({ days: d.days, todayKey, nowTs, settings: d.settings });
   return {
     ...d,

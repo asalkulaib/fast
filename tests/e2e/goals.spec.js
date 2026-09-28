@@ -14,7 +14,7 @@ test('a 16:8 goal from More: the window counts down 8 hours, and 7 hours is a su
 
   await page.locator('.tab[data-tab="today"]').click();
   await expect(page.locator('[data-action="edit-goal"]')).toContainText('16:8');
-  await tap(page, 'first-bite');
+  await tap(page, 'start-meal');
   await tap(page, 'start-eating');
   await expect(page.locator('.countdown-caption')).toHaveText('left of 8 hours');
   await expect(page.getByTestId('countdown')).toHaveText('8:00');

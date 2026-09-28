@@ -3,8 +3,8 @@ import { test, expect, openAt, advance, tap, pick, choose, setTime, sheet, readD
 // 2026-09-27 is a Sunday (workday); 2026-09-25 a Friday and 2026-09-26 a Saturday.
 
 async function openWindow(page) {
-  await tap(page, 'first-bite');
-  await expect(sheet(page, 'first-bite')).toBeVisible();
+  await tap(page, 'start-meal');
+  await expect(sheet(page, 'start-meal')).toBeVisible();
 }
 
 async function startFirstMeal(page, name = 'Dinner', hunger = 7) {
@@ -13,7 +13,7 @@ async function startFirstMeal(page, name = 'Dinner', hunger = 7) {
   await page.locator('input[data-field="meal-name"]').fill(name);
   await pick(page, 'hunger', hunger);
   await tap(page, 'start-eating');
-  await expect(sheet(page, 'first-bite')).toBeHidden();
+  await expect(sheet(page, 'start-meal')).toBeHidden();
 }
 
 /** The 20-minute fullness check opens by itself once it is due. */
@@ -106,9 +106,8 @@ test('4 h 20 min is a miss, shown as over by 20 min', async ({ page }) => {
 test('a workday window opening at 15:30 is a miss even when short', async ({ page }) => {
   await openAt(page, '2026-09-27T15:30');
   await expect(page.getByTestId('firm-reminder')).toHaveText('Opening before 16:00 makes today a miss.');
-  await tap(page, 'first-bite');
-  await expect(sheet(page, 'confirm-open')).toContainText('today will count as a miss');
-  await tap(page, 'confirm-open');
+  await tap(page, 'start-meal');
+  await expect(sheet(page, 'start-meal').getByTestId('meal-warning')).toHaveText('Before 16:00 on a workday: today will count as a miss.');
   await startFirstMeal(page);
   await expect(page.getByText('Opened before 16:00, so today counts as a miss.')).toBeVisible();
   await advance(page, 150); // 18:00, only 2 h 30 min
@@ -262,7 +261,8 @@ test('a day off follows weekend rules', async ({ page }) => {
   await expect(page.getByTestId('firm-reminder')).toHaveCount(0);
   await expect(page.locator('.head')).toContainText('Day off');
   await expect(page.locator('[data-block="before"]')).toContainText('Window planned for 14:00.');
-  await tap(page, 'first-bite'); // no confirmation on a day off
+  await tap(page, 'start-meal');
+  await expect(sheet(page, 'start-meal').getByTestId('meal-warning')).toBeHidden(); // no warning on a day off
   await startFirstMeal(page, 'Lunch');
   await advance(page, 180);
   await closeWindowAt(page);
@@ -273,18 +273,20 @@ test('a double tap on Start eating logs one meal', async ({ page }) => {
   await openAt(page, '2026-09-27T17:30');
   await openWindow(page);
   await page.locator('[data-action="start-eating"]').dblclick();
-  await expect(sheet(page, 'first-bite')).toBeHidden();
+  await expect(sheet(page, 'start-meal')).toBeHidden();
   await expect(page.locator('[data-block="open"]')).toBeVisible();
   expect((await readDb(page)).meals).toHaveLength(1);
 });
 
-test('a first-bite time still ahead is refused and the window stays put', async ({ page }) => {
+test('a start time still ahead is refused; the first meal opens the window at its start', async ({ page }) => {
   await openAt(page, '2026-09-27T17:05');
   await openWindow(page);
-  await setTime(page, 'first-bite', '17:10');
-  await expect(sheet(page, 'first-bite')).toContainText('That time is still ahead.');
-  await setTime(page, 'first-bite', '16:50');
+  await setTime(page, 'meal-start', '17:10');
+  await expect(sheet(page, 'start-meal').getByTestId('meal-ahead')).toHaveText('That time is still ahead.');
+  await setTime(page, 'meal-start', '16:50');
+  await expect(sheet(page, 'start-meal').getByTestId('meal-ahead')).toHaveText('');
   await tap(page, 'start-eating');
+  await expect(page.getByTestId('flash')).toHaveText('Window open from 16:50.');
   const db = await readDb(page);
   expect(db.days.filter((d) => d.firstBite)).toHaveLength(1);
   expect(db.days.find((d) => d.day === '2026-09-27').firstBite).toBe(ms('2026-09-27T16:50'));

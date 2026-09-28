@@ -1,5 +1,6 @@
 // Stage icons: thin line drawings on a 24 x 24 grid, stroked in the current
-// text colour so CSS decides quiet or gold. Never emoji.
+// text colour so CSS decides quiet or ink; the current one sits on a disc of
+// gold leaf. Never emoji.
 
 import { s } from './dom.js';
 
@@ -36,5 +37,5 @@ export function stageIcon(key, { x = 12, y = 12, size = 24, current = false } = 
     transform: `translate(${(x - size / 2).toFixed(1)} ${(y - size / 2).toFixed(1)}) scale(${k.toFixed(3)})`,
     'data-stage-icon': key,
     'aria-hidden': 'true',
-  }, ...PATHS[key].map((d) => s('path', { d })));
+  }, current ? s('circle', { class: 'leaf', cx: 12, cy: 12, r: 14 }) : null, ...PATHS[key].map((d) => s('path', { d })));
 }

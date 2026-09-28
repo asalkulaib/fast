@@ -54,7 +54,7 @@ function rank(items, keyOf) {
 export function weekReview(data, { weekStartKey, todayKey, nowTs, startKey }) {
   const keys = Array.from({ length: 7 }, (_, i) => addDays(weekStartKey, i));
   const inWeek = new Set(keys);
-  const evaluate = makeEvaluator({ days: data.days, outside: data.outside, nowTs, todayKey, startKey, settings: data.settings });
+  const evaluate = makeEvaluator({ days: data.days, outside: data.outside, meals: data.meals, nowTs, todayKey, startKey, settings: data.settings });
   const evals = keys.map((k) => ({ ...evaluate(k), future: k > todayKey }));
 
   const successCount = evals.filter((e) => e.result === 'success').length;

@@ -17,19 +17,21 @@ const read = (f) => readFileSync(f, 'utf8');
 const rel = (f) => path.relative(root, f);
 const css = read(path.join(root, 'css', 'app.css'));
 
+// Nafud at midday: sand is the page, umber ink the text, gold leaf a fill.
 const PALETTE = {
-  '--bg': '#05060B', '--bg-raised': '#16120E', '--bg-raised-2': '#1C1409',
-  '--text-display': '#F6E7CB', '--text-body': '#E4D2B2', '--text-quiet': '#A9957B',
-  '--text-label': '#C79B5C', '--text-marginalia': '#6E5C45',
-  '--accent': '#F0B25C', '--accent-strong': '#C8913F', '--clay': '#9E3B23', '--rule': '#E0AE5B',
+  '--bg': '#E6D0A8', '--bg-raised': '#F1E3C7', '--bg-raised-2': '#F7EEDC',
+  '--text-display': '#1E140C', '--text-body': '#33241A', '--text-quiet': '#5F4A31',
+  '--text-label': '#6B4E17', '--text-marginalia': '#8C7556', '--ink': '#1E140C',
+  '--accent': '#F0B25C', '--accent-strong': '#C8913F', '--clay': '#9E3B23', '--rule': '#2A1C10',
   '--rock-400': '#C58E50', '--rock-500': '#9C6832', '--rock-700': '#4B2E14', '--sand-600': '#5E3B18',
+  '--sand-300': '#D8BF93', '--sand-400': '#C9A26C', '--night': '#05060B',
 };
 
 test('the colour tokens are exactly the brief', () => {
   for (const [name, hex] of Object.entries(PALETTE)) {
     assert.match(css, new RegExp(`${name}:\\s*${hex};`, 'i'), name);
   }
-  assert.match(css, /--rule-quiet:\s*rgba\(224, 174, 91, 0\.4\);/);
+  assert.match(css, /--rule-quiet:\s*rgba\(42, 28, 16, 0\.2\);/);
 });
 
 test('no colour outside the palette anywhere', () => {
@@ -39,7 +41,7 @@ test('no colour outside the palette anywhere', () => {
       assert.ok(allowed.has(hex.toLowerCase()), `${rel(f)} uses ${hex}`);
     }
     for (const [rgba] of read(f).matchAll(/rgba\(([^)]*)\)/g)) {
-      assert.match(rgba, /rgba\((224, 174, 91|5, 6, 11), 0?\.\d+\)/, `${rel(f)} uses ${rgba}`);
+      assert.match(rgba, /rgba\((42, 28, 16|224, 174, 91), 0?\.\d+\)/, `${rel(f)} uses ${rgba}`);
     }
   }
 });
@@ -86,16 +88,19 @@ export function contrast(a, b) {
   return (x + 0.05) / (y + 0.05);
 }
 
-test('text contrast on night and ink', () => {
+test('text contrast on sand', () => {
   const grounds = [PALETTE['--bg'], PALETTE['--bg-raised'], PALETTE['--bg-raised-2']];
-  for (const token of ['--text-display', '--text-body', '--text-quiet', '--text-label', '--accent']) {
+  for (const token of ['--text-display', '--text-body', '--text-quiet', '--text-label']) {
     for (const g of grounds) assert.ok(contrast(PALETTE[token], g) >= 4.5, `${token} on ${g}: ${contrast(PALETTE[token], g).toFixed(2)}`);
   }
-  // The pressed primary button: night text on gold.
-  assert.ok(contrast(PALETTE['--bg'], PALETTE['--accent']) >= 4.5);
-  // Clay passes only for large text (3:1), so it is used at 24px and above.
+  // Gold leaf is a fill: ink on it (the highlight, a pressed button), never gold text on sand.
+  assert.ok(contrast(PALETTE['--ink'], PALETTE['--accent']) >= 4.5);
+  assert.ok(contrast(PALETTE['--accent'], PALETTE['--bg']) < 3);
+  // Selected choices: sand text on ink.
+  assert.ok(contrast(PALETTE['--bg-raised'], PALETTE['--ink']) >= 4.5);
+  // Clay stays on large text (24px and above), where 3:1 is enough.
   const clay = contrast(PALETTE['--clay'], PALETTE['--bg']);
-  assert.ok(clay >= 2.95 && clay < 4.5, `clay ${clay.toFixed(2)}`);
+  assert.ok(clay >= 3, `clay ${clay.toFixed(2)}`);
   // Marginalia colour is decorative only.
   assert.ok(contrast(PALETTE['--text-marginalia'], PALETTE['--bg']) < 4.5);
 });

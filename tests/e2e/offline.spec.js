@@ -33,7 +33,7 @@ test('works fully offline once opened', async ({ page }, testInfo) => {
     expect(loaded).toEqual(expect.arrayContaining(['Cormorant Garamond', 'EB Garamond', 'Jost']));
 
     // Data still saves offline.
-    await tap(page, 'first-bite');
+    await tap(page, 'start-meal');
     await tap(page, 'start-eating');
     await expect(page.locator('[data-block="open"]')).toBeVisible();
 

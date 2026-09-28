@@ -37,7 +37,7 @@ function dayType(key, rec) {
  * Returns [{ name, text }] for windows, meals, weight, check-ins and temptations.
  */
 export function buildCsvFiles(data, { nowTs, todayKey, startKey }) {
-  const evaluate = makeEvaluator({ days: data.days, outside: data.outside, nowTs, todayKey, startKey, settings: data.settings });
+  const evaluate = makeEvaluator({ days: data.days, outside: data.outside, meals: data.meals, nowTs, todayKey, startKey, settings: data.settings });
   const byDay = mealsByDay(data.meals);
   const dayKeys = [...data.days.keys()].sort();
   const outsideKeys = new Set(data.outside.map((o) => o.day));
@@ -70,7 +70,7 @@ export function buildCsvFiles(data, { nowTs, todayKey, startKey }) {
 
   const mealRows = [
     ...data.meals.map((m) => ({ sort: m.startedAt, row: [
-      m.day, 'meal', m.name || null, time(m.startedAt), time(m.finishedAt), m.hungerBefore ?? null,
+      m.day, m.outside ? 'meal outside the window' : 'meal', m.name || null, time(m.startedAt), time(m.finishedAt), m.hungerBefore ?? null,
       m.stop ? FULLNESS_WORD[m.stop] : null, m.fullnessNow ?? null, m.fullness20 ?? null, null, null,
     ] })),
     ...data.outside.map((o) => ({ sort: o.at, row: [

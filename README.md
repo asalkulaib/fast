@@ -4,6 +4,10 @@ A personal eating-window and satiety tracker for iPhone. It is a Progressive Web
 
 Live app: https://asalkulaib.github.io/fast/
 
+## The look
+
+Nafud at midday: sand is the page, umber ink the text, and gold leaf marks the one value that matters on each screen. Clay appears only for misses. Fonts are Cormorant Garamond, EB Garamond and Jost, with square corners and hairline rules.
+
 ## Use it on your iPhone
 
 1. Open the link above in Safari.
@@ -16,7 +20,7 @@ Live app: https://asalkulaib.github.io/fast/
 
 - Kuwait time (UTC+3). Workdays are Sunday to Thursday, weekends Friday and Saturday.
 - Your goal is an eating window: 16:8, 18:6, 20:4 (the default), 23:1, or any whole number of hours from 1 to 12. The fasting goal is the rest of the 24 hours. Change it in More, Goal, or by tapping Goal on Today. A change applies from that day on; past days keep the goal they had.
-- The first bite opens the window and starts the countdown of your eating window. A window belongs to the day of its first bite, even when it runs past midnight.
+- Starting your first meal opens the window: its start is the first bite, and the countdown of your eating window begins. A window belongs to the day of its first bite, even when it runs past midnight.
 - A day succeeds when all eating falls within the window goal, with 15 minutes of grace. Beyond that it is a miss, shown as the time over the goal.
 - On a workday, a window that opens before 16:00 is a miss. A day marked as a day off follows weekend rules.
 - Eating after "I'm done eating" counts as outside the window and makes the day a miss. While you are still inside the window goal, you can reopen the window instead.
@@ -24,9 +28,14 @@ Live app: https://asalkulaib.github.io/fast/
 - The streak counts consecutive successful days, shown in Week. A day with nothing logged breaks it, so Fast asks you to fill in any gap.
 - A paused day is not tracked for fasting: it is never a miss, and it neither counts towards the streak nor breaks it. Fullness still counts.
 
-## Starting: First bite or Begin fast
+## Starting: a meal or Begin fast
 
-Before your window, Today offers two equal buttons. First bite starts the eating window now; its sheet has quick times (30 min, 1 h, 2 h ago) to start it earlier. Begin fast is for a fast already under way, for example on your first day with Fast or after a pause: pick Now, 1 or 2 hours ago, last night, or any time on the wheel, so none of the fast is lost. Tap Fast began on Today to adjust it later. A fast start never changes the result of the day it falls on, and it cannot be earlier than the last bite on record.
+Before your window, Today offers two equal buttons.
+
+- Start a meal: your first meal opens the window. The sheet has the eating reminders, the meal's name, hunger before, and its start time, with quick times (30 min, 1 h, 2 h ago) and the wheel. Already eaten? Log it whole with how you finished. On a workday before 16:00, the sheet says the day will count as a miss.
+- Begin fast: for a fast already under way, for example on your first day with Fast or after a pause. Pick Now, 1 or 2 hours ago, last night, or any time on the wheel, so none of the fast is lost. Tap Fast began on Today to adjust it later. A fast start never changes the result of the day it falls on, and it cannot be earlier than the last bite on record.
+
+Each meal is tracked on its own: its start, its finish, hunger before, how you finished and the 20-minute check. One meal at a time: Start another meal first asks how the open one finished. I'm done eating closes the window. After closing, a meal within your goal's hours reopens the window; later, it counts as eating outside the window, so the day is a miss, and its satiety is still tracked.
 
 ## Changing a time
 

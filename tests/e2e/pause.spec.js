@@ -20,7 +20,7 @@ test('Pause today: one tap, nothing to log, and Undo brings the day back', async
   await expect(paused.getByTestId('paused-until')).toHaveText('Paused today');
   await expect(paused).toContainText('Fasting is not tracked and the fast climber waits; fullness still counts. Tracking resumes on Monday 28 September.');
   // Nothing to log: no First bite, no ring, no check-in, no Tempted?.
-  await expect(page.locator('[data-action="first-bite"]')).toHaveCount(0);
+  await expect(page.locator('[data-action="start-meal"]')).toHaveCount(0);
   await expect(page.getByTestId('fasting-ring')).toHaveCount(0);
   await expect(page.locator('[data-block="checkin"]')).toHaveCount(0);
   await expect(page.locator('[data-action="tempted"]')).toHaveCount(0);
@@ -29,7 +29,7 @@ test('Pause today: one tap, nothing to log, and Undo brings the day back', async
 
   await tap(page, 'undo');
   await expect(page.getByTestId('flash')).toHaveText('Undone.');
-  await expect(page.locator('[data-action="first-bite"]')).toBeVisible();
+  await expect(page.locator('[data-action="start-meal"]')).toBeVisible();
   expect((await readDb(page)).days).toHaveLength(1);
 });
 
@@ -120,7 +120,7 @@ test('the day editor pauses and unpauses a single day', async ({ page }) => {
 
 test('a pause is refused while a window is open on one of its days', async ({ page }) => {
   await openAt(page, '2026-09-27T18:00');
-  await tap(page, 'first-bite');
+  await tap(page, 'start-meal');
   await tap(page, 'start-eating');
   await page.locator('.tab[data-tab="more"]').click();
   await tap(page, 'add-pause');

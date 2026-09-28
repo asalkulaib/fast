@@ -4,8 +4,8 @@ import { h } from './dom.js';
 import { button, choice, scale, textField, timeField, STOP_OPTIONS } from './components.js';
 import { openSheet, sheetHead } from './sheet.js';
 import * as store from '../store.js';
-import { MIN, HOUR, DAY, dayKey, dayStart, fmtDuration, fmtTime, minutesOfDay, nearestTime, now } from '../core/time.js';
-import { CUTOFF_MIN, LATE_NIGHT_END_MIN, isWorkday, timeOnOrAfter } from '../core/rules.js';
+import { MIN, HOUR, DAY, dayKey, dayStart, floorToMinute, fmtDuration, fmtTime, minutesOfDay, nearestTime, now } from '../core/time.js';
+import { CUTOFF_MIN, LATE_NIGHT_END_MIN, canReopen, isWorkday, timeOnOrAfter } from '../core/rules.js';
 import { mealInProgress } from './shared.js';
 
 /** Most recent moment at or before ref with this clock time (for edits after the fact). */
@@ -58,88 +58,118 @@ const fullnessScale = (draft, key = 'fullnessNow', label = 'Fullness now') => sc
   label, low: '1 empty', high: '10 stuffed', name: key === 'fullnessNow' ? 'fullness-now' : 'fullness-20',
 });
 
-// ---------- First bite ----------
+// ---------- Start a meal ----------
 
-/** The First bite button. On a workday before 16:00 it asks first. */
-export function firstBite(ctx, app) {
-  const key = ctx.todayKey;
-  if (isWorkday(key, ctx.days.get(key)) && minutesOfDay(ctx.nowTs) < CUTOFF_MIN) {
-    openSheet((api) => h('div', {},
-      sheetHead(api, 'First bite'),
-      h('p', { class: 'statement' }, 'Open the window now?'),
-      h('p', { class: 'gap' }, 'Today is a workday and it is before 16:00, so today will count as a miss.'),
-      h('div', { class: 'stack gap-l' },
-        button('Open the window', () => openWindowNow(app), { block: true, name: 'confirm-open' }),
-        button('Not yet', () => api.close(), { kind: 'secondary', name: 'not-yet' }))),
-    { name: 'confirm-open', label: 'Open the window' });
+/**
+ * Where a meal started now goes (see store.startMealAs): 'open' joins the
+ * open window; after a window has closed, 'reopen' inside its goal and
+ * 'outside' past it; 'first' opens a window when there is none.
+ */
+export function mealSituation(ctx) {
+  const { mode, rec } = ctx.mode;
+  if (mode === 'open' || mode === 'forgot') return { kind: 'open', rec };
+  if (mode === 'closed') return { kind: canReopen(rec, ctx.nowTs, ctx.windowMsFor(rec.day)) ? 'reopen' : 'outside', rec };
+  return { kind: 'first', rec: null };
+}
+
+const QUICK = [[0, 'Now'], [30, '30 min ago'], [60, '1 h ago'], [120, '2 h ago']];
+
+/**
+ * Start a meal: the first meal of the day opens the window, and each meal
+ * keeps its own satiety. One meal at a time, so a meal still open is
+ * finished first. 'Already finished?' logs a meal whole.
+ */
+export function showStartMealSheet(app) {
+  const ctx0 = app.ctx();
+  const sit0 = mealSituation(ctx0);
+  const running = sit0.rec ? mealInProgress(ctx0, sit0.rec.day) : null;
+  if (running) {
+    showFinishMealSheet(app, running.id, { next: () => showStartMealSheet(app), lead: 'One meal at a time. First, how did this one finish?' });
     return;
   }
-  openWindowNow(app);
-}
-
-/** Opens the window at this minute and shows the first-bite reminder. */
-export async function openWindowNow(app) {
-  const rec = await store.openWindow(now());
-  showFirstBiteSheet(app, rec.day);
-  return rec;
-}
-
-export function showFirstBiteSheet(app, initialKey) {
-  let key = initialKey;
-  const draft = { name: '', hungerBefore: null };
+  const draft = { name: '', hungerBefore: null, ts: floorToMinute(now()), done: false, stop: null, fullnessNow: null, finishMinutes: minutesOfDay(now()) };
   let hint = '';
-  // The wheel saves as soon as it comes to rest; a refused time rolls back.
-  // Presets move the first bite back in one tap.
-  const firstBiteField = (rec) => {
-    const hintEl = h('p', { class: 'small gap-s', 'data-testid': 'first-bite-hint' }, hint);
-    const move = async (ts) => {
-      const moved = ts == null ? { error: 'That time is still ahead.' } : await store.moveFirstBite(key, ts);
-      if (moved.error) {
-        hint = moved.error;
-        const cur = store.state.days.get(key);
-        if (cur && cur.firstBite) field.set(minutesOfDay(cur.firstBite));
-      } else {
-        key = moved.key;
-        hint = '';
-        field.set(minutesOfDay(ts));
-      }
-      hintEl.textContent = hint;
-    };
-    const field = timeField({
-      label: 'First bite at',
-      minutes: minutesOfDay(rec.firstBite),
-      name: 'first-bite',
-      onChange: (m) => move(resolveFirstBite(key, m)),
-    });
-    const presets = h('div', { class: 'presets gap-s', role: 'group', 'aria-label': 'Quick times' },
-      [[0, 'Now'], [30, '30 min ago'], [60, '1 h ago'], [120, '2 h ago']].map(([mins, label]) =>
-        button(label, () => move(now() - mins * MIN), { kind: 'secondary', name: `first-bite-${mins}` })));
-    return h('section', { class: 'section gap-l' }, presets, field, hintEl);
-  };
   openSheet((api) => {
     const ctx = app.ctx();
-    const rec = ctx.days.get(key);
-    if (!rec || !rec.firstBite) return h('div', {}, sheetHead(api, 'First bite'), h('p', {}, 'No window is open.'));
+    const sit = mealSituation(ctx);
+    const rec = sit.rec;
+    // Only a first meal before 16:00 on a workday makes the day a miss.
+    const warnEl = h('p', { class: 'statement gap', 'data-testid': 'meal-warning' });
+    const aheadEl = h('p', { class: 'small', 'data-testid': 'meal-ahead' });
+    const updateWarn = () => {
+      const key = draft.ts == null ? null : dayKey(draft.ts);
+      const early = key != null && sit.kind === 'first' && isWorkday(key, ctx.days.get(key)) && minutesOfDay(draft.ts) < CUTOFF_MIN;
+      warnEl.textContent = early ? 'Before 16:00 on a workday: today will count as a miss.' : '';
+      warnEl.hidden = !early;
+      aheadEl.textContent = draft.ts == null ? 'That time is still ahead.' : '';
+    };
+    // A clock time means today, or last night just after midnight; never a time still ahead.
+    const field = timeField({
+      label: 'Started at',
+      minutes: draft.ts == null ? minutesOfDay(now()) : minutesOfDay(draft.ts),
+      name: 'meal-start',
+      onChange: (m) => { draft.ts = resolveFirstBite(app.ctx().todayKey, m); updateWarn(); },
+    });
+    const presets = h('div', { class: 'presets gap-s', role: 'group', 'aria-label': 'Quick times' },
+      QUICK.map(([mins, label]) => button(label, () => {
+        draft.ts = floorToMinute(now() - mins * MIN);
+        field.set(minutesOfDay(draft.ts));
+        updateWarn();
+      }, { kind: 'secondary', name: `meal-start-${mins}` })));
+    updateWarn();
+    const context = {
+      first: 'Your first meal opens the window.',
+      reopen: rec && `This reopens your window from ${fmtTime(rec.firstBite)}.`,
+      outside: rec && `Your window closed at ${fmtTime(rec.lastBite)} and its hours are over, so this meal counts as eating outside it and the day becomes a miss.`,
+    }[sit.kind];
+
+    const save = async () => {
+      const cur = mealSituation(app.ctx());
+      const ts = draft.ts;
+      const refuse = (text) => { hint = text; api.rerender(); };
+      if (ts == null || ts > now() + MIN) return refuse('That time is still ahead.');
+      if ((cur.kind === 'open' || cur.kind === 'reopen') && ts < cur.rec.firstBite) {
+        return refuse(`Your window opened at ${fmtTime(cur.rec.firstBite)}. A meal in it starts after that.`);
+      }
+      if (cur.kind === 'outside' && ts < cur.rec.lastBite) {
+        return refuse(`Your window closed at ${fmtTime(cur.rec.lastBite)}. Pick a later time, or change the window's times.`);
+      }
+      const res = await store.startMealAs(cur.kind, { day: cur.rec ? cur.rec.day : null, name: draft.name, startedAt: ts, hungerBefore: draft.hungerBefore });
+      if (res.error) return refuse(res.error);
+      if (draft.done) {
+        const finishedAt = Math.min(timeOnOrAfter(res.meal.startedAt, draft.finishMinutes), now());
+        await store.finishMeal(res.meal.id, { finishedAt, stop: draft.stop, fullnessNow: draft.fullnessNow });
+      }
+      await api.close();
+      const at = fmtTime(res.meal.startedAt);
+      app.flash(cur.kind === 'first' ? `Window open from ${at}.` : draft.done ? 'Meal saved.' : `Meal started at ${at}.`, { undo: res.undo });
+      return null;
+    };
+
     return h('div', {},
-      sheetHead(api, 'First bite'),
-      h('div', { class: 'stanza' },
+      sheetHead(api, 'Start a meal'),
+      h('p', { 'data-testid': 'meal-context' }, context),
+      h('div', { class: 'stanza gap' },
         h('p', { class: 'statement' }, 'Protein and vegetables first.'),
         h('p', { class: 'statement' }, 'Eat slowly.'),
         h('p', { class: 'statement' }, 'Pause halfway.')),
-      firstBiteField(rec),
+      h('section', { class: 'section gap' }, presets, field, aheadEl),
+      warnEl,
       nameSection(ctx, draft, api),
       h('section', { class: 'section' }, hungerScale(draft)),
-      h('div', { class: 'gap' }, button('Start eating', async () => {
-        const r = store.state.days.get(key);
-        await store.startMeal({ day: key, name: draft.name, startedAt: r.firstBite, hungerBefore: draft.hungerBefore });
-        api.close();
-      }, { block: true, name: 'start-eating' })),
-      h('div', { class: 'gap-s' }, button('Opened by mistake? Undo', async () => {
-        await store.undoOpen(key);
-        api.close();
-      }, { kind: 'secondary', name: 'undo-open' })),
+      draft.done
+        ? [
+          h('section', { class: 'section' }, stopChoice(draft)),
+          h('section', { class: 'section' }, fullnessScale(draft)),
+          h('section', { class: 'section' },
+            timeField({ label: 'Finished at', minutes: draft.finishMinutes, name: 'meal-finish', onChange: (m) => { draft.finishMinutes = m; } })),
+        ]
+        : null,
+      hint ? h('p', { class: 'small', 'data-testid': 'meal-hint' }, hint) : null,
+      h('div', { class: 'gap' }, button(draft.done ? 'Save meal' : 'Start eating', save, { block: true, name: draft.done ? 'save-meal' : 'start-eating' })),
+      draft.done ? null : h('div', { class: 'gap-s' }, button('Already finished? Log it all at once', () => { draft.done = true; api.rerender(); }, { kind: 'secondary', name: 'already-finished' })),
     );
-  }, { name: 'first-bite', label: 'First bite' });
+  }, { name: 'start-meal', label: 'Start a meal' });
 }
 
 // ---------- Log a meal ----------
@@ -190,13 +220,15 @@ export function showLogMealSheet(app, key) {
 
 // ---------- Finish a meal ----------
 
-export function showFinishMealSheet(app, mealId) {
+/** next(): opened once the meal is saved (starting another meal). lead: a line above the questions. */
+export function showFinishMealSheet(app, mealId, { next = null, lead = null } = {}) {
   const draft = { stop: null, fullnessNow: null, minutes: minutesOfDay(now()) };
   openSheet((api) => {
     const meal = store.state.meals.get(mealId);
     if (!meal) return h('div', {}, sheetHead(api, 'Finished'), h('p', {}, 'This meal was removed.'));
     return h('div', {},
       sheetHead(api, 'Finished this meal'),
+      lead ? h('p', { class: 'gap-s', 'data-testid': 'finish-lead' }, lead) : null,
       h('h2', { class: 'h2' }, meal.name || 'This meal'),
       h('section', { class: 'section gap' }, stopChoice(draft)),
       h('section', { class: 'section' }, fullnessScale(draft)),
@@ -207,6 +239,7 @@ export function showFinishMealSheet(app, mealId) {
         await store.finishMeal(mealId, { finishedAt, stop: draft.stop, fullnessNow: draft.fullnessNow });
         await api.close();
         app.flash(`Fullness check at ${fmtTime(finishedAt + store.FULLNESS_DELAY)}.`);
+        if (next) next();
       }, { block: true, name: 'save-finish' })),
     );
   }, { name: 'finish-meal', label: 'Finished this meal' });

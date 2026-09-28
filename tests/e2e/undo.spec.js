@@ -29,12 +29,12 @@ test('Undo reverses a time change, from a bar above the tabs', async ({ page }) 
 
 test('Undo brings back a window removed by mistake, with its meal', async ({ page }) => {
   await openAt(page, '2026-09-27T18:00');
-  await tap(page, 'first-bite');
+  await tap(page, 'start-meal');
   await tap(page, 'start-eating');
   await tap(page, 'change-opening');
   await tap(page, 'remove-window');
   await tap(page, 'confirm-remove-window');
-  await expect(page.getByTestId('flash')).toHaveText('Window removed. Tap First bite when you eat.');
+  await expect(page.getByTestId('flash')).toHaveText('Window removed. Start a meal when you eat.');
   expect((await readDb(page)).meals).toHaveLength(0);
   await tap(page, 'undo');
   await expect(page.locator('[data-block="open"]')).toBeVisible();

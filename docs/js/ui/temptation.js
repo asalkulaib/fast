@@ -9,7 +9,7 @@ import { HOUR, MIN, at, fmtDuration, fmtMinutes, fmtTime, fmtTimer, minutesOfDay
 import { CUTOFF_MIN, isWorkday, lateNightDay, plannedStartMin } from '../core/rules.js';
 import { SUMMIT, climbers } from '../core/climb.js';
 import { energySplit } from '../core/review.js';
-import { openWindowNow } from './meal.js';
+import { showStartMealSheet } from './meal.js';
 import { nextWindowLine, note } from './shared.js';
 
 export const SURF_MS = 10 * MIN;
@@ -175,7 +175,7 @@ function render(app, api, id) {
     const planned = at(today, plannedStartMin(today, todayRec, ctx.settings));
     await store.updateTemptation(id, { outcome: now() < planned ? 'opened_early' : 'held', step: 'done', endedAt: now() });
     await api.close();
-    return openWindowNow(app);
+    return showStartMealSheet(app);
   };
   const ateOutside = async (amount) => {
     // Eating outside the window belongs to the window it follows, even after midnight.

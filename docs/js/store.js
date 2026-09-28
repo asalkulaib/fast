@@ -375,6 +375,47 @@ export function setClimber(kind, on, todayKey) {
 
 // ---------- Meals ----------
 
+/**
+ * Starts a meal, which is what opens a window. kind:
+ *   'first'   opens a window at the meal's start (the first bite),
+ *   'open'    joins the window already open on that day,
+ *   'reopen'  reopens that day's window, closed but still inside its goal,
+ *   'outside' counts it as eating outside that day's closed window.
+ * One transaction. Resolves with { meal, undo } or { error }.
+ */
+export async function startMealAs(kind, { day, name, startedAt, hungerBefore }) {
+  const t = stamp(startedAt);
+  const key = kind === 'first' ? dayKey(t) : day;
+  const cur = state.days.get(key);
+  if (kind === 'first' && cur && cur.firstBite) return { error: `${fmtDayLong(key)} already has a window. Pick a later time.` };
+  const snap = snapshot({ days: [key] });
+  const meal = {
+    day: key,
+    name: name || '',
+    startedAt: t,
+    finishedAt: null,
+    hungerBefore: hungerBefore ?? null,
+    stop: null,
+    fullnessNow: null,
+    fullness20DueAt: null,
+    fullness20: null,
+    fullness20Skipped: false,
+    ...(kind === 'outside' ? { outside: true } : {}),
+  };
+  const at = now();
+  let rec = null;
+  if (kind === 'first') rec = { ...(cur || { day: key }), day: key, firstBite: t, lastBite: null, noEating: false, updatedAt: at };
+  if (kind === 'reopen') rec = { ...cur, lastBite: null, updatedAt: at };
+  const ops = [...(rec ? [{ store: 'days', put: rec }] : []), { store: 'meals', put: meal }];
+  const keys = await db.batch(ops);
+  const saved = { ...meal, id: keys[keys.length - 1] };
+  if (rec) state.days.set(key, rec);
+  state.meals.set(saved.id, saved);
+  changed();
+  snap.meals.push([saved.id, null]); // undo removes the meal
+  return { meal: saved, undo: () => putBack(snap) };
+}
+
 async function saveRecord(store, map, rec) {
   const id = await db.put(store, rec);
   const saved = { ...rec, id };

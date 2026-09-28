@@ -3,10 +3,10 @@ import { test, expect, openAt, seed, advance, tap, setTime, sheet, readDb, setti
 // Correcting a window opened by mistake. 2026-09-27 is a Sunday (workday).
 
 async function firstBiteWithMeal(page) {
-  await tap(page, 'first-bite');
-  await expect(sheet(page, 'first-bite')).toBeVisible();
+  await tap(page, 'start-meal');
+  await expect(sheet(page, 'start-meal')).toBeVisible();
   await tap(page, 'start-eating');
-  await expect(sheet(page, 'first-bite')).toBeHidden();
+  await expect(sheet(page, 'start-meal')).toBeHidden();
 }
 
 test('opened too early: move the opening time to when eating really started', async ({ page }) => {
@@ -36,15 +36,15 @@ test('forgot to tap: move the opening time earlier', async ({ page }) => {
 
 test('opened by mistake without eating: remove the window, meal and all', async ({ page }) => {
   await openAt(page, '2026-09-27T13:00');
-  await tap(page, 'first-bite');
-  await tap(page, 'confirm-open'); // workday before 16:00
+  await tap(page, 'start-meal');
+  await expect(sheet(page, 'start-meal').getByTestId('meal-warning')).toBeVisible(); // workday before 16:00
   await tap(page, 'start-eating');
   await expect(page.getByText('Opened before 16:00, so today counts as a miss.')).toBeVisible();
   await tap(page, 'change-opening');
   await tap(page, 'remove-window');
   await expect(sheet(page, 'opening')).toContainText('Remove the window opened at 13:00? Its meal goes too.');
   await tap(page, 'confirm-remove-window');
-  await expect(page.getByTestId('flash')).toHaveText('Window removed. Tap First bite when you eat.');
+  await expect(page.getByTestId('flash')).toHaveText('Window removed. Start a meal when you eat.');
   await expect(page.locator('[data-block="before"]')).toBeVisible();
   await expect(page.getByTestId('firm-reminder')).toBeVisible();
   const db = await readDb(page);

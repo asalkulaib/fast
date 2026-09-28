@@ -66,8 +66,9 @@ test('opening the window early on a workday says it will be a miss', async ({ pa
   await expect(flow(page)).toContainText('today will count as a miss');
   await expect(flow(page)).not.toContainText('Eat very little'); // the window has not opened today
   await tap(page, 'open-now');
-  await expect(sheet(page, 'first-bite')).toBeVisible();
+  await expect(sheet(page, 'start-meal')).toBeVisible();
   await expect(page.getByText('Protein and vegetables first.')).toBeVisible();
+  await tap(page, 'start-eating'); // the meal opens the window
 
   const db = await readDb(page);
   expect(db.temptations[0]).toMatchObject({ trigger: 'social', outcome: 'opened_early' });
@@ -124,7 +125,7 @@ test('a resumed temptation never overwrites a window logged since', async ({ pag
   await tap(page, 'close-flow'); // Not sure yet
   await expect(flow(page)).toBeHidden();
   await advance(page, 40); // 17:30: first bite
-  await tap(page, 'first-bite');
+  await tap(page, 'start-meal');
   await tap(page, 'start-eating');
   await advance(page, 90); // 19:00
   await tap(page, 'done-eating');

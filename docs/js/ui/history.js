@@ -17,12 +17,11 @@ const HT = 220;
 const PAD = { top: 12, right: 8, bottom: 28, left: 36 };
 const MARK = '#9C6832'; // --rock-500: the series, recessive
 const MISS = '#9E3B23'; // --clay: a missed day
-const PICK = '#F0B25C'; // --accent: the selected day
-const TREND = '#E4D2B2'; // --text-body: the 7-day trend
-const AVG = '#F6E7CB'; // --text-display, dashed and faint: the average
-const BAND = '#16120E'; // --bg-raised: a paused day
-const SURFACE = '#05060B'; // --bg: ring around markers
-const GRID = 'rgba(224, 174, 91, 0.22)';
+const PICK = '#F0B25C'; // --accent: the selected day, gold leaf edged in ink
+const INK = '#1E140C'; // --ink: the 7-day trend, the average (dashed) and edges
+const BAND = '#D8BF93'; // --sand-300: a paused day
+const SURFACE = '#E6D0A8'; // --bg: ring around markers
+const GRID = 'rgba(42, 28, 16, 0.14)';
 
 const METRICS = {
   fast: { key: 'fastMs', name: 'Fast', noun: 'fast', empty: 'Fasts appear here from the day after your first logged window.' },
@@ -95,6 +94,7 @@ function chart({ series, trend, metric, kind, isMiss, avgMs, onPick }) {
       marks.push(s('rect', {
         x: (xc(i) - bw / 2).toFixed(1), y: y(v).toFixed(1), width: bw.toFixed(1), height: (y(0) - y(v)).toFixed(1),
         fill: colour(i), 'data-day': series[i].day, 'data-miss': isMiss(series[i].day) ? 'true' : null,
+        stroke: i === pickIdx ? INK : null, 'stroke-width': i === pickIdx ? 1.5 : null,
       }));
     });
   } else {
@@ -110,19 +110,19 @@ function chart({ series, trend, metric, kind, isMiss, avgMs, onPick }) {
       const size = pick ? 10 : 8;
       markers.push(s('rect', {
         x: (xc(i) - size / 2).toFixed(1), y: (y(v) - size / 2).toFixed(1), width: size, height: size,
-        fill: colour(i), stroke: SURFACE, 'stroke-width': 2, 'data-day': series[i].day, 'data-miss': miss ? 'true' : null,
+        fill: colour(i), stroke: pick ? INK : SURFACE, 'stroke-width': pick ? 1.5 : 2, 'data-day': series[i].day, 'data-miss': miss ? 'true' : null,
       }));
     });
   }
 
   const trendD = linePath(trend, xc, y);
   const trendLine = trendD
-    ? s('path', { d: trendD, fill: 'none', stroke: TREND, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round', 'data-testid': 'trend-line' })
+    ? s('path', { d: trendD, fill: 'none', stroke: INK, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round', 'data-testid': 'trend-line' })
     : null;
   const avgLine = avgMs != null
     ? s('line', {
       x1: PAD.left, x2: W - PAD.right, y1: y(avgMs).toFixed(1), y2: y(avgMs).toFixed(1),
-      stroke: AVG, 'stroke-opacity': 0.75, 'stroke-width': 1.25, 'stroke-dasharray': '3 4', 'data-testid': 'avg-line',
+      stroke: INK, 'stroke-opacity': 0.6, 'stroke-width': 1.25, 'stroke-dasharray': '3 4', 'data-testid': 'avg-line',
     })
     : null;
 

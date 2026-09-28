@@ -10,7 +10,7 @@ import {
   CUTOFF_MIN, GRACE_MS, canReopen, goalLabel, isWorkday, lastEatingSource, lastEatingTs, lateNightDay, plannedStartMin, timeOnOrAfter, windowPhase,
 } from '../core/rules.js';
 import { dunes } from './art.js';
-import { firstBite, forgotCloseDefault, showDoneEatingSheet, showFinishMealSheet, showLogMealSheet, showMealEditSheet } from './meal.js';
+import { forgotCloseDefault, showDoneEatingSheet, showFinishMealSheet, showMealEditSheet, showStartMealSheet } from './meal.js';
 import { showOutsideSheet } from './outside.js';
 import { showBiteTimeSheet, showOpeningSheet, showOutsideTimeSheet, showWindowTimesSheet } from './window-times.js';
 import { ringHero, stagesSection } from './stages.js';
@@ -104,9 +104,9 @@ function beforeBlock(ctx, app) {
     last ? h('div', { class: 'row gap' }, h('div', { class: 'main' }, plannedLine), h('div', { class: 'margin' }, goalNote)) : null,
     last ? null : h('p', { class: 'quiet small gap-s', 'data-testid': 'begin-fast-hint' }, 'Already fasting? Tap Begin fast and set when it began, so none of it is lost.'),
     workdayEarly ? h('p', { class: 'statement gap', 'data-testid': 'firm-reminder' }, 'Opening before 16:00 makes today a miss.') : null,
-    // Two equal ways in: eating now, or a fast already under way.
+    // Two equal ways in: a meal (the first opens the window), or a fast already under way.
     h('div', { class: 'btn-pair start-actions gap-l' },
-      button('First bite', () => firstBite(app.ctx(), app), { big: true, block: true, name: 'first-bite' }),
+      button('Start a meal', () => showStartMealSheet(app), { big: true, block: true, name: 'start-meal' }),
       button('Begin fast', beginFast, { big: true, block: true, name: 'begin-fast' })),
     h('p', { class: 'quiet small gap' }, 'Until then: water, sparkling water, black coffee, espresso, plain tea.'),
     late
@@ -185,11 +185,8 @@ function openBlock(ctx, app, rec) {
       : null,
     e.openedEarly ? h('p', { class: 'gap' }, 'Opened before 16:00, so today counts as a miss.') : null,
     eating
-      ? h('div', { class: 'gap-l' },
-        h('div', { class: 'label' }, 'Eating'),
-        h('p', { class: 'gap-s' }, `${eating.name || 'A meal'}, since ${fmtTime(eating.startedAt)}.`),
-        h('div', { class: 'gap' }, button('Finished this meal', () => showFinishMealSheet(app, eating.id), { block: true, name: 'finish-meal' })))
-      : h('div', { class: 'gap' }, button('Log a meal', () => showLogMealSheet(app, rec.day), { kind: 'secondary', name: 'log-meal' })),
+      ? eatingNow(app, eating, { another: true })
+      : h('div', { class: 'gap-l' }, button('Start a meal', () => showStartMealSheet(app), { block: true, name: 'start-meal' })),
     h('div', { class: 'gap' }, button("I'm done eating", () => showDoneEatingSheet(app, rec.day), { block: true, name: 'done-eating' })),
     h('div', { class: 'gap-s' }, button('Change opening time', () => showOpeningSheet(app, rec.day), { kind: 'secondary', name: 'change-opening' })),
   );
@@ -243,10 +240,21 @@ function reasonLine(reason, e) {
   return 'Ate outside the window.';
 }
 
+/** The meal being eaten, with its Finished button (and Start another meal while the window is open). */
+function eatingNow(app, meal, { another = false } = {}) {
+  return h('div', { class: 'gap-l', 'data-block': 'eating' },
+    h('div', { class: 'label' }, meal.outside ? 'Eating, outside the window' : 'Eating'),
+    h('p', { class: 'gap-s' }, `${meal.name || 'A meal'}, since ${fmtTime(meal.startedAt)}.`),
+    h('div', { class: 'gap' }, button('Finished this meal', () => showFinishMealSheet(app, meal.id), { block: true, name: 'finish-meal' })),
+    another ? h('div', { class: 'gap-s' }, button('Start another meal', () => showStartMealSheet(app), { kind: 'secondary', name: 'another-meal' })) : null);
+}
+
 function closedBlock(ctx, app, rec) {
   const e = ctx.evaluate(rec.day);
   const success = e.result === 'success';
   const reopen = canReopen(rec, ctx.nowTs, ctx.windowMsFor(rec.day));
+  // A meal started after the window closed, still being eaten.
+  const eating = mealInProgress(ctx, rec.day);
   return h('section', { class: 'section strong', 'data-block': 'closed', 'data-result': e.result },
     h('div', { class: 'row' },
       h('div', { class: 'main' },
@@ -258,12 +266,14 @@ function closedBlock(ctx, app, rec) {
     success
       ? h('p', { class: 'statement gap', 'data-testid': 'result' }, 'Success. All eating inside the window.')
       : h('div', { class: 'gap', 'data-testid': 'result' }, e.reasons.map((r) => h('p', { class: 'statement clay' }, reasonLine(r, e)))),
+    eating ? eatingNow(app, eating) : null,
     reopen
       ? h('div', { class: 'btn-row gap' },
         h('span', { class: 'small quiet' }, 'Still inside your window.'),
         button('Reopen window', () => store.reopenWindow(rec.day), { kind: 'secondary', name: 'reopen' }))
       : null,
     h('div', { class: 'btn-row gap' },
+      eating ? null : button('Start a meal', () => showStartMealSheet(app), { kind: 'secondary', name: 'start-meal' }),
       button('I ate something', () => showOutsideSheet(app, { day: rec.day }), { kind: 'secondary', name: 'ate-something' }),
       button('Change times', () => showWindowTimesSheet(app, rec.day), { kind: 'secondary', name: 'change-times' })),
     h('p', { class: 'quiet gap', 'data-testid': 'next-window' }, nextWindowLine(ctx, rec.day)),
@@ -336,8 +346,9 @@ function mealsSection(ctx, app, key) {
 
 export function mealMeta(m) {
   const bits = [];
+  if (m.outside) bits.push('outside the window');
   if (m.hungerBefore != null) bits.push(`hunger ${m.hungerBefore}`);
-  if (m.stop) bits.push(`stopped ${STOP_TEXT[m.stop]}`);
+  if (m.stop) bits.push(STOP_TEXT[m.stop]);
   if (m.fullnessNow != null) bits.push(`fullness ${m.fullnessNow}`);
   if (m.fullness20 != null) bits.push(`at 20 min ${m.fullness20}`);
   return bits.length ? bits.join(', ') : '';

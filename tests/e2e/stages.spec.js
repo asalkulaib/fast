@@ -48,7 +48,7 @@ test('hidden while the window is open, then below the main block from the last b
   await openAt(page, '2026-09-27T17:30');
   await seed(page, LAST_NIGHT);
   await expect(ring(page)).toBeVisible();
-  await tap(page, 'first-bite');
+  await tap(page, 'start-meal');
   await tap(page, 'start-eating');
   await expect(page.locator('[data-block="open"]')).toBeVisible();
   await expect(ring(page)).toHaveCount(0);

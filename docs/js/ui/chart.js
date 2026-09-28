@@ -9,9 +9,10 @@ const W = 340;
 const H = 190;
 const PAD = { top: 18, right: 46, bottom: 30, left: 38 };
 const LINE = '#9C6832'; // --rock-500: recessive series
-const ACCENT = '#F0B25C'; // --accent: the latest week only
-const SURFACE = '#05060B'; // --bg: ring around markers
-const GRID = 'rgba(224, 174, 91, 0.22)';
+const ACCENT = '#F0B25C'; // --accent: the latest week only, gold leaf edged in ink
+const INK = '#1E140C'; // --ink
+const SURFACE = '#E6D0A8'; // --bg: ring around markers
+const GRID = 'rgba(42, 28, 16, 0.14)';
 
 function niceStep(range) {
   const steps = [0.2, 0.5, 1, 2, 5, 10];
@@ -55,11 +56,11 @@ export function weightChart(points) {
     const size = latest ? 10 : 8;
     return s('rect', {
       x: (x(i) - size / 2).toFixed(1), y: (y(p.avg) - size / 2).toFixed(1), width: size, height: size,
-      fill: latest ? ACCENT : LINE, stroke: SURFACE, 'stroke-width': '2', class: latest ? 'latest' : null,
+      fill: latest ? ACCENT : LINE, stroke: latest ? INK : SURFACE, 'stroke-width': latest ? '1.5' : '2', class: latest ? 'latest' : null,
     });
   };
 
-  const cross = s('line', { y1: PAD.top, y2: H - PAD.bottom, stroke: 'rgba(224, 174, 91, 0.55)', 'stroke-width': '1', visibility: 'hidden' });
+  const cross = s('line', { y1: PAD.top, y2: H - PAD.bottom, stroke: 'rgba(42, 28, 16, 0.5)', 'stroke-width': '1', visibility: 'hidden' });
   const svg = s('svg', {
     class: 'chart', viewBox: `0 0 ${W} ${H}`, role: 'img', tabindex: '0',
     'aria-label': `Weekly weight averages, ${data.length} ${data.length === 1 ? 'week' : 'weeks'}. Latest ${last.avg.toFixed(1)} kg, week of ${fmtDayMonth(last.week)}.`,
@@ -69,7 +70,7 @@ export function weightChart(points) {
     data.length > 1 ? s('path', { d: path, fill: 'none', stroke: LINE, 'stroke-width': '2', 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }) : null,
     cross,
     ...data.map((p, i) => marker(i, p, i === data.length - 1)),
-    s('text', { x: lx + 9, y: ly + 4, class: 'chart-end', fill: '#F6E7CB' }, last.avg.toFixed(1)),
+    s('text', { x: lx + 9, y: ly + 4, class: 'chart-end', fill: INK }, last.avg.toFixed(1)),
   );
 
   // Touch and keyboard readout: snaps to the nearest week.

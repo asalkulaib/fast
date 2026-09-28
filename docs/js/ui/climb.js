@@ -13,7 +13,7 @@ const FACE = '#5E3B18'; // --sand-600: the sunlit side
 const TRAIL = 'rgba(224, 174, 91, 0.35)'; // a quiet hairline
 const COLOUR = {
   fast: { on: '#F0B25C', done: '#C58E50' }, // --accent, --rock-400
-  fullness: { on: '#E4D2B2', done: '#A9957B' }, // --text-body, --text-quiet
+  fullness: { on: '#F1E3C7', done: '#C9A26C' }, // --bg-raised, --sand-400
 };
 
 // The mountain, symmetric, with a small summit plateau at y 40.
@@ -63,7 +63,7 @@ function figure(kind, [x, y], { done = false, scale = 1 } = {}) {
     transform: `translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${scale})`,
     class: done ? 'summiteer' : 'climber',
     'data-climber': kind,
-    stroke: '#05060B',
+    stroke: '#1E140C',
     'stroke-width': 0.8,
     'paint-order': 'stroke',
   }, ...parts);
@@ -96,7 +96,9 @@ export function climbSection(ctx) {
     s('polygon', { points: pts(SUNLIT), fill: FACE }),
     ...trails, ...crowd, ...walkers);
 
-  const key = (k) => s('svg', { class: 'climber-key', viewBox: '-7 -22 20 24', 'aria-hidden': 'true' }, figure(k, [0, 0]));
+  // Each key stands on a piece of the mountain, as the climbers do.
+  const key = (k) => s('svg', { class: 'climber-key', viewBox: '-7 -22 20 24', 'aria-hidden': 'true' },
+    s('rect', { x: -7, y: -22, width: 20, height: 24, fill: ROCK }), figure(k, [0, 0]));
   const tally = shown.map((k) => `${k === 'fast' ? 'Fasts' : 'Fullness'}: ${summits(c[k].summits)}`).join(' · ');
   const steps = [c.fast.on ? 'each successful day' : null, c.fullness.on ? 'each day left wanting' : null].filter(Boolean).join(', and ');
   return h('section', { class: 'section', 'data-block': 'climb' },

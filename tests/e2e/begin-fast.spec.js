@@ -11,7 +11,7 @@ test('a first day with Fast: Begin fast from last night, so no fasting hours are
   await openAt(page, '2026-09-27T09:00');
   const before = page.locator('[data-block="before"]');
   await expect(before.getByTestId('begin-fast-hint')).toBeVisible();
-  await expect(before.locator('.start-actions [data-action]')).toHaveText(['First bite', 'Begin fast']);
+  await expect(before.locator('.start-actions [data-action]')).toHaveText(['Start a meal', 'Begin fast']);
   await tap(page, 'begin-fast');
   const s = sheet(page, 'begin-fast');
   // Yesterday was a Saturday: its planned window closed at 18:00.
@@ -50,12 +50,12 @@ test('the start can be moved later; before the last bite on record it is refused
   await expect(sheet(page, 'last-bite-time')).toBeVisible();
 });
 
-test('First bite: quick times move the first bite back', async ({ page }) => {
+test('Start a meal: quick times start it earlier, and the window opens with it', async ({ page }) => {
   await openAt(page, '2026-09-27T18:00');
-  await tap(page, 'first-bite');
-  await expect(sheet(page, 'first-bite').locator('.presets [data-action]')).toHaveText(['Now', '30 min ago', '1 h ago', '2 h ago']);
-  await tap(page, 'first-bite-60');
-  await expect(page.locator('[data-time="first-bite"] [data-part="hour"]')).toHaveAttribute('aria-valuenow', '17');
+  await tap(page, 'start-meal');
+  await expect(sheet(page, 'start-meal').locator('.presets [data-action]')).toHaveText(['Now', '30 min ago', '1 h ago', '2 h ago']);
+  await tap(page, 'meal-start-60');
+  await expect(page.locator('[data-time="meal-start"] [data-part="hour"]')).toHaveAttribute('aria-valuenow', '17');
   await tap(page, 'start-eating');
   await expect(page.getByTestId('countdown')).toHaveText('3:00');
   expect((await readDb(page)).days[0].firstBite).toBe(ms('2026-09-27T17:00'));

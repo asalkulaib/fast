@@ -151,9 +151,12 @@ export function countByDay(items) {
   return map;
 }
 
-/** Builds a cached evaluator for any day. */
-export function makeEvaluator({ days, outside, nowTs, todayKey, startKey, settings }) {
-  const outsideByDay = countByDay(outside);
+/**
+ * Builds a cached evaluator for any day. Eating outside the window counts
+ * both entries logged outside it and meals started after it closed.
+ */
+export function makeEvaluator({ days, outside, meals = [], nowTs, todayKey, startKey, settings }) {
+  const outsideByDay = countByDay([...outside, ...meals.filter((m) => m.outside)]);
   const cache = new Map();
   return (key) => {
     if (!cache.has(key)) {

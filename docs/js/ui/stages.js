@@ -17,11 +17,11 @@ const R = 108; // ring radius
 const WIDTH = 12; // ring thickness
 const ICON_R = 136; // icons sit just outside the ring
 const GAP = 0.12; // hours of surface gap between stages
-const FILL = '#C58E50'; // --rock-400: time already fasted
-const TRACK = '#4B2E14'; // --rock-700: time still ahead on the ring
-const SURFACE = '#05060B'; // --bg: halo around the marker
-const MARK = '#F0B25C'; // --accent: now
-const GOAL = '#E4D2B2'; // --text-body: the fasting goal
+const FILL = '#4B2E14'; // --rock-700: time already fasted
+const TRACK = '#D8BF93'; // --sand-300: time still ahead on the ring
+const SURFACE = '#E6D0A8'; // --bg: halo around the marks
+const MARK = '#F0B25C'; // --accent: now, a needle of gold leaf
+const INK = '#1E140C'; // --ink: edges, ticks and the fasting goal
 
 // Where each icon sits: beside its stage's arc, and the open-ended last
 // stage at the 24-hour mark where it begins (the top of the ring).
@@ -61,11 +61,22 @@ function ringSvg(state, goalHours) {
     stroke: color, 'stroke-width': w, 'stroke-linecap': 'butt', 'data-testid': testid || null,
     'data-hours': testid ? (state.elapsedMs / HOUR).toFixed(1) : null,
   });
+  // The fasting goal: an ink bar across the ring, edged in sand so it shows on both tones.
   const [gx, gy] = point(goalHours, R - WIDTH / 2 - 1);
   const [hx, hy] = point(goalHours, R + WIDTH / 2 + 1);
-  const goal = s('line', {
+  const goalLine = (stroke, w, testid) => s('line', {
     x1: gx.toFixed(2), y1: gy.toFixed(2), x2: hx.toFixed(2), y2: hy.toFixed(2),
-    stroke: GOAL, 'stroke-width': 2, 'data-testid': 'goal-tick', 'data-hours': String(goalHours),
+    stroke, 'stroke-width': w, 'data-testid': testid || null, 'data-hours': testid ? String(goalHours) : null,
+  });
+  const goal = [goalLine(SURFACE, 5), goalLine(INK, 2, 'goal-tick')];
+  // An engraved scale: a tick for every hour, longer every six.
+  const ticks = Array.from({ length: SCALE_HOURS }, (_, hour) => {
+    const [ax, ay] = point(hour, R + WIDTH / 2 + 3);
+    const [bx, by] = point(hour, R + WIDTH / 2 + (hour % 6 ? 6 : 10));
+    return s('line', {
+      x1: ax.toFixed(2), y1: ay.toFixed(2), x2: bx.toFixed(2), y2: by.toFixed(2),
+      stroke: INK, 'stroke-opacity': hour % 6 ? 0.35 : 0.7, 'stroke-width': 1,
+    });
   });
   const icons = STAGES.map((st) => {
     const [x, y] = point(ICON_AT[st.key], ICON_R);
@@ -76,7 +87,7 @@ function ringSvg(state, goalHours) {
     viewBox: `0 0 ${SIZE} ${SIZE}`,
     'aria-hidden': 'true',
     focusable: 'false',
-  }, ...arcs, goal, marker(SURFACE, 8), marker(MARK, 3, 'stage-marker'), ...icons);
+  }, ...ticks, ...arcs, ...goal, marker(SURFACE, 9), marker(INK, 5), marker(MARK, 3, 'stage-marker'), ...icons);
 }
 
 /** The ring with the time fasted and the stage in its centre. */

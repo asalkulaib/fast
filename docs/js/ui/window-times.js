@@ -49,7 +49,7 @@ export function showOpeningSheet(app, initialKey) {
               button('Remove window', async () => {
                 const { undo } = await store.cancelWindow(key);
                 await api.close();
-                app.flash('Window removed. Tap First bite when you eat.', { undo });
+                app.flash('Window removed. Start a meal when you eat.', { undo });
               }, { kind: 'secondary', name: 'confirm-remove-window' }),
               button('Keep it', () => { draft.confirm = false; api.rerender(); }, { kind: 'secondary', name: 'keep-window' })))
           : h('div', { class: 'gap-s' },

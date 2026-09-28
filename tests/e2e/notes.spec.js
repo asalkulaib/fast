@@ -53,7 +53,7 @@ test('a last bite logged outside the window opens that entry', async ({ page }) 
 
 test('while open: the Opened note changes the opening time', async ({ page }) => {
   await openAt(page, '2026-09-27T18:00');
-  await tap(page, 'first-bite');
+  await tap(page, 'start-meal');
   await tap(page, 'start-eating');
   await tap(page, 'edit-opened');
   await expect(sheet(page, 'opening')).toBeVisible();

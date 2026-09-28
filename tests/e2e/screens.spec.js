@@ -27,7 +27,7 @@ async function audit(page) {
         if (c && c.a > 0.5) return c;
         if (e.classList && e.classList.contains('sheet')) break;
       }
-      return { r: 5, g: 6, b: 11, a: 1 };
+      return { r: 230, g: 208, b: 168, a: 1 };
     };
     const blend = (fg, bg) => ({ r: fg.r * fg.a + bg.r * (1 - fg.a), g: fg.g * fg.a + bg.g * (1 - fg.a), b: fg.b * fg.a + bg.b * (1 - fg.a) });
     const bad = [];
@@ -120,10 +120,10 @@ test('today: fasting stages', async ({ page }) => {
 test('today: window open, phases and sheets', async ({ page }) => {
   await openAt(page, '2026-09-27T17:30');
   await seed(page, { ...WEEK, settings: install });
-  await tap(page, 'first-bite');
+  await tap(page, 'start-meal');
   await page.locator('input[data-field="meal-name"]').fill('Dinner');
   await pick(page, 'hunger', 7);
-  await shot(page, '02-first-bite-sheet');
+  await shot(page, '02-start-meal-sheet');
   await tap(page, 'start-eating');
   await advance(page, 40);
   await shot(page, '03-today-open');
