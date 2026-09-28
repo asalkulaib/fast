@@ -19,6 +19,7 @@ export const DEFAULTS = {
   persisted: null,
   goalChanges: [], // [{ from: 'YYYY-MM-DD', hours }]: the eating-window goal from that day on
   climb: DEFAULT_CLIMB,
+  alarms: false, // timers through the Fast Timer shortcut
 };
 
 export const FULLNESS_DELAY = 20 * MIN;

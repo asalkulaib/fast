@@ -114,6 +114,14 @@ If an import fails:
 - No weight data on the clipboard: run the Shortcut again, come back to Fast and tap Import weight.
 - Entries skipped: in the Health app, open Weight and set its unit to kg. In Settings, General, Language and Region, set Calendar to Gregorian.
 
+## Alarms
+
+Fast cannot ring while it is closed. In More, Alarms, switch it on and build a shortcut once: in Shortcuts, tap +, name it Fast Timer, add the action Start Timer, set its duration to Shortcut Input in minutes, and tap Done. Fast then starts an iPhone timer when your first meal opens the window (for when it closes) and when you finish a meal (for the 20-minute fullness check). The Shortcuts app opens for a moment each time.
+
+## Week
+
+A strip of seven squares opens the week: ink for a success, clay for a miss, sand for a paused day, and a gold dot on days left wanting. Tap a square to open the day. Once ten meals are rated, the Satiety section adds findings from your own meals, such as how often you finish left wanting at lower and higher hunger.
+
 ## Calendar reminders
 
 More, Add to Calendar creates four repeating alerts: hold the line at 13:00 and training at 16:30 on workdays, and the window start at your workday and weekend times. In the share sheet choose Calendar, or Save to Files and then open the file and tap Add All. If you change the times, add the new file and delete the old Fast events (open one, Delete Event, Delete All Future Events).

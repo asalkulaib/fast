@@ -83,7 +83,9 @@ test('calendar file: four weekly alerts, regenerated when times change', async (
   expect(ics.text).toContain('DTSTART;TZID=Asia/Kuwait:20260927T173000');
   expect(ics.text).toContain('DTSTART;TZID=Asia/Kuwait:20260926T140000');
 
+  await tap(page, 'edit-workdayStart');
   await setTime(page, 'workdayStart', '18:00');
+  await tap(page, 'close-sheet');
   await expect(page.getByTestId('ics-status')).toContainText('Your times changed since the last file.');
   await tap(page, 'add-calendar');
   await expect(page.getByTestId('ics-status')).toHaveText('Added with your current times.');

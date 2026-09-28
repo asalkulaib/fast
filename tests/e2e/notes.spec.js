@@ -79,6 +79,7 @@ test('the day editor: clear a last bite, then roll it back in', async ({ page })
 
 test('a wheel on More saves exactly the time rolled, though saving redraws the screen', async ({ page }) => {
   await openAt(page, '2026-09-26T23:00', '#more');
+  await tap(page, 'edit-workdayStart');
   await setTime(page, 'workdayStart', '18:05');
   await page.waitForTimeout(500); // past any late settling of the wheel that was replaced
   const s = Object.fromEntries((await readDb(page)).settings.map((x) => [x.key, x.value]));

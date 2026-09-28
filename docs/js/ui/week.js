@@ -6,6 +6,27 @@ import { addDays, fmtDayShort, fmtDuration, fmtTime, fmtWeekRange, weekStart, we
 import { weekReview } from '../core/review.js';
 import { header, note } from './shared.js';
 import { pauseWord } from './pause.js';
+import { LEFT_WANTING, dayFullness, mealsByDay } from '../core/fullness.js';
+import { satietyInsights } from '../core/insights.js';
+
+const RESULT_WORD = { success: 'success', miss: 'miss', paused: 'paused', pending: 'in progress', unlogged: 'nothing logged' };
+
+/**
+ * The week at a glance: a square per day, Sunday to Saturday. Ink for a
+ * success, clay for a miss, sand for a paused day, an outline otherwise;
+ * a dot of gold leaf on days left wanting. Tap a square to open the day.
+ */
+function weekStrip(ctx, app, r) {
+  const byDay = mealsByDay(ctx.meals);
+  return h('div', { class: 'strip gap', 'data-testid': 'week-strip' }, r.days.map((d) => {
+    const result = d.future && d.result !== 'paused' ? 'future' : d.result;
+    const lw = dayFullness(byDay.get(d.day) || [], ctx.days.get(d.day)) === LEFT_WANTING;
+    const words = [fmtDayShort(d.day), RESULT_WORD[result], lw ? 'left wanting' : null].filter(Boolean).join(', ');
+    return h('button', { type: 'button', class: 'strip-day', 'data-day': d.day, 'data-result': result, 'aria-label': words, onclick: () => app.go(`day/${d.day}`) },
+      h('span', { class: 'strip-cell' }, lw ? h('span', { class: 'strip-dot', 'data-testid': 'left-wanting-dot' }) : null),
+      h('span', { class: 'strip-name' }, weekdayShort(d.day).slice(0, 2)));
+  }));
+}
 
 const TRIGGER_WORD = { hunger: 'hunger', boredom: 'boredom', social: 'social', stress: 'stress', tired: 'tired', other: 'other' };
 const TYPE_WORD = { weights: 'weights', cardio: 'cardio', other: 'other', unspecified: 'type not set' };
@@ -36,6 +57,16 @@ function dayResult(d) {
   }
 }
 
+/** What your own meals show so far, across all weeks. */
+function satietyFindings(ctx) {
+  const found = satietyInsights(ctx.meals);
+  return found.length
+    ? h('div', { class: 'gap', 'data-testid': 'insights' },
+      h('p', { class: 'small quiet' }, 'From all your meals so far'),
+      h('ul', { class: 'plain gap-s' }, found.map((f) => h('li', { class: 'gap-s' }, f))))
+    : h('p', { class: 'small quiet gap', 'data-testid': 'insights' }, 'Rate how ten meals finished and your own patterns show here.');
+}
+
 export function renderWeek(ctx, app, weekKey) {
   const start = weekStart(weekKey || ctx.todayKey);
   const thisWeek = weekStart(ctx.todayKey);
@@ -57,6 +88,7 @@ export function renderWeek(ctx, app, weekKey) {
     header(ctx, app, { title: 'Week', sub: isCurrent ? 'This week' : null }),
     h('section', { class: 'section strong' },
       h('h1', { class: 'display', 'data-testid': 'week-range' }, fmtWeekRange(start)),
+      weekStrip(ctx, app, r),
       h('div', { class: 'btn-row gap-s' },
         button('‹ Previous', () => app.go(`week/${addDays(start, -7)}`), { kind: 'secondary', name: 'prev-week' }),
         isCurrent ? null : button('Next ›', () => app.go(`week/${addDays(start, 7)}`), { kind: 'secondary', name: 'next-week' }))),
@@ -100,7 +132,8 @@ export function renderWeek(ctx, app, weekKey) {
         stat('Meals left wanting', s.rated ? `${s.beforeFull} of ${s.rated} (${Math.round(s.beforeFullShare * 100)}%)` : 'no meals rated', 'before-full'),
         stat('Days left wanting', days(s.leftWantingDays), 'left-wanting-days'),
         stat('Rise from right after to 20 min', s.pairs ? `${signed(s.avgRise)} points` : 'no pairs yet', 'rise'),
-        s.avgAt20 != null ? stat('Average at 20 min', `${one(s.avgAt20)} (target about 7)`, 'at20') : null)),
+        s.avgAt20 != null ? stat('Average at 20 min', `${one(s.avgAt20)} (target about 7)`, 'at20') : null),
+      satietyFindings(ctx)),
     h('section', { class: 'section' },
       h('div', { class: 'label' }, 'Temptations'),
       h('div', { class: 'gap-s' },

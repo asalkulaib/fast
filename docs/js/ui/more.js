@@ -13,13 +13,31 @@ import { goalSection } from './goal.js';
 import { choice } from './components.js';
 import { DEFAULT_CLIMB } from '../core/climb.js';
 
+/** A time shown as a row; tapping it opens its wheel in a sheet, where each roll saves. */
 function timeSetting(label, key, ctx) {
-  return timeField({
-    label,
-    minutes: toMinutes(ctx.settings[key]),
-    name: key,
-    onChange: (m) => store.setSettings({ [key]: fmtMinutes(m) }),
-  });
+  return h('button', { type: 'button', class: 'setting-row', 'data-action': `edit-${key}`, 'aria-label': `${label}, ${ctx.settings[key]}. Change`,
+    onclick: () => openSheet((api) => h('div', {},
+      sheetHead(api, label),
+      h('section', { class: 'section flush gap' }, timeField({
+        label: `${label} at`,
+        minutes: toMinutes(store.state.settings[key]),
+        name: key,
+        onChange: (m) => store.setSettings({ [key]: fmtMinutes(m) }),
+      }))), { name: `time-${key}`, label }) },
+  h('span', {}, label), h('span', { class: 'value' }, ctx.settings[key]));
+}
+
+/** Alarms: timers on the iPhone clock through the Fast Timer shortcut. */
+function alarmSection(ctx) {
+  return h('section', { class: 'section', 'data-block': 'alarms' },
+    h('div', { class: 'label' }, 'Alarms'),
+    h('p', { class: 'small gap-s' }, 'Fast cannot ring while it is closed. With Alarms on, it asks your Fast Timer shortcut to start an iPhone timer: when a window opens, for when it closes, and when you finish a meal, for the 20-minute fullness check. The Shortcuts app opens for a moment each time.'),
+    h('div', { class: 'gap' }, choice({
+      options: [{ value: true, label: 'On' }, { value: false, label: 'Off' }],
+      value: !!ctx.settings.alarms, cols: 2, name: 'alarms',
+      onChange: (v) => store.setSettings({ alarms: v }),
+    })),
+    h('p', { class: 'small quiet gap' }, 'Build the shortcut once: in Shortcuts, tap +, name it Fast Timer, add the action Start Timer, tap its duration, choose Shortcut Input, and set it to minutes. Then tap Done.'));
 }
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
@@ -105,15 +123,16 @@ export function renderMore(ctx, app) {
     goalSection(ctx, app),
     h('section', { class: 'section', 'data-block': 'planned' },
       h('div', { class: 'label' }, 'Planned window start'),
-      h('div', { class: 'btn-pair gap' },
+      h('div', { class: 'gap-s' },
         timeSetting('Workdays', 'workdayStart', ctx),
         timeSetting('Weekends', 'weekendStart', ctx)),
       h('p', { class: 'small quiet gap-s' }, 'Workdays run Sunday to Thursday; weekends are Friday and Saturday.')),
     h('section', { class: 'section', 'data-block': 'reminder-times' },
       h('div', { class: 'label' }, 'Reminder times, Sun to Thu'),
-      h('div', { class: 'btn-pair gap' },
+      h('div', { class: 'gap-s' },
         timeSetting('Hold the line', 'holdTime', ctx),
         timeSetting('Training', 'trainingTime', ctx))),
+    alarmSection(ctx),
     pausesSection(ctx, app),
     climbSettings(ctx),
     h('section', { class: 'section', 'data-block': 'calendar' },

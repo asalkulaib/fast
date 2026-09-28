@@ -909,6 +909,86 @@ sup.fn {
   color: var(--text-label);
 }
 
+/* ---------- Week strip ---------- */
+
+.strip {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  column-gap: var(--s2);
+}
+
+.strip-day {
+  display: grid;
+  justify-items: center;
+  row-gap: var(--s1);
+  min-height: 44px;
+}
+
+.strip-cell {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 1;
+  max-width: 40px;
+  border: 1px solid var(--rule-quiet);
+}
+
+.strip-day[data-result='success'] .strip-cell {
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+.strip-day[data-result='miss'] .strip-cell {
+  background: var(--clay);
+  border-color: var(--clay);
+}
+
+.strip-day[data-result='paused'] .strip-cell {
+  background: var(--sand-300);
+}
+
+.strip-day[data-result='future'] .strip-cell {
+  border-style: dashed;
+}
+
+.strip-dot {
+  width: 10px;
+  height: 10px;
+  background: var(--accent);
+  outline: 1px solid var(--ink);
+}
+
+/* A setting shown as a row; tapping it opens its wheel. */
+.setting-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  width: 100%;
+  min-height: 48px;
+  padding: var(--s2) 0;
+  border-bottom: 1px solid var(--rule-quiet);
+  text-align: left;
+}
+
+.setting-row .value {
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 17px;
+  color: var(--text-display);
+  font-variant-numeric: tabular-nums lining-nums;
+  text-decoration: underline;
+  text-decoration-color: var(--text-label);
+  text-underline-offset: 4px;
+}
+
+.strip-name {
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--text-quiet);
+}
+
 /* ---------- Notices ---------- */
 
 .notices {

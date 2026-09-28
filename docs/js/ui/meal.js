@@ -7,6 +7,7 @@ import * as store from '../store.js';
 import { MIN, HOUR, DAY, dayKey, dayStart, floorToMinute, fmtDuration, fmtTime, minutesOfDay, nearestTime, now } from '../core/time.js';
 import { CUTOFF_MIN, LATE_NIGHT_END_MIN, canReopen, isWorkday, timeOnOrAfter } from '../core/rules.js';
 import { mealInProgress } from './shared.js';
+import { ringIn } from './alarm.js';
 
 /** Most recent moment at or before ref with this clock time (for edits after the fact). */
 export function latestAtOrBefore(minutes, ref) {
@@ -141,6 +142,11 @@ export function showStartMealSheet(app) {
         await store.finishMeal(res.meal.id, { finishedAt, stop: draft.stop, fullnessNow: draft.fullnessNow });
       }
       await api.close();
+      // Alarms: a timer for when the window closes, counted from its first bite.
+      if (cur.kind === 'first' && !draft.done) {
+        const c = app.ctx();
+        ringIn((res.meal.startedAt + c.windowMsFor(res.meal.day) - now()) / MIN);
+      }
       const at = fmtTime(res.meal.startedAt);
       app.flash(cur.kind === 'first' ? `Window open from ${at}.` : draft.done ? 'Meal saved.' : `Meal started at ${at}.`, { undo: res.undo });
       return null;
@@ -239,6 +245,7 @@ export function showFinishMealSheet(app, mealId, { next = null, lead = null } = 
         await store.finishMeal(mealId, { finishedAt, stop: draft.stop, fullnessNow: draft.fullnessNow });
         await api.close();
         app.flash(`Fullness check at ${fmtTime(finishedAt + store.FULLNESS_DELAY)}.`);
+        ringIn((finishedAt + store.FULLNESS_DELAY - now()) / MIN);
         if (next) next();
       }, { block: true, name: 'save-finish' })),
     );
