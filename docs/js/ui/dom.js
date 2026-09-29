@@ -61,6 +61,19 @@ export function updateLive(root, nowTs) {
   }
 }
 
+/**
+ * Shows one series and fades the rest: every outermost [data-series] element
+ * under root that is not the focused one gets .dim. focus null shows all.
+ */
+export function dimOthers(root, focus) {
+  root.setAttribute('data-focus', focus || '');
+  for (const el of root.querySelectorAll('[data-series]')) {
+    if (el.parentElement.closest('[data-series]')) continue;
+    el.classList.toggle('dim', !!focus && el.dataset.series !== focus);
+  }
+  return root;
+}
+
 export function clear(el) {
   while (el.firstChild) el.firstChild.remove();
 }

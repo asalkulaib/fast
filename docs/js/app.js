@@ -87,8 +87,13 @@ function renderRoute(ctx) {
   }
 }
 
+let lastRoute = null;
+
 function render(fresh) {
   if (!store.state.ready) return;
+  // A chart showing one series only resets once you leave its screen.
+  if (route.name !== lastRoute) { app.ui.satietyFocus = null; app.ui.historyFocus = null; }
+  lastRoute = route.name;
   const ctx = context();
   const y = window.scrollY;
   const node = renderRoute(ctx);
@@ -271,7 +276,7 @@ async function restoreFrom(file) {
 }
 
 export const app = {
-  ui: { showPaste: false, showTable: false, showHistoryTable: false, showSatietyTable: false },
+  ui: { showPaste: false, showTable: false, showHistoryTable: false, showSatietyTable: false, satietyFocus: null, historyFocus: null },
   ctx: context,
   go(path) {
     const target = `#${path}`;

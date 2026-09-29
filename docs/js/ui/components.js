@@ -368,9 +368,24 @@ export function button(label, onClick, { kind = 'primary', block = false, big = 
  * relies on colour alone. items: [key, label], where key is a swatch class
  * ('miss', 'paused', ...) or a node such as an icon. Empty items are skipped.
  */
-export function legend(items, testid) {
-  return h('div', { class: 'legend', 'data-testid': testid || null }, items.filter(Boolean).map(([key, label]) => h('span', { class: 'legend-item' },
-    typeof key === 'string' ? h('span', { class: `swatch ${key}`, 'aria-hidden': 'true' }) : key, label)));
+export function legend(items, testid, { focus = null, onPick = null } = {}) {
+  return h('div', { class: 'legend', 'data-testid': testid || null }, items.filter(Boolean).map(([key, label, series]) => {
+    const icon = typeof key === 'string' ? h('span', { class: `swatch ${key}`, 'aria-hidden': 'true' }) : key;
+    // With a series and onPick, the item is a button: tap to show only that
+    // series, tap again to show everything.
+    if (!onPick || series == null) return h('span', { class: 'legend-item' }, icon, label);
+    return h('button', {
+      type: 'button', class: 'legend-item legend-pick', 'data-series': series, 'aria-pressed': String(focus === series),
+      onclick: () => onPick(focus === series ? null : series),
+    }, icon, label);
+  }));
+}
+
+/** 'Showing Overfull only.' with Show all, above a filtered view. */
+export function focusLine(text, onClear, testid) {
+  return h('div', { class: 'btn-row focus-line gap', 'data-testid': testid },
+    h('span', { class: 'small' }, text),
+    button('Show all', onClear, { kind: 'secondary', name: 'show-all' }));
 }
 
 export const TRIGGER_OPTIONS = [

@@ -58,6 +58,8 @@ Today keeps the meal buttons, the check-in and Uhud. While a fullness check is r
 
 ## Legends
 
+On Satiety and History, tap a legend item to show only that one; the rest fade out. On Satiety you can also tap a mark, line or bar, and the choice applies to every chart and the meal list at once. Tap the item again, or Show all, to see everything; leaving the tab also resets it. (On the History chart, tapping a day still reads that day.)
+
 Every colour-coded visual has a legend that names each colour in words: the ring on Today, the week strip, Uhud, the History chart, the weight chart and the Satiety charts. Clay red always means a miss. Sand means a paused day on the strip and the chart, time still ahead on the ring, and the comfortable zone on Satiety. On Satiety each way of finishing also has its own shape: a triangle for left wanting, a square for satisfied and a diamond for overfull.
 
 ## Fullness (شبع)

@@ -133,3 +133,54 @@ test('feasting hours: success is the length alone; past days keep the planned-st
   await page.goto('./#day/2026-09-24');
   await expect(page.locator('.day')).toContainText('Miss: opened before 16:00.');
 });
+
+test('tap a legend item or a mark: every chart and the meal list show only that one', async ({ page }) => {
+  await openAt(page, '2026-09-26T23:00', '#satiety');
+  await seed(page, WEEK);
+  const dimmed = (id) => page.getByTestId(id).locator('.dim');
+  // Tap Overfull in the first legend: the other two fade in every chart.
+  await page.getByTestId('landing-legend').locator('button[data-series="stuffed"]').click();
+  await expect(page.getByTestId('satiety-focus')).toContainText('Charts and meals show overfull only.');
+  await expect(page.getByTestId('landing-legend').locator('button[data-series="stuffed"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByTestId('landing-chart').locator('[data-series="stuffed"].dim')).toHaveCount(0);
+  await expect(page.getByTestId('landing-chart').locator('path[data-stop="before_full"].dim')).toHaveCount(1);
+  await expect(dimmed('lag-chart')).toHaveCount(2);
+  await expect(dimmed('stop-chart')).toHaveCount(2);
+  await expect(dimmed('hunger-chart')).toHaveCount(2);
+  // The meal list follows.
+  await choose(page, 'satiety-view', 'meals');
+  await expect(page.locator('[data-block="satiety-meals"] [data-meal]')).toHaveCount(1);
+  await expect(page.locator('[data-meal="3"]')).toBeVisible();
+  // Tapping a bar row switches to its way of finishing; Show all brings everything back.
+  await choose(page, 'satiety-view', 'insights');
+  const row = page.getByTestId('stop-chart').locator('g[data-series="full"] text').first();
+  // WebKit's smooth scroll can move the chart under a synthetic click; real taps hit the right row.
+  await row.dispatchEvent('click');
+  await expect(page.getByTestId('satiety-focus')).toContainText('Charts and meals show satisfied only.');
+  await tap(page, 'show-all');
+  await expect(page.getByTestId('satiety-focus')).toHaveCount(0);
+  await expect(page.locator('.chart .dim')).toHaveCount(0);
+  // Leaving the tab resets it.
+  await page.getByTestId('lag-legend').locator('button[data-series="before_full"]').click();
+  await expect(page.getByTestId('satiety-focus')).toBeVisible();
+  await tab(page, 'today').click();
+  await tab(page, 'satiety').click();
+  await expect(page.getByTestId('satiety-focus')).toHaveCount(0);
+});
+
+test('History: a legend item shows only its series; tap it again for all', async ({ page }) => {
+  await openAt(page, '2026-09-26T23:00', '#history');
+  await seed(page, WEEK);
+  await choose(page, 'history-metric', 'feast');
+  const chart = page.getByTestId('history-chart');
+  const item = page.getByTestId('history-legend').locator('button[data-series="miss"]');
+  await item.click();
+  await expect(page.getByTestId('history-focus')).toContainText('Showing misses only.');
+  await expect(chart).toHaveAttribute('data-focus', 'miss');
+  await expect(chart.locator('rect[data-miss="true"].dim')).toHaveCount(0);
+  await expect(chart.getByTestId('trend-line')).toHaveClass(/dim/);
+  await expect(chart.getByTestId('avg-line')).toHaveClass(/dim/);
+  await page.getByTestId('history-legend').locator('button[data-series="miss"]').click();
+  await expect(page.getByTestId('history-focus')).toHaveCount(0);
+  await expect(chart.locator('.dim')).toHaveCount(0);
+});

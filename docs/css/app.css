@@ -1571,3 +1571,33 @@ html.locked body {
   display: block;
   color: var(--text-display);
 }
+
+/* ---------- Show one series ---------- */
+
+/* Faded by fill and stroke, not opacity: in WebKit an opacity layer can take
+   taps meant for the rows beside it. */
+.chart .dim {
+  fill-opacity: 0.12;
+  stroke-opacity: 0.12;
+}
+
+.chart.pickable [data-series] {
+  cursor: pointer;
+}
+
+.legend-pick {
+  min-height: 36px;
+  padding: 0 var(--s1);
+  margin-left: calc(-1 * var(--s1));
+  font: inherit;
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--rule-quiet);
+  text-underline-offset: 4px;
+}
+
+.legend-pick[aria-pressed='true'] {
+  color: var(--text-display);
+  background: var(--accent);
+  text-decoration: none;
+}

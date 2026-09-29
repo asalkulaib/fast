@@ -4,8 +4,8 @@
 // on top; paused days shaded behind. A tap reads any day; a table view
 // repeats the values.
 
-import { h, s } from './dom.js';
-import { button, choice, legend } from './components.js';
+import { h, s, dimOthers } from './dom.js';
+import { button, choice, focusLine, legend } from './components.js';
 import * as store from '../store.js';
 import { HOUR, addDays, fmtDayMonth, fmtDayShort, fmtDuration, weekdayShort, keyParts } from '../core/time.js';
 import { dailySeries, hourScale, rollingAverage, summarize } from '../core/history.js';
@@ -30,6 +30,8 @@ const METRICS = {
 
 const FOR_REASON = { travel: ' for travel', illness: ' for illness', ramadan: ' for Ramadan' };
 
+const FOCUS_KEYS = ['bar', 'miss', 'trend', 'avg', 'paused'];
+
 let selected = null; // the day the reader tapped, kept across redraws
 
 function prefs(settings) {
@@ -50,7 +52,7 @@ function linePath(values, xc, y) {
   return d.trim();
 }
 
-function chart({ series, trend, metric, kind, isMiss, avgMs, onPick }) {
+function chart({ series, trend, metric, kind, isMiss, avgMs, onPick, focus }) {
   const key = METRICS[metric].key;
   const n = series.length;
   const values = series.map((d) => d[key]);
@@ -64,7 +66,7 @@ function chart({ series, trend, metric, kind, isMiss, avgMs, onPick }) {
 
   // Paused days: a quiet band behind everything.
   const bands = series.map((d, i) => (d.paused
-    ? s('rect', { x: (PAD.left + slot * i).toFixed(1), y: PAD.top, width: slot.toFixed(1), height: plotH, fill: BAND, 'data-paused': d.day })
+    ? s('rect', { x: (PAD.left + slot * i).toFixed(1), y: PAD.top, width: slot.toFixed(1), height: plotH, fill: BAND, 'data-paused': d.day, 'data-series': 'paused' })
     : null)).filter(Boolean);
 
   const grid = [];
@@ -93,7 +95,7 @@ function chart({ series, trend, metric, kind, isMiss, avgMs, onPick }) {
       if (v == null) return;
       marks.push(s('rect', {
         x: (xc(i) - bw / 2).toFixed(1), y: y(v).toFixed(1), width: bw.toFixed(1), height: (y(0) - y(v)).toFixed(1),
-        fill: colour(i), 'data-day': series[i].day, 'data-miss': isMiss(series[i].day) ? 'true' : null,
+        fill: colour(i), 'data-day': series[i].day, 'data-miss': isMiss(series[i].day) ? 'true' : null, 'data-series': isMiss(series[i].day) ? 'miss' : 'bar',
         stroke: i === pickIdx ? INK : null, 'stroke-width': i === pickIdx ? 1.5 : null,
       }));
     });
@@ -101,7 +103,7 @@ function chart({ series, trend, metric, kind, isMiss, avgMs, onPick }) {
     // A 2px line that breaks over days with no value; square markers when
     // they fit, and always for missed days and the selected one.
     const d = linePath(values, xc, y);
-    if (d) marks.push(s('path', { d, fill: 'none', stroke: MARK, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+    if (d) marks.push(s('path', { d, fill: 'none', stroke: MARK, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round', 'data-series': 'bar' }));
     values.forEach((v, i) => {
       if (v == null) return;
       const pick = i === pickIdx;
@@ -110,19 +112,19 @@ function chart({ series, trend, metric, kind, isMiss, avgMs, onPick }) {
       const size = pick ? 10 : 8;
       markers.push(s('rect', {
         x: (xc(i) - size / 2).toFixed(1), y: (y(v) - size / 2).toFixed(1), width: size, height: size,
-        fill: colour(i), stroke: pick ? INK : SURFACE, 'stroke-width': pick ? 1.5 : 2, 'data-day': series[i].day, 'data-miss': miss ? 'true' : null,
+        fill: colour(i), stroke: pick ? INK : SURFACE, 'stroke-width': pick ? 1.5 : 2, 'data-day': series[i].day, 'data-miss': miss ? 'true' : null, 'data-series': miss ? 'miss' : 'bar',
       }));
     });
   }
 
   const trendD = linePath(trend, xc, y);
   const trendLine = trendD
-    ? s('path', { d: trendD, fill: 'none', stroke: INK, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round', 'data-testid': 'trend-line' })
+    ? s('path', { d: trendD, fill: 'none', stroke: INK, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round', 'data-testid': 'trend-line', 'data-series': 'trend' })
     : null;
   const avgLine = avgMs != null
     ? s('line', {
       x1: PAD.left, x2: W - PAD.right, y1: y(avgMs).toFixed(1), y2: y(avgMs).toFixed(1),
-      stroke: INK, 'stroke-opacity': 0.6, 'stroke-width': 1.25, 'stroke-dasharray': '3 4', 'data-testid': 'avg-line',
+      stroke: INK, 'stroke-opacity': 0.6, 'stroke-width': 1.25, 'stroke-dasharray': '3 4', 'data-testid': 'avg-line', 'data-series': 'avg',
     })
     : null;
 
@@ -135,6 +137,7 @@ function chart({ series, trend, metric, kind, isMiss, avgMs, onPick }) {
     'data-kind': kind,
     'aria-label': `${METRICS[metric].name} hours per day, ${n} days, with the 7-day trend and the average. Tap a day to read it.`,
   }, ...bands, ...grid, ...xLabels, ...marks, trendLine, avgLine, ...markers);
+  dimOthers(svg, focus);
 
   const nearest = (evt) => {
     const box = svg.getBoundingClientRect();
@@ -154,16 +157,19 @@ function chart({ series, trend, metric, kind, isMiss, avgMs, onPick }) {
 /** Which marks are on the chart, so identity never rests on colour alone. */
 // Miss (clay red) and the day's own mark (rock brown) are always named, so the
 // two are never told apart by colour alone.
-function chartLegend(m, { anyTrend, anyPaused, anyPick }) {
+// Tap an item to show only that series; the chart itself still picks a day.
+function chartLegend(m, { anyTrend, anyPaused, anyPick }, focus, onPick) {
   return legend([
-    ['bar', m.mark],
-    ['miss', 'Miss'],
+    ['bar', m.mark, 'bar'],
+    ['miss', 'Miss', 'miss'],
     anyPick ? ['pick', 'Selected day'] : null,
-    anyTrend ? ['trend', '7-day trend'] : null,
-    ['avg', 'Average'],
-    anyPaused ? ['paused', 'Paused'] : null,
-  ], 'history-legend');
+    anyTrend ? ['trend', '7-day trend', 'trend'] : null,
+    ['avg', 'Average', 'avg'],
+    anyPaused ? ['paused', 'Paused', 'paused'] : null,
+  ], 'history-legend', { focus, onPick });
 }
+
+const FOCUS_WORD = { bar: 'days that were not a miss', miss: 'misses', trend: 'the 7-day trend', avg: 'the average', paused: 'paused days' };
 
 /** Fast, Feast or Weight: the three views of History, on both of its pages. */
 export function metricSwitch(app, value) {
@@ -219,6 +225,8 @@ export function renderHistory(ctx, app) {
   const pickIdx = series.findIndex((d) => d.day === selected);
   const pick = pickIdx >= 0 ? series[pickIdx] : null;
   const set = (values) => store.setSettings(values);
+  const focus = FOCUS_KEYS.includes(app.ui.historyFocus) ? app.ui.historyFocus : null;
+  const setFocus = (v) => { app.ui.historyFocus = v; app.refresh(); };
 
   const controls = h('section', { class: 'section', 'data-block': 'history-controls' },
     choice({ options: [{ value: 'bars', label: 'Bars' }, { value: 'line', label: 'Line' }], value: p.chart, cols: 2, name: 'history-chart', onChange: (v) => set({ historyChart: v }) }),
@@ -227,8 +235,9 @@ export function renderHistory(ctx, app) {
 
   const body = sum.count
     ? h('section', { class: 'section', 'data-block': 'history-chart' },
-      chart({ series, trend, metric: p.metric, kind: p.chart, isMiss, avgMs: sum.avgMs, onPick: (day) => { selected = day; app.refresh(); } }),
-      chartLegend(m, { anyTrend: trend.some((t) => t != null), anyPaused: series.some((d) => d.paused), anyPick: pickIdx >= 0 }),
+      focus ? focusLine(`Showing ${FOCUS_WORD[focus]} only.`, () => setFocus(null), 'history-focus') : null,
+      chart({ series, trend, metric: p.metric, kind: p.chart, isMiss, avgMs: sum.avgMs, focus, onPick: (day) => { selected = day; app.refresh(); } }),
+      chartLegend(m, { anyTrend: trend.some((t) => t != null), anyPaused: series.some((d) => d.paused), anyPick: pickIdx >= 0 }, focus, setFocus),
       h('p', { class: 'small gap-s', 'data-testid': 'history-readout' }, readout(pick, m, pick ? trend[pickIdx] : null, pick ? isMiss(pick.day) : false)),
       pick ? h('div', {}, button('Open this day', () => app.go(`day/${pick.day}`), { kind: 'secondary', name: 'history-open-day' })) : null,
       app.ui.showHistoryTable ? h('div', { class: 'gap' }, table(series, trend, m, isMiss)) : null,

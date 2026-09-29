@@ -381,6 +381,9 @@ test('satiety tab, legends and feasting hours', async ({ page }) => {
   await seed(page, { ...WEEK, meals, settings: install });
   await shot(page, '70-satiety-insights');
   await shot(page, '70b-satiety-insights-full', { full: true });
+  await page.getByTestId('landing-legend').locator('button[data-series="stuffed"]').click();
+  await shot(page, '70c-satiety-overfull-only', { full: true });
+  await tap(page, 'show-all');
   await choose(page, 'satiety-view', 'meals');
   await shot(page, '71-satiety-meals');
   await choose(page, 'satiety-view', 'now');
@@ -393,6 +396,8 @@ test('satiety tab, legends and feasting hours', async ({ page }) => {
   await shot(page, '75-today-uhud-legend');
   await page.locator('.tab[data-tab="history"]').click();
   await shot(page, '76-history-legend', { full: true });
+  await page.getByTestId('history-legend').locator('button[data-series="miss"]').click();
+  await shot(page, '76b-history-misses-only');
   await page.locator('.tab[data-tab="more"]').click();
   await choose(page, 'timing', 'flexible');
   await shot(page, '77-more-feasting-hours');
