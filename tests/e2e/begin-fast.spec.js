@@ -26,12 +26,23 @@ test('a first day with Fast: Begin fast from last night, so no fasting hours are
   expect((await readDb(page)).days).toEqual([expect.objectContaining({ day: '2026-09-26', fastFrom: ms('2026-09-26T18:00') })]);
 });
 
-test('the start can be moved later; before the last bite on record it is refused', async ({ page }) => {
+test('with a last bite on record, Begin fast is hidden: Start a meal is the one way in', async ({ page }) => {
   await openAt(page, '2026-09-27T09:00');
   await seed(page, LAST_NIGHT);
-  await tap(page, 'begin-fast');
+  const before = page.locator('[data-block="before"]');
+  await expect(page.getByTestId('fasting-for')).toHaveText('12 h');
+  await expect(before.locator('[data-action="begin-fast"]')).toHaveCount(0);
+  await expect(before.getByTestId('begin-fast-hint')).toHaveCount(0);
+  await expect(before.locator('[data-action="start-meal"]')).toBeVisible();
+});
+
+test('the start can be moved later; before the last bite on record it is refused', async ({ page }) => {
+  await openAt(page, '2026-09-27T09:00');
+  await seed(page, { ...LAST_NIGHT, days: [{ ...LAST_NIGHT.days[0], fastFrom: ms('2026-09-26T21:30') }] });
+  await expect(page.locator('[data-action="begin-fast"]')).toHaveCount(0);
+  await tap(page, 'edit-fast-start');
   const s = sheet(page, 'begin-fast');
-  await expect(s.getByTestId('fast-summary')).toHaveText('Fasting since 21:00 yesterday: 12 h so far.');
+  await expect(s.getByTestId('fast-summary')).toHaveText('Fasting since 21:30 yesterday: 11 h 30 min so far.');
   await setTime(page, 'fast-start', '22:30');
   await expect(s.getByTestId('fast-summary')).toHaveText('Fasting since 22:30 yesterday: 10 h 30 min so far.');
   await tap(page, 'save-fast');

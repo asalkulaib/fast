@@ -335,6 +335,15 @@ export async function setGoal(hours, fromKey) {
   return { undo: () => setSettings({ goalChanges: before }) };
 }
 
+/** Switches flexible timing on or off from a day on; earlier days keep their rule. */
+export async function setFlexible(on, fromKey) {
+  const before = state.settings.flexChanges || [];
+  const kept = before.filter((c) => c.from < fromKey);
+  const previous = kept.length ? kept[kept.length - 1].on : false;
+  await setSettings({ flexChanges: previous === on ? kept : [...kept, { from: fromKey, on }] });
+  return { undo: () => setSettings({ flexChanges: before }) };
+}
+
 // ---------- Begin fast ----------
 
 /**

@@ -8,7 +8,10 @@
 //     12 to 36 hours after the last meal).
 //   Stage 4: Pan JW et al., J Cereb Blood Flow Metab 2000 (ketones keep
 //     rising over days of fasting); Ho KY et al., J Clin Invest 1988
-//     (a 24-hour fast raises growth hormone secretion several-fold).
+//     (growth hormone about three times higher by day 5); Hartman ML et al.,
+//     J Clin Endocrinol Metab 1992 (about five times higher on day 2).
+//   Stage 2 sugar: Rothman DL et al., Science 1991 (new sugar made by the
+//     liver is about 64% of supply in the first 22 hours of a fast).
 //   Autophagy: Bagherniya M et al., Ageing Res Rev 2018; Bensalem J et al.,
 //     J Physiol 2025. Human timing is unknown, so it has no place on the clock.
 
@@ -31,7 +34,7 @@ export const STAGES = [
     from: 4,
     to: 12,
     range: 'about 4 to 12 h',
-    text: 'Insulin is back at its low baseline. Your liver releases stored sugar to keep blood sugar steady, and your body draws more and more on fat.',
+    text: 'Insulin is back at its low baseline. Your liver keeps blood sugar steady, partly from its sugar store and partly by making new sugar, and your body draws more and more on fat.',
   },
   {
     key: 'switch',
@@ -47,7 +50,7 @@ export const STAGES = [
     from: 24,
     to: Infinity,
     range: '24 h and beyond',
-    text: 'Fat supplies most of your energy and ketones keep rising over the following days. By a full day, growth hormone output is several times higher.',
+    text: 'Fat supplies most of your energy and ketones keep rising over the following days. Growth hormone output climbs too: by the second day it is about five times higher.',
   },
 ];
 
@@ -60,6 +63,8 @@ export const SOURCES = [
   'Anton SD et al. Flipping the metabolic switch: understanding and applying the health benefits of fasting. Obesity, 2018.',
   'Pan JW et al. Human brain beta-hydroxybutyrate and lactate increase in fasting-induced ketosis. Journal of Cerebral Blood Flow and Metabolism, 2000.',
   'Ho KY et al. Fasting enhances growth hormone secretion and amplifies the complex rhythms of growth hormone secretion in man. Journal of Clinical Investigation, 1988.',
+  'Hartman ML et al. Augmented growth hormone secretory burst frequency and amplitude mediate enhanced GH secretion during a two-day fast in normal men. Journal of Clinical Endocrinology and Metabolism, 1992.',
+  'Rothman DL et al. Quantitation of hepatic glycogenolysis and gluconeogenesis in fasting humans with 13C NMR. Science, 1991.',
   'Bagherniya M et al. The effect of fasting or calorie restriction on autophagy induction: a review of the literature. Ageing Research Reviews, 2018.',
   'Bensalem J et al. Intermittent time-restricted eating may increase autophagic flux in humans: an exploratory analysis. Journal of Physiology, 2025.',
 ];

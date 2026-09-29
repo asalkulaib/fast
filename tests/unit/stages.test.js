@@ -41,5 +41,5 @@ test('the copy stays within the evidence', () => {
   assert.doesNotMatch(STAGES.map((s) => `${s.name} ${s.text}`).join(' '), /autophagy/i);
   assert.doesNotMatch(all, /you are in ketosis/i);
   assert.match(AUTOPHAGY_NOTE, /not known/);
-  assert.equal(SOURCES.length, 6);
+  assert.equal(SOURCES.length, 8);
 });

@@ -5,7 +5,7 @@ import { button, choice, scale, textField, timeField, STOP_OPTIONS } from './com
 import { openSheet, sheetHead } from './sheet.js';
 import * as store from '../store.js';
 import { MIN, HOUR, DAY, dayKey, dayStart, floorToMinute, fmtDuration, fmtTime, minutesOfDay, nearestTime, now } from '../core/time.js';
-import { CUTOFF_MIN, LATE_NIGHT_END_MIN, canReopen, isWorkday, timeOnOrAfter } from '../core/rules.js';
+import { CUTOFF_MIN, LATE_NIGHT_END_MIN, canReopen, cutoffApplies, timeOnOrAfter } from '../core/rules.js';
 import { mealInProgress } from './shared.js';
 import { ringIn } from './alarm.js';
 
@@ -99,7 +99,7 @@ export function showStartMealSheet(app) {
     const aheadEl = h('p', { class: 'small', 'data-testid': 'meal-ahead' });
     const updateWarn = () => {
       const key = draft.ts == null ? null : dayKey(draft.ts);
-      const early = key != null && sit.kind === 'first' && isWorkday(key, ctx.days.get(key)) && minutesOfDay(draft.ts) < CUTOFF_MIN;
+      const early = key != null && sit.kind === 'first' && cutoffApplies(key, ctx.days.get(key), ctx.settings) && minutesOfDay(draft.ts) < CUTOFF_MIN;
       warnEl.textContent = early ? 'Before 16:00 on a workday: today will count as a miss.' : '';
       warnEl.hidden = !early;
       aheadEl.textContent = draft.ts == null ? 'That time is still ahead.' : '';

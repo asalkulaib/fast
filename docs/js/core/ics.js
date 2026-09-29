@@ -63,13 +63,18 @@ function localStamp(key, hhmm) {
   return `${y}${pad(m)}${pad(d)}T${pad(Math.floor(min / 60))}${pad(min % 60)}00`;
 }
 
-/** The four repeating reminders, from the current settings. */
-export function reminderEvents(s) {
+/**
+ * The four repeating reminders, from the current settings. On flexible
+ * timing there is no planned opening, so the two window alerts go out
+ * cancelled: importing the file removes them from Calendar.
+ */
+export function reminderEvents(s, { flexible = false } = {}) {
+  const until = flexible ? 'your window' : `your window opens at ${s.workdayStart}`;
   return [
-    { uid: 'hold-the-line', days: WORK, time: s.holdTime, summary: 'Hold the line', description: `Your window opens at ${s.workdayStart}. Water, black coffee, espresso or plain tea until then.` },
-    { uid: 'training', days: WORK, time: s.trainingTime, summary: 'Training', description: `Train before your window opens at ${s.workdayStart}. Log your 4 PM energy in Fast.` },
-    { uid: 'window-workday', days: WORK, time: s.workdayStart, summary: 'Window opens', description: 'Protein and vegetables first. Eat slowly. Pause halfway.' },
-    { uid: 'window-weekend', days: WEEKEND, time: s.weekendStart, summary: 'Window opens', description: 'Protein and vegetables first. Eat slowly. Pause halfway.' },
+    { uid: 'hold-the-line', days: WORK, time: s.holdTime, summary: 'Hold the line', description: flexible ? 'Water, black coffee, espresso or plain tea until your window.' : `Your window opens at ${s.workdayStart}. Water, black coffee, espresso or plain tea until then.` },
+    { uid: 'training', days: WORK, time: s.trainingTime, summary: 'Training', description: `Train before ${until}. Log your 4 PM energy in Fast.` },
+    { uid: 'window-workday', days: WORK, time: s.workdayStart, summary: 'Window opens', description: 'Protein and vegetables first. Eat slowly. Pause halfway.', cancelled: flexible },
+    { uid: 'window-weekend', days: WEEKEND, time: s.weekendStart, summary: 'Window opens', description: 'Protein and vegetables first. Eat slowly. Pause halfway.', cancelled: flexible },
   ];
 }
 
@@ -77,7 +82,7 @@ export function reminderEvents(s) {
  * settings: { workdayStart, weekendStart, holdTime, trainingTime }
  * opts: { nowTs, todayKey, sequence }
  */
-export function buildIcs(settings, { nowTs, todayKey, sequence = 0 }) {
+export function buildIcs(settings, { nowTs, todayKey, sequence = 0, flexible = false }) {
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
@@ -96,7 +101,7 @@ export function buildIcs(settings, { nowTs, todayKey, sequence = 0 }) {
     'END:STANDARD',
     'END:VTIMEZONE',
   ];
-  for (const ev of reminderEvents(settings)) {
+  for (const ev of reminderEvents(settings, { flexible })) {
     const start = firstMatching(todayKey, ev.days);
     lines.push(
       'BEGIN:VEVENT',
@@ -109,11 +114,7 @@ export function buildIcs(settings, { nowTs, todayKey, sequence = 0 }) {
       `SUMMARY:${escapeText(ev.summary)}`,
       `DESCRIPTION:${escapeText(ev.description)}`,
       'TRANSP:TRANSPARENT',
-      'BEGIN:VALARM',
-      'ACTION:DISPLAY',
-      `DESCRIPTION:${escapeText(ev.summary)}`,
-      'TRIGGER:-PT0M',
-      'END:VALARM',
+      ...(ev.cancelled ? ['STATUS:CANCELLED'] : ['BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${escapeText(ev.summary)}`, 'TRIGGER:-PT0M', 'END:VALARM']),
       'END:VEVENT',
     );
   }
@@ -122,6 +123,6 @@ export function buildIcs(settings, { nowTs, todayKey, sequence = 0 }) {
 }
 
 /** The times a calendar file was built from, to tell when it is out of date. */
-export function icsTimes(s) {
-  return [s.holdTime, s.trainingTime, s.workdayStart, s.weekendStart].join('|');
+export function icsTimes(s, { flexible = false } = {}) {
+  return [s.holdTime, s.trainingTime, s.workdayStart, s.weekendStart, ...(flexible ? ['flexible'] : [])].join('|');
 }

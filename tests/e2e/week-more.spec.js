@@ -20,7 +20,7 @@ test('the week strip: a square per day, coloured by result, a dot on days left w
 });
 
 test('satiety insights appear once ten meals are rated', async ({ page }) => {
-  await openAt(page, '2026-09-26T23:00', '#week');
+  await openAt(page, '2026-09-26T23:00', '#satiety');
   await seed(page, WEEK);
   await expect(page.getByTestId('insights')).toHaveText('Rate how ten meals finished and your own patterns show here.');
   const meals = [];

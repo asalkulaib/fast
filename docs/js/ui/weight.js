@@ -2,7 +2,8 @@
 // A daily weight is never shown, and there is no way to type one in.
 
 import { h, hl } from './dom.js';
-import { button } from './components.js';
+import { button, legend } from './components.js';
+import { metricSwitch } from './history.js';
 import { fmtDayMonth } from '../core/time.js';
 import { rollingSummary, weeklyAverages, MIN_WEIGH_INS } from '../core/weight.js';
 import { dunes } from './art.js';
@@ -65,7 +66,8 @@ function importSection(ctx, app) {
 export function renderWeight(ctx, app) {
   const summary = rollingSummary(ctx.weights);
   const weekly = weeklyAverages(ctx.weights);
-  const head = header(ctx, app, { title: 'Weight' });
+  // Weight is the third view of History, under the same switch.
+  const head = [header(ctx, app, { title: 'History' }), metricSwitch(app, 'weight')];
 
   if (!ctx.weights.size) {
     return h('div', { class: 'weight empty' },

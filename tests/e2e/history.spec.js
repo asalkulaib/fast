@@ -74,7 +74,7 @@ test('history: misses in clay, the average and the 7-day trend, named in a legen
   await expect(chart.locator('rect[data-day="2026-09-26"]')).toHaveAttribute('fill', '#F0B25C'); // selected
   await expect(chart.getByTestId('avg-line')).toHaveCount(1);
   await expect(chart.getByTestId('trend-line')).toHaveCount(1);
-  await expect(page.getByTestId('history-legend').locator('.legend-item')).toHaveText(['Miss', '7-day trend', 'Average']);
+  await expect(page.getByTestId('history-legend').locator('.legend-item')).toHaveText(['Hours in the window', 'Miss', 'Selected day', '7-day trend', 'Average']);
   // On a line, missed days keep their clay markers.
   await pick(page, 'history-chart', 'line');
   await expect(chart.locator('rect[data-miss="true"]')).toHaveCount(3);

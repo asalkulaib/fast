@@ -3,7 +3,7 @@
 import { h, live } from './dom.js';
 import { button } from './components.js';
 import { DAY, addDays, dayKey, fmtDayLong, fmtDuration, fmtMinutes, fmtWhen } from '../core/time.js';
-import { isOpen, isWorkday, plannedStartMin } from '../core/rules.js';
+import { isFlexible, isOpen, isWorkday, plannedStartMin } from '../core/rules.js';
 
 /** Margin note: a small scholar's note. */
 export function note(title, value) {
@@ -74,6 +74,10 @@ export function temptationsOfDay(ctx, key) {
 /** The next planned window after a day, as a sentence. */
 export function nextWindowLine(ctx, fromKey = ctx.todayKey) {
   const next = addDays(fromKey, 1);
+  if (isFlexible(next, ctx.settings)) {
+    const when = next === addDays(ctx.todayKey, 1) ? 'Tomorrow' : 'Today';
+    return `${when}: a ${Math.round(ctx.windowMsFor(next) / 3600000)}-hour window, opened whenever you choose.`;
+  }
   const time = fmtMinutes(plannedStartMin(next, ctx.days.get(next), ctx.settings));
   return next === addDays(ctx.todayKey, 1)
     ? `Tomorrow's window opens at ${time}.`

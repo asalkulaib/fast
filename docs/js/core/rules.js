@@ -36,6 +36,17 @@ export function windowMsFor(key, settings) {
   return hours * HOUR;
 }
 
+/**
+ * Flexible timing: the window may open at any hour of any day, and success is
+ * its length alone. Like the goal, it applies from the day it was switched,
+ * so past days keep the rule they were judged by.
+ */
+export function isFlexible(key, settings) {
+  let on = false;
+  for (const c of (settings && settings.flexChanges) || []) if (c.from <= key) on = c.on;
+  return on;
+}
+
 /** '20:4' for a 4-hour window: fasting hours, then eating hours. */
 export function goalLabel(windowMs) {
   const hours = Math.round(windowMs / HOUR);
@@ -81,6 +92,11 @@ export function isOpen(rec) {
   return !!(rec && rec.firstBite && !rec.lastBite);
 }
 
+/** Whether the 16:00 rule applies: a workday on fixed timing. */
+export function cutoffApplies(key, rec, settings) {
+  return isWorkday(key, rec) && !isFlexible(key, settings);
+}
+
 /** Planned window start for a day, in minutes since midnight. */
 export function plannedStartMin(key, rec, settings) {
   return toMinutes(isWorkday(key, rec) ? settings.workdayStart : settings.weekendStart);
@@ -91,14 +107,15 @@ export function plannedStartMin(key, rec, settings) {
  * result: 'success' | 'miss' | 'pending' (today, not decided yet)
  *       | 'unlogged' (a past day with nothing logged) | 'none' (outside tracking)
  *       | 'paused' (not tracked, whatever is logged)
- * reasons for a miss: 'early' (workday window opened before 16:00),
+ * reasons for a miss: 'early' (workday window opened before 16:00; never on flexible timing),
  *                     'over' (longer than the goal plus 15 min), 'outside' (ate outside the window)
  */
-export function evaluateDay(key, rec, outsideCount, nowTs, todayKey, startKey, windowMs = WINDOW_MS) {
+export function evaluateDay(key, rec, outsideCount, nowTs, todayKey, startKey, windowMs = WINDOW_MS, flexible = false) {
   const workday = isWorkday(key, rec);
   const base = {
     day: key,
     windowMs,
+    flexible,
     workday,
     dayOff: !!(rec && rec.dayOff),
     weekend: !isWorkweekday(key),
@@ -114,7 +131,7 @@ export function evaluateDay(key, rec, outsideCount, nowTs, todayKey, startKey, w
     const open = !rec.lastBite;
     const end = open ? Math.max(nowTs, rec.firstBite) : rec.lastBite;
     const lengthMs = Math.max(0, end - rec.firstBite);
-    const openedEarly = workday && minutesOfDay(rec.firstBite) < CUTOFF_MIN;
+    const openedEarly = workday && !flexible && minutesOfDay(rec.firstBite) < CUTOFF_MIN;
     const over = lengthMs > windowMs + GRACE_MS;
     const reasons = [];
     if (openedEarly) reasons.push('early');
@@ -160,7 +177,7 @@ export function makeEvaluator({ days, outside, meals = [], nowTs, todayKey, star
   const cache = new Map();
   return (key) => {
     if (!cache.has(key)) {
-      cache.set(key, evaluateDay(key, days.get(key), outsideByDay.get(key) || 0, nowTs, todayKey, startKey, windowMsFor(key, settings)));
+      cache.set(key, evaluateDay(key, days.get(key), outsideByDay.get(key) || 0, nowTs, todayKey, startKey, windowMsFor(key, settings), isFlexible(key, settings)));
     }
     return cache.get(key);
   };

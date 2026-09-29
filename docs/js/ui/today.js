@@ -7,7 +7,7 @@ import {
   HOUR, MIN, addDays, fmtCountdown, fmtDayLong, fmtDayShort, fmtDuration, fmtMinutes, fmtTime, fmtWhen, isWorkweekday, minutesOfDay, now,
 } from '../core/time.js';
 import {
-  CUTOFF_MIN, GRACE_MS, canReopen, goalLabel, isWorkday, lastEatingSource, lastEatingTs, lateNightDay, plannedStartMin, timeOnOrAfter, windowPhase,
+  CUTOFF_MIN, GRACE_MS, canReopen, cutoffApplies, goalLabel, isFlexible, isWorkday, lastEatingSource, lastEatingTs, lateNightDay, plannedStartMin, timeOnOrAfter, windowPhase,
 } from '../core/rules.js';
 import { dunes } from './art.js';
 import { forgotCloseDefault, showDoneEatingSheet, showFinishMealSheet, showMealEditSheet, showStartMealSheet } from './meal.js';
@@ -18,8 +18,7 @@ import { currentPause, endPause, pauseToday, showPauseSheet } from './pause.js';
 import { showBeginFastSheet } from './begin-fast.js';
 import { showGoalSheet } from './goal.js';
 import { climbSection } from './climb.js';
-import { fullnessCard } from './fullness.js';
-import { dayTypeText, header, liveNote, mealInProgress, mealsOfDay, nextWindowLine, note, notices, runningFullness, tapNote } from './shared.js';
+import { dayTypeText, header, mealInProgress, nextWindowLine, note, notices, runningFullness, tapNote } from './shared.js';
 
 const days = (n) => `${n} ${n === 1 ? 'day' : 'days'}`;
 const hoursWord = (ms) => { const n = Math.round(ms / HOUR); return `${n} ${n === 1 ? 'hour' : 'hours'}`; };
@@ -49,22 +48,18 @@ export function renderToday(ctx, app) {
   else if (mode === 'paused') main = pausedBlock(ctx, app);
   else main = beforeBlock(ctx, app);
 
-  // The window on screen may be last night's (open, forgotten, or reopenable after midnight).
-  const mealsKey = (mode === 'open' || mode === 'forgot' || mode === 'closed') ? rec.day : ctx.todayKey;
-  // Before the window the ring leads the main block; after it, it sits below.
-  // How the day's eating ended: asked once the window is closed, and on paused days.
-  const fullnessKey = mode === 'closed' ? rec.day : mode === 'paused' ? ctx.todayKey : null;
+  // Meals, fullness checks and how the day ended live on the Satiety tab;
+  // Today points there while a fullness check is running.
   return h('div', { class: 'today', 'data-mode': mode },
     header(ctx, app, { title: fmtDayLong(ctx.todayKey), sub: dayTypeText(ctx.todayKey, todayRec) }),
     notices(ctx, app),
     main,
-    fullnessKey ? fullnessCard(ctx, fullnessKey) : null,
+    satietyPointer(ctx, app),
     fasting(mode) ? stagesSection(ctx, app, lastEatingTs(ctx), { withRing: mode !== 'before' }) : null,
     // The climb up Uhud takes the streak's place; with both climbers off, the streak returns.
     climbSection(ctx) || streakSection(ctx),
     // A paused day tracks nothing.
     mode === 'paused' ? null : checkinSection(ctx, app),
-    mode === 'paused' ? null : mealsSection(ctx, app, mealsKey),
     dunes(),
   );
 }
@@ -75,11 +70,14 @@ function beforeBlock(ctx, app) {
   const key = ctx.todayKey;
   const rec = ctx.days.get(key);
   const planned = plannedStartMin(key, rec, ctx.settings);
-  const workdayEarly = isWorkday(key, rec) && minutesOfDay(ctx.nowTs) < CUTOFF_MIN;
+  const workdayEarly = cutoffApplies(key, rec, ctx.settings) && minutesOfDay(ctx.nowTs) < CUTOFF_MIN;
   const lastSrc = lastEatingSource(ctx);
   const last = lastSrc ? lastSrc.ts : null;
   const late = lateNightDay(ctx);
-  const plannedLine = h('p', { class: 'gap' }, 'Window planned for ', hl(fmtMinutes(planned)), '.');
+  // On feasting hours there is no planned time: the window opens when you choose.
+  const plannedLine = isFlexible(key, ctx.settings)
+    ? h('p', { class: 'gap', 'data-testid': 'flexible-line' }, 'Your ', hl(`${Math.round(ctx.windowMsFor(key) / HOUR)}-hour window`), ' opens when you choose.')
+    : h('p', { class: 'gap' }, 'Window planned for ', hl(fmtMinutes(planned)), '.');
   const goalNote = tapNote('Goal', goalLabel(ctx.windowMsFor(key)), () => showGoalSheet(app), 'edit-goal');
   // From Begin fast, a start before the last bite on record leads to that bite.
   const beginFast = () => showBeginFastSheet(app, {
@@ -104,15 +102,19 @@ function beforeBlock(ctx, app) {
     last ? h('div', { class: 'row gap' }, h('div', { class: 'main' }, plannedLine), h('div', { class: 'margin' }, goalNote)) : null,
     last ? null : h('p', { class: 'quiet small gap-s', 'data-testid': 'begin-fast-hint' }, 'Already fasting? Tap Begin fast and set when it began, so none of it is lost.'),
     workdayEarly ? h('p', { class: 'statement gap', 'data-testid': 'firm-reminder' }, 'Opening before 16:00 makes today a miss.') : null,
-    // Two equal ways in: a meal (the first opens the window), or a fast already under way.
-    h('div', { class: 'btn-pair start-actions gap-l' },
-      button('Start a meal', () => showStartMealSheet(app), { big: true, block: true, name: 'start-meal' }),
-      button('Begin fast', beginFast, { big: true, block: true, name: 'begin-fast' })),
+    // With a fast already known (a last bite or a fast start), a meal is the only way in;
+    // Begin fast is offered only when Fast has nothing to time from.
+    last
+      ? h('div', { class: 'gap-l' }, button('Start a meal', () => showStartMealSheet(app), { big: true, block: true, name: 'start-meal' }))
+      : h('div', { class: 'btn-pair start-actions gap-l' },
+        button('Start a meal', () => showStartMealSheet(app), { big: true, block: true, name: 'start-meal' }),
+        button('Begin fast', beginFast, { big: true, block: true, name: 'begin-fast' })),
     h('p', { class: 'quiet small gap' }, 'Until then: water, sparkling water, black coffee, espresso, plain tea.'),
     late
       ? h('div', { class: 'gap' }, button('Eating late? Count it against last night', () => showOutsideSheet(app, { day: late }), { kind: 'secondary', name: 'late-night' }))
       : null,
-    isWorkweekday(key) ? dayOffToggle(ctx, key) : null,
+    // A day off only lifts the 16:00 rule, which feasting hours do not have.
+    isWorkweekday(key) && !isFlexible(key, ctx.settings) ? dayOffToggle(ctx, key) : null,
     h('div', { class: 'gap-s' }, button('Pause today', () => pauseToday(app), { kind: 'secondary', name: 'pause-today' })),
   );
 }
@@ -324,24 +326,18 @@ function checkinSection(ctx, app) {
   );
 }
 
-// ---------- Meals ----------
+// ---------- Satiety pointer ----------
 
-function mealsSection(ctx, app, key) {
-  const meals = mealsOfDay(ctx, key);
-  if (!meals.length) return null;
-  const running = runningFullness(ctx).filter((m) => m.day === key);
-  return h('section', { class: 'section', 'data-block': 'meals' },
+function satietyPointer(ctx, app) {
+  const running = runningFullness(ctx);
+  if (!running.length) return null;
+  const m = running[0];
+  return h('section', { class: 'section', 'data-block': 'satiety-pointer' },
     h('div', { class: 'row' },
-      h('div', { class: 'main' }, h('div', { class: 'label' }, 'Meals')),
-      h('div', { class: 'margin' },
-        running.map((m) => liveNote('Fullness check', (t) => (m.fullness20DueAt > t ? `in ${fmtDuration(m.fullness20DueAt - t)}` : 'now'))))),
-    h('ul', { class: 'list gap-s' }, meals.map((m) => h('li', {},
-      h('button', { type: 'button', class: 'item', 'data-meal': String(m.id), onclick: () => showMealEditSheet(app, m.id) },
-        h('span', {},
-          h('span', { class: 'item-title' }, m.name || 'Meal'),
-          mealMeta(m) ? [h('br'), h('span', { class: 'item-meta' }, mealMeta(m))] : null),
-        h('span', { class: 'item-side' }, m.finishedAt ? `${fmtTime(m.startedAt)} to ${fmtTime(m.finishedAt)}` : `from ${fmtTime(m.startedAt)}`))))),
-  );
+      h('div', { class: 'main' },
+        h('div', { class: 'label' }, 'Fullness check'),
+        live('p', { class: 'gap-s' }, (t) => (m.fullness20DueAt > t ? `${m.name || 'Your meal'}: check in ${fmtDuration(m.fullness20DueAt - t)}.` : `${m.name || 'Your meal'}: time to score it.`))),
+      h('div', { class: 'margin' }, button('Satiety', () => app.go('satiety'), { kind: 'secondary', name: 'open-satiety' }))));
 }
 
 export function mealMeta(m) {

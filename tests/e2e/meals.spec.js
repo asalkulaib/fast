@@ -75,7 +75,9 @@ test('after the goal: a meal counts as eating outside the window, with its satie
   await tap(page, 'save-finish');
   const [meal] = (await readDb(page)).meals;
   expect(meal).toMatchObject({ outside: true, stop: 'full', startedAt: ms('2026-09-27T22:00') });
-  await expect(page.locator('[data-block="meals"]')).toContainText('outside the window');
+  await page.locator('.tab[data-tab="satiety"]').click();
+  await choose(page, 'satiety-view', 'meals');
+  await expect(page.locator('[data-block="satiety-meals"]')).toContainText('Satisfied, outside the window');
 });
 
 test('a meal already eaten can be logged whole; the window opens at its start', async ({ page }) => {

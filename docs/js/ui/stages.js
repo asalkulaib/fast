@@ -5,7 +5,7 @@
 // one in gold. The stages themselves are never a target.
 
 import { h, s, live } from './dom.js';
-import { button } from './components.js';
+import { button, legend } from './components.js';
 import { openSheet, sheetHead } from './sheet.js';
 import { HOUR, fmtDuration, fmtElapsed } from '../core/time.js';
 import { AUTOPHAGY_NOTE, SCALE_HOURS, SOURCES, STAGES, VARIATION_NOTE, fastingState } from '../core/stages.js';
@@ -105,7 +105,11 @@ function fastingRing(state, lastBiteTs, compact, goalHours) {
       h('div', { class: 'ring-stage', 'data-testid': 'stage-name' }, state.stage.name)));
 }
 
-/** How far the fast is from its goal, live. */
+/** What each mark on the ring means. */
+const ringLegend = () => legend([
+  ['fasted', 'Hours fasted'], ['ahead', 'Still ahead'], ['needle', 'Now'], ['goal', 'Fasting goal'], ['stage-now', 'Current stage icon'],
+], 'ring-legend');
+
 /** Under the ring, live: how far the fasting goal is, then the next stage. */
 function ringLines(state, lastBiteTs, goalHours) {
   return h('p', { class: 'quiet small gap ring-lines' },
@@ -135,7 +139,7 @@ export function ringHero(ctx, lastBiteTs) {
   const state = fastingState(lastBiteTs, ctx.nowTs);
   const goalHours = 24 - Math.round(ctx.windowMsFor(ctx.todayKey) / HOUR);
   return markStage(h('div', { class: 'ring-hero gap' },
-    fastingRing(state, lastBiteTs, false, goalHours), ringLines(state, lastBiteTs, goalHours)), state, ctx.nowTs);
+    fastingRing(state, lastBiteTs, false, goalHours), ringLegend(), ringLines(state, lastBiteTs, goalHours)), state, ctx.nowTs);
 }
 
 /**
@@ -148,7 +152,7 @@ export function stagesSection(ctx, app, lastBiteTs, { withRing }) {
   const goalHours = 24 - Math.round(ctx.windowMsFor(ctx.todayKey) / HOUR);
   return markStage(h('section', { class: 'section', 'data-block': 'stages', 'data-stage': state.stage.key },
     withRing
-      ? [h('div', { class: 'label' }, 'Fasting'), fastingRing(state, lastBiteTs, true, goalHours), ringLines(state, lastBiteTs, goalHours)]
+      ? [h('div', { class: 'label' }, 'Fasting'), fastingRing(state, lastBiteTs, true, goalHours), ringLegend(), ringLines(state, lastBiteTs, goalHours)]
       : h('div', { class: 'label' }, state.stage.name),
     h('p', { class: 'gap-s' }, state.stage.text),
     h('div', { class: 'gap-s' }, button('About the stages', () => showStagesSheet(), { kind: 'secondary', name: 'about-stages' })),

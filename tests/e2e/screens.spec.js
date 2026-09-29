@@ -242,7 +242,8 @@ test('week, day, weight, more, help', async ({ page }) => {
   await shot(page, '30b-week-full', { full: true });
   await page.locator('.dayrow[data-day="2026-09-24"]').click();
   await shot(page, '31-day-editor', { full: true });
-  await page.locator('.tab[data-tab="weight"]').click();
+  await page.locator('.tab[data-tab="history"]').click();
+  await choose(page, 'history-metric', 'weight');
   await page.evaluate(async () => {
     const db = await import('/fast/js/db.js');
     const w = [];
@@ -367,4 +368,38 @@ test('the Uhud climb and the fullness of the day', async ({ page }) => {
   await shot(page, '65-today-climb');
   await page.evaluate(() => window.scrollTo(0, 0));
   await shot(page, '66-today-fullness-card');
+});
+
+test('satiety tab, legends and feasting hours', async ({ page }) => {
+  const meals = [];
+  for (let i = 0; i < 14; i++) {
+    const day = new Date(Date.UTC(2026, 8, 12 + i)).toISOString().slice(0, 10);
+    const stop = ['before_full', 'full', 'full', 'stuffed'][i % 4];
+    meals.push({ id: i + 1, day, name: i % 3 ? 'Dinner' : 'Lunch', startedAt: ms(`${day}T17:30`), finishedAt: ms(`${day}T18:00`), hungerBefore: 5 + (i % 4), stop, fullnessNow: 5 + (i % 3), fullness20: i === 13 ? null : 6 + (i % 4) });
+  }
+  await openAt(page, '2026-09-26T23:00', '#satiety');
+  await seed(page, { ...WEEK, meals, settings: install });
+  await shot(page, '70-satiety-insights');
+  await shot(page, '70b-satiety-insights-full', { full: true });
+  await choose(page, 'satiety-view', 'meals');
+  await shot(page, '71-satiety-meals');
+  await choose(page, 'satiety-view', 'now');
+  await shot(page, '72-satiety-now');
+  await page.locator('.tab[data-tab="week"]').click();
+  await shot(page, '73-week-legend');
+  await page.locator('.tab[data-tab="today"]').click();
+  await shot(page, '74-today-closed');
+  await page.locator('[data-block="climb"]').scrollIntoViewIfNeeded();
+  await shot(page, '75-today-uhud-legend');
+  await page.locator('.tab[data-tab="history"]').click();
+  await shot(page, '76-history-legend', { full: true });
+  await page.locator('.tab[data-tab="more"]').click();
+  await choose(page, 'timing', 'flexible');
+  await shot(page, '77-more-feasting-hours');
+});
+
+test('today before the window: ring legend, Start a meal alone, feasting hours', async ({ page }) => {
+  await openAt(page, '2026-09-27T11:00');
+  await seed(page, { ...WEEK, settings: [...install, { key: 'flexChanges', value: [{ from: '2026-09-27', on: true }] }] });
+  await shot(page, '78-today-before-flexible', { full: true });
 });

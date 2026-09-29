@@ -68,7 +68,8 @@ export function weekReview(data, { weekStartKey, todayKey, nowTs, startKey }) {
   const streak = endKey >= startKey ? streaks(evaluate, endKey, startKey) : { current: 0, best: 0 };
 
   // Workday rule
-  const workdayWindows = evals.filter((e) => e.workday && !e.future && e.firstBite);
+  // Flexible days have no 16:00 rule, so they stay out of this count.
+  const workdayWindows = evals.filter((e) => e.workday && !e.flexible && !e.future && e.firstBite);
   const onTime = workdayWindows.filter((e) => !e.openedEarly).length;
 
   // Energy at 4 PM: this week and all time

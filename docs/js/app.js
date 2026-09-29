@@ -6,7 +6,7 @@ import { requestPersistence } from './db.js';
 import { h, fadeIn, fadeOut, updateLive } from './ui/dom.js';
 import { button } from './ui/components.js';
 import { now, dayKey, isDayKey, fmtDayLong } from './core/time.js';
-import { makeEvaluator, streaks, todayMode, trackingStart, windowMsFor } from './core/rules.js';
+import { isFlexible, makeEvaluator, streaks, todayMode, trackingStart, windowMsFor } from './core/rules.js';
 import { buildIcs, icsTimes } from './core/ics.js';
 import { buildCsvFiles } from './core/csv.js';
 import { buildBackup, backupFileName, describeBackup, parseBackup } from './core/backup.js';
@@ -16,6 +16,7 @@ import { renderDay } from './ui/day.js';
 import { renderHistory } from './ui/history.js';
 import { renderWeight } from './ui/weight.js';
 import { renderMore } from './ui/more.js';
+import { renderSatiety } from './ui/satiety.js';
 import { renderHelp } from './ui/help.js';
 import { currentSheet, isSheetOpen, openSheet, sheetHead } from './ui/sheet.js';
 import { showFullnessSheet } from './ui/meal.js';
@@ -29,7 +30,7 @@ const view = document.getElementById('view');
 const tabbar = document.getElementById('tabbar');
 const sheetRoot = document.getElementById('sheet-root');
 
-const ROUTES = ['today', 'week', 'day', 'history', 'weight', 'more', 'help'];
+const ROUTES = ['today', 'week', 'day', 'satiety', 'history', 'weight', 'more', 'help'];
 let route = parseRoute(location.hash);
 let lastSignature = '';
 let lastStateKey = '';
@@ -76,7 +77,9 @@ function renderRoute(ctx) {
   switch (route.name) {
     case 'week': return renderWeek(ctx, app, route.arg);
     case 'day': return renderDay(ctx, app, route.arg);
-    case 'history': return renderHistory(ctx, app);
+    case 'satiety': return renderSatiety(ctx, app);
+    // Weight is the third view of History.
+    case 'history': return ctx.settings.historyMetric === 'weight' ? renderWeight(ctx, app) : renderHistory(ctx, app);
     case 'weight': return renderWeight(ctx, app);
     case 'more': return renderMore(ctx, app);
     case 'help': return renderHelp(ctx, app);
@@ -103,7 +106,7 @@ function render(fresh) {
     if (stateKey !== lastStateKey) fadeIn(node);
   }
   lastStateKey = stateKey;
-  const tab = route.name === 'day' ? 'week' : route.name === 'help' ? 'more' : route.name;
+  const tab = { day: 'week', help: 'more', weight: 'history' }[route.name] || route.name;
   for (const b of tabbar.querySelectorAll('.tab')) {
     if (b.dataset.tab === tab) b.setAttribute('aria-current', 'page');
     else b.removeAttribute('aria-current');
@@ -232,9 +235,10 @@ async function exportCsv() {
 async function addCalendar() {
   const ctx = context();
   const s = ctx.settings;
-  const fingerprint = icsTimes(s);
+  const flexible = isFlexible(ctx.todayKey, s);
+  const fingerprint = icsTimes(s, { flexible });
   const sequence = s.icsTimes && s.icsTimes !== fingerprint ? (s.icsSequence || 0) + 1 : s.icsSequence || 0;
-  const text = buildIcs(s, { nowTs: ctx.nowTs, todayKey: ctx.todayKey, sequence });
+  const text = buildIcs(s, { nowTs: ctx.nowTs, todayKey: ctx.todayKey, sequence, flexible });
   const result = await deliverFiles([{ name: 'fast-reminders.ics', text, type: 'text/calendar' }], 'Fast reminders');
   if (result === 'cancelled') return;
   await store.setSettings({ icsTimes: fingerprint, icsSequence: sequence });
@@ -267,7 +271,7 @@ async function restoreFrom(file) {
 }
 
 export const app = {
-  ui: { showPaste: false, showTable: false, showHistoryTable: false },
+  ui: { showPaste: false, showTable: false, showHistoryTable: false, showSatietyTable: false },
   ctx: context,
   go(path) {
     const target = `#${path}`;

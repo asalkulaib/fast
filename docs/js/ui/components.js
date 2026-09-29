@@ -363,6 +363,16 @@ export function button(label, onClick, { kind = 'primary', block = false, big = 
   return b;
 }
 
+/**
+ * A legend: each colour or mark beside the word for what it means, so no mark
+ * relies on colour alone. items: [key, label], where key is a swatch class
+ * ('miss', 'paused', ...) or a node such as an icon. Empty items are skipped.
+ */
+export function legend(items, testid) {
+  return h('div', { class: 'legend', 'data-testid': testid || null }, items.filter(Boolean).map(([key, label]) => h('span', { class: 'legend-item' },
+    typeof key === 'string' ? h('span', { class: `swatch ${key}`, 'aria-hidden': 'true' }) : key, label)));
+}
+
 export const TRIGGER_OPTIONS = [
   { value: 'hunger', label: 'Hunger' },
   { value: 'boredom', label: 'Boredom' },

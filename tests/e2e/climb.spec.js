@@ -5,6 +5,9 @@ import { WEEK } from './seed-data.js';
 // climber (a step per day left wanting), 30 steps to the summit.
 
 const stepsOf = (page, kind) => page.getByTestId(`climb-${kind}`).locator('.stat-value');
+// How the day ended is asked on Satiety, under Now; the climbers stay on Today.
+const toNow = async (page) => { await page.locator('.tab[data-tab="satiety"]').click(); await choose(page, 'satiety-view', 'now'); };
+const toToday = (page) => page.locator('.tab[data-tab="today"]').click();
 
 test('two climbers: a step per successful day, and per day left wanting', async ({ page }) => {
   await openAt(page, '2026-09-26T23:00');
@@ -15,9 +18,11 @@ test('two climbers: a step per successful day, and per day left wanting', async 
   await expect(page.getByTestId('summits')).toHaveText('Fasts: 0 summits · Fullness: 0 summits');
   await expect(page.locator('[data-block="streak"]')).toHaveCount(0);
   // Today's window has no meals: the day's end asks how it finished.
+  await toNow(page);
   const card = page.locator('[data-block="fullness"]');
   await expect(card).toContainText('How did you finish eating today?');
   await choose(page, 'day-fullness', 'before_full');
+  await toToday(page);
   await expect(stepsOf(page, 'fullness')).toHaveText('3 of 30');
   expect((await readDb(page)).days.find((d) => d.day === '2026-09-26').fullness).toBe('before_full');
 });
@@ -25,8 +30,9 @@ test('two climbers: a step per successful day, and per day left wanting', async 
 test('with every meal rated, the day reads from the meals; one satisfied meal holds the climber', async ({ page }) => {
   await openAt(page, '2026-09-24T23:00');
   await seed(page, WEEK);
-  await expect(page.locator('[data-block="fullness"]').getByTestId('day-fullness')).toHaveText('Left wanting at every meal.');
   await expect(stepsOf(page, 'fullness')).toHaveText('2 of 30');
+  await toNow(page);
+  await expect(page.locator('[data-block="fullness"]').getByTestId('day-fullness')).toHaveText('Left wanting at every meal.');
   await page.goto('./#day/2026-09-22');
   await expect(page.locator('[data-block="fullness"]').getByTestId('day-fullness')).toHaveText('Satisfied at one meal or more.');
 });
@@ -65,9 +71,11 @@ test('a paused day holds the fast climber and still counts fullness', async ({ p
   await openAt(page, '2026-09-27T20:00');
   await seed(page, WEEK);
   await tap(page, 'pause-today');
+  await toNow(page);
   const card = page.locator('[data-block="fullness"]');
   await expect(card).toContainText('How did you finish eating today?');
   await choose(page, 'day-fullness', 'before_full');
+  await toToday(page);
   await expect(stepsOf(page, 'fullness')).toHaveText('3 of 30');
   await expect(stepsOf(page, 'fast')).toHaveText('4 of 30');
 });

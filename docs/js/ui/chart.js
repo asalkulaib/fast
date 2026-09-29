@@ -3,6 +3,7 @@
 // and a table view carry every value, so the chart never gates a number.
 
 import { h, s } from './dom.js';
+import { legend } from './components.js';
 import { fmtDayMonth } from '../core/time.js';
 
 const W = 340;
@@ -98,7 +99,8 @@ export function weightChart(points) {
     if (e.key === 'ArrowRight') { e.preventDefault(); show(active + 1); }
   });
 
-  return h('div', { class: 'chart-wrap' }, svg, readout);
+  return h('div', { class: 'chart-wrap' }, svg,
+    legend([['mark', 'Weekly average'], ['pick', 'Latest week']], 'weight-legend'), readout);
 }
 
 /** Table view of the same weekly averages. */

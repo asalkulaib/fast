@@ -22,7 +22,7 @@ Nafud at midday: sand is the page, umber ink the text, and gold leaf marks the o
 - Your goal is an eating window: 16:8, 18:6, 20:4 (the default), 23:1, or any whole number of hours from 1 to 12. The fasting goal is the rest of the 24 hours. Change it in More, Goal, or by tapping Goal on Today. A change applies from that day on; past days keep the goal they had.
 - Starting your first meal opens the window: its start is the first bite, and the countdown of your eating window begins. A window belongs to the day of its first bite, even when it runs past midnight.
 - A day succeeds when all eating falls within the window goal, with 15 minutes of grace. Beyond that it is a miss, shown as the time over the goal.
-- On a workday, a window that opens before 16:00 is a miss. A day marked as a day off follows weekend rules.
+- What makes a day a success is set in More. With Planned start (the default), a workday window that opens before 16:00 is a miss, and a day marked as a day off follows weekend rules. With Feasting hours, the window opens at any hour of any day, and only its length and eating outside it count. Today then shows no planned time, and the calendar file drops the window alerts. Like the goal, a change applies from that day on, and past days keep the rule they had.
 - Eating after "I'm done eating" counts as outside the window and makes the day a miss. While you are still inside the window goal, you can reopen the window instead.
 - Between midnight and 04:00, late eating can be counted against the night before.
 - The streak counts consecutive successful days, shown in Week. A day with nothing logged breaks it, so Fast asks you to fill in any gap.
@@ -30,7 +30,7 @@ Nafud at midday: sand is the page, umber ink the text, and gold leaf marks the o
 
 ## Starting: a meal or Begin fast
 
-Before your window, Today offers two equal buttons.
+Before your window, Today offers Start a meal. Begin fast appears beside it only when Fast has nothing to time a fast from: on your first day, after a reset, or when no last bite is on record.
 
 - Start a meal: your first meal opens the window. The sheet has the eating reminders, the meal's name, hunger before, and its start time, with quick times (30 min, 1 h, 2 h ago) and the wheel. Already eaten? Log it whole with how you finished. On a workday before 16:00, the sheet says the day will count as a miss.
 - Begin fast: for a fast already under way, for example on your first day with Fast or after a pause. Pick Now, 1 or 2 hours ago, last night, or any time on the wheel, so none of the fast is lost. Tap Fast began on Today to adjust it later. A fast start never changes the result of the day it falls on, and it cannot be earlier than the last bite on record.
@@ -46,9 +46,23 @@ Every time in Fast is set on a rolling 24-hour wheel, like the iPhone clock. The
 - Any day can be corrected from Week: tap the day.
 - After a change is saved, the message above the tabs offers Undo for 10 seconds. Removing a window, a meal or an entry can be undone the same way.
 
+## Satiety tab
+
+Satiety has its own tab, laid out after your earlier satiety page. It has three views, and it opens on the last one you used:
+
+- Insights (the default) has four tiles: satiety drift (how much fullness rises in the 20 minutes after a meal), meals landed in the comfortable zone (6 to 8), meals complete, and meals stopped past full. Four charts follow: Where you land, The 20-minute lag, How often you stop where, and Arriving hungry. Then come findings from your own meals once ten are rated, and a table view.
+- Now shows the fullness check waiting, with its countdown and Score my fullness now; any meal in progress, with Finished this meal; and how the day's eating ended.
+- Meals lists the last 30 days by day, newest first. Each meal reads hunger before → fullness right after → fullness at 20 minutes, followed by the drift. Tap one to edit it.
+
+Today keeps the meal buttons, the check-in and Uhud. While a fullness check is running, Today shows a short line with a button to Satiety.
+
+## Legends
+
+Every colour-coded visual has a legend that names each colour in words: the ring on Today, the week strip, Uhud, the History chart, the weight chart and the Satiety charts. Clay red always means a miss. Sand means a paused day on the strip and the chart, time still ahead on the ring, and the comfortable zone on Satiety. On Satiety each way of finishing also has its own shape: a triangle for left wanting, a square for satisfied and a diamond for overfull.
+
 ## Fullness (شبع)
 
-When you finish a meal, Fast asks how you finished: Left wanting (the goal), Satisfied, or Overfull. A day counts as left wanting only when every meal was. When the day's meals were not rated, and on paused days, Today asks once how the day's eating ended. Fullness is logged every day, holidays and pauses included. The 1 to 10 ratings and the 20-minute check stay as before.
+When you finish a meal, Fast asks how you finished: Left wanting (the goal), Satisfied, or Overfull. A day counts as left wanting only when every meal was. When the day's meals were not rated, and on paused days, Satiety › Now asks once how the day's eating ended. Fullness is logged every day, holidays and pauses included. The 1 to 10 ratings and the 20-minute check stay as before.
 
 ## Jebel Uhud
 
@@ -66,15 +80,15 @@ While you fast, Today shows a 24-hour ring timed from your last bite (or from wh
 | Stage | Typical time | Based on |
 |---|---|---|
 | Digesting | 0 to about 4 h | [Dimitriadis et al., Nutrients 2021](https://pmc.ncbi.nlm.nih.gov/articles/PMC7825450/) |
-| Blood sugar settles | about 4 to 12 h | [Dimitriadis et al., Nutrients 2021](https://pmc.ncbi.nlm.nih.gov/articles/PMC7825450/) |
+| Blood sugar settles | about 4 to 12 h | [Dimitriadis et al., Nutrients 2021](https://pmc.ncbi.nlm.nih.gov/articles/PMC7825450/); [Rothman et al., Science 1991](https://pubmed.ncbi.nlm.nih.gov/1948033/) |
 | Metabolic switch | from about 12 h, up to 36 h | [Anton et al., Obesity 2018](https://pubmed.ncbi.nlm.nih.gov/29086496/) |
-| Ketones climbing | 24 h and beyond | [Pan et al., 2000](https://journals.sagepub.com/doi/10.1097/00004647-200010000-00012); [Ho et al., J Clin Invest 1988](https://pmc.ncbi.nlm.nih.gov/articles/PMC329619/) |
+| Ketones climbing | 24 h and beyond | [Pan et al., 2000](https://journals.sagepub.com/doi/10.1097/00004647-200010000-00012); [Ho et al., J Clin Invest 1988](https://pmc.ncbi.nlm.nih.gov/articles/PMC329619/); [Hartman et al., JCEM 1992](https://pubmed.ncbi.nlm.nih.gov/1548337/) |
 
 Autophagy is described as uncertain instead of being given an hour: the evidence comes mostly from cell and animal studies ([Bagherniya et al., 2018](https://pubmed.ncbi.nlm.nih.gov/30172870/); [Bensalem et al., 2025](https://pubmed.ncbi.nlm.nih.gov/40345145)).
 
 ## History
 
-The History tab charts, day by day, either your fasts or your eating windows, as bars or a line, over 7, 30 or 90 days. A day's fast runs from your last bite before it to that day's first bite. Missed days show in clay. A solid line shows the 7-day trend and a dashed line the average; a legend names each. Paused days are shaded and left out. Tap a day to read its value and trend, then Open this day to edit it. Show as a table lists every value. Fast remembers your choices.
+History has three views: Fast, Feast and Weight. Weight opens the weight averages and import (see below). Fast and Feast chart, day by day, either your fasts or your eating windows, as bars or a line, over 7, 30 or 90 days. A day's fast runs from your last bite before it to that day's first bite. Missed days show in clay. A solid line shows the 7-day trend and a dashed line the average. A legend names every mark: hours, miss, selected day, trend, average and paused. Paused days are shaded and left out. Tap a day to read its value and trend, then Open this day to edit it. Show as a table lists every value. Fast remembers your choices.
 
 ## Pauses
 
@@ -98,14 +112,14 @@ Build it once in the Shortcuts app:
 10. Add Show Notification with the text `Weight ready. Open Fast and tap Import weight.` Do not add Show Result or Quick Look: they would display the data.
 11. Tap Done and run it once. Allow Health access to Weight when asked.
 
-To import: open Fast, go to Weight, tap Import weight, then tap Paste in the small bubble. Fast saves the entries and reports only how many it imported. Duplicate dates keep the latest value.
+To import: open Fast, go to History, choose Weight, tap Import weight, then tap Paste in the small bubble. Fast saves the entries and reports only how many it imported. Duplicate dates keep the latest value.
 
 Run it every week with a Personal Automation:
 
 1. In Shortcuts, open the Automation tab and tap +.
 2. Choose Time of Day. Pick a time you usually have the phone in hand, such as 10:00, set Repeat to Weekly and choose Friday.
 3. Choose Run Immediately, then Next, pick Fast Weight and tap Done.
-4. When the notification arrives, open Fast and tap Import weight. Health is locked while the iPhone is locked, so if the automation ran then, use Run the Fast Weight shortcut on the Weight screen instead.
+4. When the notification arrives, open Fast and tap Import weight. Health is locked while the iPhone is locked, so if the automation ran then, use Run the Fast Weight shortcut under History, Weight instead.
 
 Why the clipboard: iOS gives a Home Screen web app its own storage, separate from Safari, and a Shortcut can only open links in Safari. Fast also accepts a link, `https://asalkulaib.github.io/fast/import/#w=2026-09-25:104.6,...`, but opened from a Shortcut it saves into Safari's copy of Fast, not the Home Screen app.
 
@@ -120,11 +134,11 @@ Fast cannot ring while it is closed. In More, Alarms, switch it on and build a s
 
 ## Week
 
-A strip of seven squares opens the week: ink for a success, clay for a miss, sand for a paused day, and a gold dot on days left wanting. Tap a square to open the day. Once ten meals are rated, the Satiety section adds findings from your own meals, such as how often you finish left wanting at lower and higher hunger.
+A strip of seven squares opens the week: ink for a success, clay for a miss, sand for a paused day, and a gold dot on days left wanting. Tap a square to open the day. A legend under the strip names each square. Satiety numbers and findings are on the Satiety tab.
 
 ## Calendar reminders
 
-More, Add to Calendar creates four repeating alerts: hold the line at 13:00 and training at 16:30 on workdays, and the window start at your workday and weekend times. In the share sheet choose Calendar, or Save to Files and then open the file and tap Add All. If you change the times, add the new file and delete the old Fast events (open one, Delete Event, Delete All Future Events).
+More, Add to Calendar creates four repeating alerts: hold the line at 13:00 and training at 16:30 on workdays, and the window start at your workday and weekend times. With Feasting hours the file keeps the first two and cancels the two window alerts. In the share sheet choose Calendar, or Save to Files and then open the file and tap Add All. If you change the times, add the new file and delete the old Fast events (open one, Delete Event, Delete All Future Events).
 
 ## Backups
 

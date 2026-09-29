@@ -4,6 +4,7 @@
 // muted, a record of every completed climb.
 
 import { h, s } from './dom.js';
+import { legend } from './components.js';
 import { SUMMIT, climbers } from '../core/climb.js';
 
 const W = 340;
@@ -107,6 +108,12 @@ export function climbSection(ctx) {
     h('div', { class: 'gap-s' }, shown.map((k) => h('div', { class: 'stat', 'data-testid': `climb-${k}` },
       h('span', { class: 'climber-name' }, key(k), NAME[k]),
       h('span', { class: 'stat-value' }, `${c[k].step} of ${SUMMIT}`)))),
+    legend([
+      c.fast.on ? ['walked-fast', 'Fast trail walked'] : null,
+      c.fullness.on ? ['walked-full', 'Fullness trail walked'] : null,
+      ['trail', 'Trail still ahead'],
+      ['summiteer', 'Faded figures: past summits'],
+    ], 'uhud-legend'),
     h('p', { class: 'gap-s', 'data-testid': 'summits' }, tally),
     h('p', { class: 'small quiet gap-s' }, `A step for ${steps}; ${SUMMIT} steps to the summit. A missed day holds, and nothing slips back.`));
 }

@@ -6,7 +6,7 @@ import { button, choice, scale, TRIGGER_OPTIONS } from './components.js';
 import { openSheet } from './sheet.js';
 import * as store from '../store.js';
 import { HOUR, MIN, at, fmtDuration, fmtMinutes, fmtTime, fmtTimer, minutesOfDay, now } from '../core/time.js';
-import { CUTOFF_MIN, isWorkday, lateNightDay, plannedStartMin } from '../core/rules.js';
+import { CUTOFF_MIN, cutoffApplies, isFlexible, isWorkday, lateNightDay, plannedStartMin } from '../core/rules.js';
 import { SUMMIT, climbers } from '../core/climb.js';
 import { energySplit } from '../core/review.js';
 import { showStartMealSheet } from './meal.js';
@@ -132,7 +132,9 @@ function gains(ctx, sit) {
   else if (sit.kind === 'late' && lastRes === 'success') out.push(`Last night stays a success. Your streak: ${days(streak)}.`);
   else if (streak > 0) out.push(`Your streak: ${days(streak)}, ${streak + 1} if today holds.`);
   else out.push('Today can start a new streak.');
-  if (waiting) {
+  if (waiting && isFlexible(today, ctx.settings)) {
+    out.push(`A ${Math.round(ctx.windowMsFor(today) / 3600000)}-hour window, whenever you choose. Each hour you wait adds to the fast.`);
+  } else if (waiting) {
     const start = plannedStartMin(today, rec, ctx.settings);
     out.push(`A window that fits today: ${fmtMinutes(start)} to ${fmtMinutes(start + ctx.windowMsFor(today) / MIN)}.`);
   }
@@ -172,7 +174,8 @@ function render(app, api, id) {
       await store.updateTemptation(id, { outcome: knownOutcome(app.ctx(), t) || 'opened_early', step: 'done', endedAt: now() });
       return api.close();
     }
-    const planned = at(today, plannedStartMin(today, todayRec, ctx.settings));
+    // On feasting hours no opening is early.
+    const planned = isFlexible(today, ctx.settings) ? -Infinity : at(today, plannedStartMin(today, todayRec, ctx.settings));
     await store.updateTemptation(id, { outcome: now() < planned ? 'opened_early' : 'held', step: 'done', endedAt: now() });
     await api.close();
     return showStartMealSheet(app);
@@ -198,7 +201,9 @@ function render(app, api, id) {
 
     case 'gain': {
       let lead;
-      if (sit.kind === 'before') {
+      if (sit.kind === 'before' && isFlexible(today, ctx.settings)) {
+        lead = h('p', { class: 'statement' }, 'Your window opens when you choose. Every hour you wait adds to the fast.');
+      } else if (sit.kind === 'before') {
         const plannedMin = plannedStartMin(today, todayRec, ctx.settings);
         const plannedTs = at(today, plannedMin);
         lead = ctx.nowTs < plannedTs
@@ -276,7 +281,7 @@ function render(app, api, id) {
       }
       if (sit.kind === 'before' || sit.kind === 'late') {
         const clock = `${Math.round(ctx.windowMsFor(today) / (60 * MIN))}-hour clock`;
-        const workdayEarly = isWorkday(today, todayRec) && minutesOfDay(ctx.nowTs) < CUTOFF_MIN;
+        const workdayEarly = cutoffApplies(today, todayRec, ctx.settings) && minutesOfDay(ctx.nowTs) < CUTOFF_MIN;
         blocks.push(h('section', { class: 'section flush' },
           h('p', { class: 'statement' }, 'Open the window now'),
           h('p', { class: 'gap-s' }, `This starts your ${clock}. Everything you eat fits by `, hl(fmtTime(ctx.nowTs + ctx.windowMsFor(today))), '.'),
@@ -317,7 +322,7 @@ function render(app, api, id) {
     case 'held':
     default: {
       let line;
-      if (sit.kind === 'before') line = `Your window opens at ${fmtMinutes(plannedStartMin(today, todayRec, ctx.settings))}.`;
+      if (sit.kind === 'before') line = isFlexible(today, ctx.settings) ? 'Your window opens when you choose.' : `Your window opens at ${fmtMinutes(plannedStartMin(today, todayRec, ctx.settings))}.`;
       else if (sit.kind === 'open') line = `Your window is open until ${fmtTime(ctx.openRec.firstBite + ctx.windowMsFor(ctx.openRec.day))}.`;
       else line = nextWindowLine(ctx, sit.lastDay);
       return h('div', {}, head,

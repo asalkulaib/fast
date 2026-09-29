@@ -1433,3 +1433,141 @@ html.locked body {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* ---------- Legend keys (every colour named beside its word) ---------- */
+
+.legend .swatch.success,
+.legend .swatch.miss,
+.legend .swatch.paused,
+.legend .swatch.outline,
+.legend .swatch.dashed {
+  width: 12px;
+  height: 12px;
+  border: 1px solid var(--rule-quiet);
+}
+
+.swatch.success {
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+.legend .swatch.miss {
+  border-color: var(--clay);
+}
+
+.swatch.dashed {
+  border-style: dashed;
+}
+
+.swatch.dot {
+  width: 10px;
+  height: 10px;
+  background: var(--accent);
+  outline: 1px solid var(--ink);
+}
+
+.swatch.bar {
+  width: 10px;
+  height: 12px;
+  background: var(--rock-500);
+}
+
+.swatch.mark {
+  width: 8px;
+  height: 8px;
+  background: var(--rock-500);
+}
+
+.swatch.pick,
+.swatch.stage-now {
+  width: 10px;
+  height: 10px;
+  background: var(--accent);
+  outline: 1.5px solid var(--ink);
+}
+
+.swatch.fasted {
+  height: 8px;
+  background: var(--rock-700);
+}
+
+.swatch.ahead {
+  height: 8px;
+  background: var(--sand-300);
+  outline: 1px solid var(--rule-quiet);
+}
+
+.swatch.needle {
+  width: 4px;
+  height: 14px;
+  background: var(--accent);
+  outline: 1.5px solid var(--ink);
+}
+
+.swatch.goal {
+  width: 2px;
+  height: 14px;
+  background: var(--ink);
+}
+
+.swatch.zone {
+  height: 10px;
+  background: var(--sand-300);
+  outline: 1px solid var(--rule-quiet);
+}
+
+.swatch.line-faint {
+  height: 0;
+  border-top: 1px solid rgba(42, 28, 16, 0.35);
+}
+
+/* Uhud keys stand on a piece of the mountain, as the trails do. */
+.swatch.walked-fast,
+.swatch.walked-full,
+.swatch.trail,
+.swatch.summiteer {
+  width: 18px;
+  height: 10px;
+  background: var(--rock-700);
+  border-top: 3px solid var(--accent);
+}
+
+.swatch.walked-full {
+  border-top-color: var(--bg-raised);
+}
+
+.swatch.trail {
+  border-top: 2px dotted var(--rock-400);
+}
+
+.swatch.summiteer {
+  border-top-color: var(--rock-400);
+}
+
+/* ---------- Satiety ---------- */
+
+.stop-icon {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  vertical-align: -2px;
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s4);
+}
+
+.tile .figure {
+  font-size: 30px;
+}
+
+.meal-entry .item-side {
+  white-space: nowrap;
+}
+
+.meal-entry .drift {
+  display: block;
+  color: var(--text-display);
+}

@@ -38,7 +38,7 @@ test('works fully offline once opened', async ({ page }, testInfo) => {
     await expect(page.locator('[data-block="open"]')).toBeVisible();
 
     // Every tab and the import route load offline.
-    for (const tab of ['week', 'weight', 'more']) {
+    for (const tab of ['week', 'satiety', 'history', 'more']) {
       await page.locator(`.tab[data-tab="${tab}"]`).click();
       await expect(page.locator(`.tab[data-tab="${tab}"]`)).toHaveAttribute('aria-current', 'page');
     }

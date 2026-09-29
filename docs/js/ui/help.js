@@ -32,7 +32,7 @@ export function renderHelp(ctx, app) {
 
     h('section', { class: 'section' },
       h('div', { class: 'label' }, 'Import'),
-      h('p', { class: 'gap-s' }, 'Open Fast, go to Weight and tap Import weight, then tap Paste in the small bubble. Fast saves the entries and says only how many it imported.')),
+      h('p', { class: 'gap-s' }, 'Open Fast, go to History, choose Weight and tap Import weight, then tap Paste in the small bubble. Fast saves the entries and says only how many it imported.')),
 
     h('section', { class: 'section' },
       h('div', { class: 'label' }, 'Run it every week'),
@@ -41,7 +41,7 @@ export function renderHelp(ctx, app) {
         h('li', {}, h('span', {}, 'Choose Time of Day. Pick a time you usually have the phone in hand, such as 10:00, set Repeat to Weekly and choose Friday.')),
         h('li', {}, h('span', {}, 'Choose Run Immediately, then Next.')),
         h('li', {}, h('span', {}, `Pick ${SHORTCUT_NAME} and tap Done.`)),
-        h('li', {}, h('span', {}, 'When the notification arrives, open Fast and tap Import weight. Health is locked while the iPhone is locked, so if the automation ran then, use Run the Fast Weight shortcut on the Weight screen instead.')))),
+        h('li', {}, h('span', {}, 'When the notification arrives, open Fast and tap Import weight. Health is locked while the iPhone is locked, so if the automation ran then, use Run the Fast Weight shortcut under History, Weight instead.')))),
 
     h('section', { class: 'section' },
       h('div', { class: 'label' }, 'Add Fast to your Home Screen'),

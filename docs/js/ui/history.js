@@ -5,7 +5,7 @@
 // repeats the values.
 
 import { h, s } from './dom.js';
-import { button, choice } from './components.js';
+import { button, choice, legend } from './components.js';
 import * as store from '../store.js';
 import { HOUR, addDays, fmtDayMonth, fmtDayShort, fmtDuration, weekdayShort, keyParts } from '../core/time.js';
 import { dailySeries, hourScale, rollingAverage, summarize } from '../core/history.js';
@@ -24,8 +24,8 @@ const SURFACE = '#E6D0A8'; // --bg: ring around markers
 const GRID = 'rgba(42, 28, 16, 0.14)';
 
 const METRICS = {
-  fast: { key: 'fastMs', name: 'Fast', noun: 'fast', empty: 'Fasts appear here from the day after your first logged window.' },
-  feast: { key: 'feastMs', name: 'Feast', noun: 'window', empty: 'Your eating windows appear here once you close one.' },
+  fast: { key: 'fastMs', name: 'Fast', mark: 'Hours fasted', noun: 'fast', empty: 'Fasts appear here from the day after your first logged window.' },
+  feast: { key: 'feastMs', name: 'Feast', mark: 'Hours in the window', noun: 'window', empty: 'Your eating windows appear here once you close one.' },
 };
 
 const FOR_REASON = { travel: ' for travel', illness: ' for illness', ramadan: ' for Ramadan' };
@@ -152,13 +152,24 @@ function chart({ series, trend, metric, kind, isMiss, avgMs, onPick }) {
 }
 
 /** Which marks are on the chart, so identity never rests on colour alone. */
-function legend({ anyMiss, anyTrend, anyPaused }) {
-  const item = (kind, label) => h('span', { class: 'legend-item' }, h('span', { class: `swatch ${kind}`, 'aria-hidden': 'true' }), label);
-  return h('div', { class: 'legend', 'data-testid': 'history-legend' },
-    anyMiss ? item('miss', 'Miss') : null,
-    anyTrend ? item('trend', '7-day trend') : null,
-    item('avg', 'Average'),
-    anyPaused ? item('paused', 'Paused') : null);
+// Miss (clay red) and the day's own mark (rock brown) are always named, so the
+// two are never told apart by colour alone.
+function chartLegend(m, { anyTrend, anyPaused, anyPick }) {
+  return legend([
+    ['bar', m.mark],
+    ['miss', 'Miss'],
+    anyPick ? ['pick', 'Selected day'] : null,
+    anyTrend ? ['trend', '7-day trend'] : null,
+    ['avg', 'Average'],
+    anyPaused ? ['paused', 'Paused'] : null,
+  ], 'history-legend');
+}
+
+/** Fast, Feast or Weight: the three views of History, on both of its pages. */
+export function metricSwitch(app, value) {
+  return h('section', { class: 'section', 'data-block': 'history-metric' },
+    choice({ options: [{ value: 'fast', label: 'Fast' }, { value: 'feast', label: 'Feast' }, { value: 'weight', label: 'Weight' }], value, cols: 3, name: 'history-metric',
+      onChange: async (v) => { await store.setSettings({ historyMetric: v }); app.go(v === 'weight' ? 'weight' : 'history'); } }));
 }
 
 /** A duration that never breaks across lines ('3 h 31 min'). */
@@ -210,16 +221,14 @@ export function renderHistory(ctx, app) {
   const set = (values) => store.setSettings(values);
 
   const controls = h('section', { class: 'section', 'data-block': 'history-controls' },
-    h('div', { class: 'btn-pair' },
-      choice({ options: [{ value: 'fast', label: 'Fast' }, { value: 'feast', label: 'Feast' }], value: p.metric, cols: 2, name: 'history-metric', onChange: (v) => set({ historyMetric: v }) }),
-      choice({ options: [{ value: 'bars', label: 'Bars' }, { value: 'line', label: 'Line' }], value: p.chart, cols: 2, name: 'history-chart', onChange: (v) => set({ historyChart: v }) })),
+    choice({ options: [{ value: 'bars', label: 'Bars' }, { value: 'line', label: 'Line' }], value: p.chart, cols: 2, name: 'history-chart', onChange: (v) => set({ historyChart: v }) }),
     h('div', { class: 'gap' },
       choice({ options: [{ value: 7, label: '7 days' }, { value: 30, label: '30 days' }, { value: 90, label: '90 days' }], value: p.range, cols: 3, name: 'history-range', onChange: (v) => set({ historyRange: v }) })));
 
   const body = sum.count
     ? h('section', { class: 'section', 'data-block': 'history-chart' },
       chart({ series, trend, metric: p.metric, kind: p.chart, isMiss, avgMs: sum.avgMs, onPick: (day) => { selected = day; app.refresh(); } }),
-      legend({ anyMiss: series.some((d) => d[m.key] != null && isMiss(d.day)), anyTrend: trend.some((t) => t != null), anyPaused: series.some((d) => d.paused) }),
+      chartLegend(m, { anyTrend: trend.some((t) => t != null), anyPaused: series.some((d) => d.paused), anyPick: pickIdx >= 0 }),
       h('p', { class: 'small gap-s', 'data-testid': 'history-readout' }, readout(pick, m, pick ? trend[pickIdx] : null, pick ? isMiss(pick.day) : false)),
       pick ? h('div', {}, button('Open this day', () => app.go(`day/${pick.day}`), { kind: 'secondary', name: 'history-open-day' })) : null,
       app.ui.showHistoryTable ? h('div', { class: 'gap' }, table(series, trend, m, isMiss)) : null,
@@ -228,6 +237,7 @@ export function renderHistory(ctx, app) {
 
   return h('div', { class: 'history', 'data-metric': p.metric },
     header(ctx, app, { title: 'History' }),
+    metricSwitch(app, p.metric),
     h('section', { class: 'section strong' },
       h('h1', { class: 'display' }, p.metric === 'fast' ? 'Fasts' : 'Eating windows'),
       h('p', { class: 'gap', 'data-testid': 'history-summary' }, summaryLine(sum, m, p.range))),

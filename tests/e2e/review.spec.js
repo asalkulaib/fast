@@ -19,9 +19,6 @@ test('weekly review maths, Sunday to Saturday', async ({ page }) => {
   await expect(stat(page, 'weight-change')).toHaveText('−0.8 kg');
   await expect(stat(page, 'training')).toHaveText('3');
   await expect(page.locator('[data-stat="training"] + p')).toHaveText('weights 2, cardio 1');
-  await expect(stat(page, 'before-full')).toHaveText('2 of 4 (50%)');
-  await expect(stat(page, 'rise')).toHaveText('+1.3 points');
-  await expect(stat(page, 'at20')).toHaveText('7.7 (target about 7)');
   await expect(stat(page, 'temptations')).toHaveText('4');
   await expect(stat(page, 'hold-rate')).toHaveText('3 of 4 (75%)');
   await expect(stat(page, 'triggers')).toHaveText('boredom 2, social 1, stress 1');
