@@ -23,6 +23,11 @@ test('Satiety opens on Insights: tiles, charts with legends, and the findings', 
   await expect(items(page, 'landing-legend')).toHaveText(['Left wanting', 'Satisfied', 'Overfull', 'Comfortable zone, 6 to 8', 'Meal to meal']);
   for (const id of ['lag-chart', 'stop-chart', 'hunger-chart']) await expect(page.getByTestId(id)).toBeVisible();
   await expect(page.getByTestId('stop-chart')).toContainText('2 (50%)');
+  // The 20-minute lag: a line per way of finishing, from right after to 20 minutes on.
+  const lag = page.getByTestId('lag-chart');
+  await expect(lag.locator('line[data-lag]')).toHaveCount(3);
+  await expect(lag).toContainText('7.0 +2.0');
+  await expect(items(page, 'lag-legend')).toHaveText(['Left wanting (1)', 'Satisfied (1)', 'Overfull (1)']);
   await expect(page.getByTestId('insights')).toHaveText('Rate how ten meals finished and your own patterns show here.');
   await tap(page, 'satiety-table');
   await expect(page.getByTestId('satiety-table').locator('tbody tr')).toHaveCount(3);

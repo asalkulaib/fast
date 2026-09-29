@@ -1,7 +1,7 @@
 // Fast service worker. Every file is precached, so the app works fully offline.
 // VERSION and ASSETS are stamped by tools/release.mjs on every release.
 
-const VERSION = '2026.09.29-ca12bc26';
+const VERSION = '2026.09.29-b34b619e';
 const ASSETS = [
   'css/app.css',
   'css/fonts.css',

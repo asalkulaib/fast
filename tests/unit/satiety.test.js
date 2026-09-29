@@ -19,6 +19,8 @@ test('drift, landing in the zone, and each way of finishing', () => {
   const [lw, sat, over] = s.byStop;
   assert.deepEqual([lw.count, sat.count, over.count], [2, 2, 1]);
   assert.equal(lw.rise, 1.5);
+  assert.deepEqual([lw.now, lw.at20], [5, 6.5]);
+  assert.deepEqual([sat.now, sat.at20], [7, 8]); // the meal without a 20-minute reading is left out
   assert.equal(sat.hunger, 7.5);
   assert.equal(s.landings.length, 4);
   assert.deepEqual(s.landings.map((x) => x.value), [7, 6, 8, 10]);

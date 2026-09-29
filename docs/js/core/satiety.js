@@ -23,6 +23,9 @@ export function satietyStats(meals) {
       count: all.length,
       share: rated.length ? all.length / rated.length : 0,
       rise: mean(pairs.map((m) => m.fullness20 - m.fullnessNow)),
+      // Average fullness right after and 20 minutes on, over the same meals.
+      now: mean(pairs.map((m) => m.fullnessNow)),
+      at20: mean(pairs.map((m) => m.fullness20)),
       rises: pairs.length,
       hunger: mean(hungry.map((m) => m.hungerBefore)),
       hungers: hungry.length,

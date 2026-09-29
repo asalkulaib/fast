@@ -50,7 +50,7 @@ Every time in Fast is set on a rolling 24-hour wheel, like the iPhone clock. The
 
 Satiety has its own tab, laid out after your earlier satiety page. It has three views, and it opens on the last one you used:
 
-- Insights (the default) has four tiles: satiety drift (how much fullness rises in the 20 minutes after a meal), meals landed in the comfortable zone (6 to 8), meals complete, and meals stopped past full. Four charts follow: Where you land, The 20-minute lag, How often you stop where, and Arriving hungry. Then come findings from your own meals once ten are rated, and a table view.
+- Insights (the default) has four tiles: satiety drift (how much fullness rises in the 20 minutes after a meal), meals landed in the comfortable zone (6 to 8), meals complete, and meals stopped past full. Four charts follow: Where you land, The 20-minute lag (a line per way of finishing, from fullness right after to 20 minutes on), How often you stop where, and Arriving hungry. Then come findings from your own meals once ten are rated, and a table view.
 - Now shows the fullness check waiting, with its countdown and Score my fullness now; any meal in progress, with Finished this meal; and how the day's eating ended.
 - Meals lists the last 30 days by day, newest first. Each meal reads hunger before → fullness right after → fullness at 20 minutes, followed by the drift. Tap one to edit it.
 

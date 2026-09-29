@@ -77,6 +77,61 @@ function landingChart(st) {
     stopLegend([['zone', `Comfortable zone, ${ZONE[0]} to ${ZONE[1]}`], ['line-faint', 'Meal to meal']], 'landing-legend'));
 }
 
+/** Moves labels apart so none overlap: at least gap units between centres. */
+function spread(ys, gap, lo, hi) {
+  const order = ys.map((y, i) => ({ y, i })).sort((a, b) => a.y - b.y);
+  for (let k = 1; k < order.length; k++) order[k].y = Math.max(order[k].y, order[k - 1].y + gap);
+  const over = order.length ? order[order.length - 1].y - hi : 0;
+  if (over > 0) for (const o of order) o.y -= over;
+  for (let k = order.length - 2; k >= 0; k--) order[k].y = Math.min(order[k].y, order[k + 1].y - gap);
+  if (order.length && order[0].y < lo) { const d = lo - order[0].y; for (const o of order) o.y += d; }
+  const out = [];
+  for (const o of order) out[o.i] = o.y;
+  return out;
+}
+
+/**
+ * The 20-minute lag, after the person's earlier page: average fullness right
+ * after eating and 20 minutes on, one line per way of finishing. The steeper
+ * the line, the more the body was still catching up.
+ */
+function lagChart(st) {
+  const rows = st.byStop.filter((r) => r.rises);
+  const HT = 230;
+  const P = { top: 30, bottom: 30, left: 34 };
+  const X0 = 100;
+  const X1 = 226;
+  const y = (v) => P.top + (HT - P.top - P.bottom) * (1 - (v - 1) / 9);
+  const grid = [2, 4, 6, 8, 10].flatMap((v) => [
+    s('line', { x1: P.left, x2: X1 + 8, y1: y(v), y2: y(v), stroke: GRID }),
+    s('text', { x: P.left - 6, y: y(v) + 4, 'text-anchor': 'end' }, String(v)),
+  ]);
+  const leftY = spread(rows.map((r) => y(r.now)), 14, P.top, HT - P.bottom);
+  const rightY = spread(rows.map((r) => y(r.at20)), 14, P.top, HT - P.bottom);
+  const lines = rows.flatMap((r, i) => {
+    const colour = STOP_STYLE[r.stop].colour;
+    return [
+      s('line', { x1: X0, y1: y(r.now), x2: X1, y2: y(r.at20), stroke: colour, 'stroke-width': 2.5, 'data-lag': r.stop }),
+      mark(r.stop, X0, y(r.now), 5),
+      mark(r.stop, X1, y(r.at20), 5),
+      // Each figure carries its line's shape, so close values stay told apart.
+      mark(r.stop, X0 - 48, leftY[i], 4),
+      s('text', { x: X0 - 12, y: leftY[i] + 4, 'text-anchor': 'end', class: 'chart-end' }, r.now.toFixed(1)),
+      mark(r.stop, X1 + 16, rightY[i], 4),
+      s('text', { x: X1 + 26, y: rightY[i] + 4, class: 'chart-end' }, `${r.at20.toFixed(1)} ${signed(r.rise)}`),
+    ];
+  });
+  const words = rows.map((r) => `${STOP_STYLE[r.stop].word}: ${r.now.toFixed(1)} right after, ${r.at20.toFixed(1)} after 20 minutes`).join('. ');
+  return h('div', { class: 'gap' },
+    s('svg', { class: 'chart', viewBox: `0 0 ${W} ${HT}`, role: 'img', 'data-testid': 'lag-chart', 'aria-label': `Average fullness right after eating and 20 minutes on. ${words}.` },
+      ...grid,
+      s('text', { x: X0, y: 14, 'text-anchor': 'middle' }, 'right after'),
+      s('text', { x: X1, y: 14, 'text-anchor': 'middle' }, 'after 20 min'),
+      ...lines,
+      s('text', { x: P.left, y: HT - 6 }, 'average fullness, 1 to 10, by how you stopped')),
+    legend(rows.map((r) => [stopIcon(r.stop), `${STOP_STYLE[r.stop].word} (${r.rises})`]), 'lag-legend'));
+}
+
 /** One horizontal bar per way of finishing, each row labelled in words. */
 function stopBars(rows, { max, value, text, testid, label }) {
   const HT = rows.length * 34;
@@ -115,8 +170,8 @@ function insightsView(ctx, app, st) {
       st.landings.length ? landingChart(st) : h('p', { class: 'small gap' }, 'Answer one fullness check and your first point appears here.')),
     h('section', { class: 'section' },
       h('div', { class: 'label' }, 'The 20-minute lag'),
-      h('p', { class: 'small quiet gap-s' }, 'How much fullness rises during the 20 minutes, by how the meal ended.'),
-      h('div', { class: 'gap' }, stopBars(st.byStop, { max: Math.max(3, ...st.byStop.map((r) => Math.abs(r.rise || 0))), value: (r) => (r.rise == null ? null : Math.max(0, r.rise)), text: (r) => `${signed(r.rise)} pts (${r.rises})`, testid: 'lag-chart', label: 'Average rise in fullness over 20 minutes, by how the meal ended.' }))),
+      h('p', { class: 'small quiet gap-s' }, 'Average fullness right after eating, and again 20 minutes later. The steeper the line, the more your body was still catching up. The figure on the right is the rise.'),
+      st.done ? lagChart(st) : h('p', { class: 'small gap' }, 'Answer one fullness check and the lines appear here.')),
     h('section', { class: 'section' },
       h('div', { class: 'label' }, 'How often you stop where'),
       h('p', { class: 'small quiet gap-s' }, 'Across every rated meal.'),
