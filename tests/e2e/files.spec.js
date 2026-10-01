@@ -78,10 +78,10 @@ test('calendar file: four weekly alerts, regenerated when times change', async (
   expect(ics.name).toBe('fast-reminders.ics');
   expect(ics.type).toBe('text/calendar');
   expect(ics.text.match(/BEGIN:VEVENT/g)).toHaveLength(4);
-  expect(ics.text).toContain('DTSTART;TZID=Asia/Kuwait:20260927T130000');
-  expect(ics.text).toContain('DTSTART;TZID=Asia/Kuwait:20260927T163000');
-  expect(ics.text).toContain('DTSTART;TZID=Asia/Kuwait:20260927T173000');
-  expect(ics.text).toContain('DTSTART;TZID=Asia/Kuwait:20260926T140000');
+  expect(ics.text).toContain('DTSTART:20260927T130000');
+  expect(ics.text).toContain('DTSTART:20260927T163000');
+  expect(ics.text).toContain('DTSTART:20260927T173000');
+  expect(ics.text).toContain('DTSTART:20260926T140000');
 
   await tap(page, 'edit-workdayStart');
   await setTime(page, 'workdayStart', '18:00');
@@ -90,7 +90,7 @@ test('calendar file: four weekly alerts, regenerated when times change', async (
   await tap(page, 'add-calendar');
   await expect(page.getByTestId('ics-status')).toHaveText('Added with your current times.');
   ics = (await sharedFiles(page))[1];
-  expect(ics.text).toContain('DTSTART;TZID=Asia/Kuwait:20260927T180000');
+  expect(ics.text).toContain('DTSTART:20260927T180000');
   expect(ics.text).toContain('SEQUENCE:1');
   expect(ics.text).toContain('UID:window-workday@fast.reminders');
 });

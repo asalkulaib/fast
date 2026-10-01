@@ -1,10 +1,10 @@
-// Kuwait time helpers.
-// Every stored time is epoch milliseconds (UTC). Local values use a fixed
-// UTC+3 offset (Kuwait has no daylight saving), so day and week boundaries
-// never depend on the phone's own time zone setting.
-
-export const OFFSET_MIN = 180;
-const OFFSET_MS = OFFSET_MIN * 60000;
+// Time helpers.
+// Every stored time is epoch milliseconds (UTC). Clock times and days follow
+// the phone's time zone, and every moment keeps the zone it happened in: a
+// timeline of zones ({ from, zone }, oldest first; the first from is null)
+// says which zone was in force when. A Dubai dinner reads 19:00 in Dubai and
+// still 19:00 back in Kuwait, and Kuwait days never shift. Until the phone
+// first leaves Kuwait time, the timeline is Kuwait alone.
 
 export const MIN = 60000;
 export const HOUR = 60 * MIN;
@@ -12,14 +12,133 @@ export const DAY = 24 * HOUR;
 
 export const now = () => Date.now();
 
+export const HOME_ZONE = 'Asia/Kuwait';
+const HOME = [{ from: null, zone: HOME_ZONE }];
+
 const pad = (n) => String(n).padStart(2, '0');
 
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-/** Local calendar parts of a timestamp. wd: 0 = Sunday. */
+// ---------- Time zones ----------
+
+let ZONES = HOME;
+
+/** Sets the timeline of zones (from settings). Empty or missing means Kuwait throughout. */
+export function setZones(list) {
+  ZONES = Array.isArray(list) && list.length && list.every((s) => isZone(s.zone))
+    ? [{ from: null, zone: list[0].zone }, ...list.slice(1)]
+    : HOME;
+}
+
+export const zones = () => ZONES;
+
+/** The zone in force at a moment. */
+export function zoneAt(ts, list = ZONES) {
+  let zone = list[0].zone;
+  for (const s of list) {
+    if (s.from != null && s.from > ts) break;
+    zone = s.zone;
+  }
+  return zone;
+}
+
+/** Whether a name is a time zone this device knows. */
+export function isZone(zone) {
+  if (typeof zone !== 'string' || !zone) return false;
+  try {
+    formatter(zone);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** 'Asia/Dubai' to 'Dubai', 'America/New_York' to 'New York'. */
+export function zoneName(zone) {
+  return String(zone).split('/').pop().replace(/_/g, ' ');
+}
+
+const formatters = new Map();
+function formatter(zone) {
+  let f = formatters.get(zone);
+  if (!f) {
+    f = new Intl.DateTimeFormat('en-US', {
+      timeZone: zone, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric',
+    });
+    formatters.set(zone, f);
+  }
+  return f;
+}
+
+// Offsets only change on a quarter hour (UTC), so each quarter is looked up once.
+const QUARTER = 15 * MIN;
+const offsets = new Map();
+
+/** Minutes the zone is ahead of UTC at a moment (Kuwait: 180, Dubai: 240). */
+export function offsetAt(zone, ts) {
+  const q = Math.floor(ts / QUARTER);
+  const key = `${zone}|${q}`;
+  let off = offsets.get(key);
+  if (off === undefined) {
+    const at = q * QUARTER;
+    const p = {};
+    for (const x of formatter(zone).formatToParts(new Date(at))) p[x.type] = x.value;
+    const wall = Date.UTC(Number(p.year), Number(p.month) - 1, Number(p.day), Number(p.hour) % 24, Number(p.minute), Number(p.second));
+    off = Math.round((wall - at) / MIN);
+    if (offsets.size > 50000) offsets.clear();
+    offsets.set(key, off);
+  }
+  return off;
+}
+
+/** Two zones keep the same clock now and through the seasons (Kuwait and Riyadh). */
+export function sameClock(a, b, ts) {
+  if (a === b) return true;
+  return [0, 91, 182, 273].every((d) => offsetAt(a, ts + d * DAY) === offsetAt(b, ts + d * DAY));
+}
+
+/** The moment a clock time on a day key happens in one zone. */
+function zonedInstant(key, minutes, zone) {
+  const { y, m, d } = keyParts(key);
+  const wall = Date.UTC(y, m - 1, d) + minutes * MIN;
+  const guess = wall - offsetAt(zone, wall) * MIN;
+  return wall - offsetAt(zone, guess) * MIN;
+}
+
+/** The day key of a moment in one zone. */
+function keyIn(ts, zone) {
+  const d = new Date(ts + offsetAt(zone, ts) * MIN);
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
+}
+
+/**
+ * The timeline after the phone reports a zone, or null when nothing changes.
+ * The new zone starts just after Fast was last seen open, or after the last
+ * thing logged (seenAt), so all that has happened since reads in the new
+ * zone; never later than now. With nothing logged yet, the new zone holds
+ * throughout. The date never goes back: flying west late at night, the new
+ * zone starts at its own midnight. A zone with the same clock as the one in
+ * force changes nothing.
+ */
+export function switchZone(list, zone, seenAt, nowTs) {
+  const timeline = Array.isArray(list) && list.length ? list : HOME;
+  const current = zoneAt(nowTs, timeline);
+  if (!isZone(zone) || sameClock(current, zone, nowTs)) return null;
+  if (seenAt == null && timeline.length === 1) return [{ from: null, zone }];
+  const lastFrom = timeline[timeline.length - 1].from;
+  let from = Math.min(seenAt != null ? seenAt + 1 : nowTs, nowTs);
+  if (lastFrom != null) from = Math.max(from, lastFrom + 1);
+  const was = keyIn(from, zoneAt(from, timeline));
+  if (keyIn(from, zone) < was) from = zonedInstant(was, 0, zone);
+  return [...timeline, { from, zone }];
+}
+
+// ---------- Days and clock times ----------
+
+/** Local calendar parts of a timestamp, in the zone in force then. wd: 0 = Sunday. */
 export function parts(ts) {
-  const d = new Date(ts + OFFSET_MS);
+  const d = new Date(ts + offsetAt(zoneAt(ts), ts) * MIN);
   return {
     y: d.getUTCFullYear(), m: d.getUTCMonth() + 1, d: d.getUTCDate(),
     hh: d.getUTCHours(), mm: d.getUTCMinutes(), ss: d.getUTCSeconds(), wd: d.getUTCDay(),
@@ -44,10 +163,19 @@ export function keyParts(key) {
   return { y, m, d };
 }
 
-/** Epoch ms of local midnight at the start of a day. */
+/**
+ * Epoch ms of local midnight at the start of a day. On a day the phone
+ * changed zone it is the midnight of the zone in force then, or the moment
+ * of the change when the new zone had already passed midnight.
+ */
 export function dayStart(key) {
-  const { y, m, d } = keyParts(key);
-  return Date.UTC(y, m - 1, d) - OFFSET_MS;
+  for (let i = 0; i < ZONES.length; i++) {
+    const s = ZONES[i];
+    const end = i + 1 < ZONES.length ? ZONES[i + 1].from : Infinity;
+    const midnight = zonedInstant(key, 0, s.zone);
+    if (midnight < end) return s.from == null ? midnight : Math.max(midnight, s.from);
+  }
+  return zonedInstant(key, 0, ZONES[ZONES.length - 1].zone);
 }
 
 /** 'HH:MM' or minutes since midnight to minutes. */
@@ -57,9 +185,17 @@ export function toMinutes(hhmm) {
   return h * 60 + m;
 }
 
-/** Epoch ms of a local time on a given day. */
+/** Epoch ms of a local time on a given day, in the zone in force at that time. */
 export function at(key, hhmm) {
-  return dayStart(key) + toMinutes(hhmm) * MIN;
+  const minutes = toMinutes(hhmm);
+  for (let i = 0; i < ZONES.length; i++) {
+    const s = ZONES[i];
+    const end = i + 1 < ZONES.length ? ZONES[i + 1].from : Infinity;
+    const ts = zonedInstant(key, minutes, s.zone);
+    if ((s.from == null || ts >= s.from) && ts < end) return ts;
+  }
+  // A time the zone change skipped: read it in the zone the day began in.
+  return zonedInstant(key, minutes, zoneAt(dayStart(key)));
 }
 
 /**
@@ -67,8 +203,9 @@ export function at(key, hhmm) {
  * Used when an existing time is edited, so it stays on its own day.
  */
 export function nearestTime(ref, minutes) {
-  const base = dayStart(dayKey(ref)) + minutes * MIN;
-  return [base - DAY, base, base + DAY].reduce((best, ts) => (Math.abs(ts - ref) < Math.abs(best - ref) ? ts : best));
+  const key = dayKey(ref);
+  return [addDays(key, -1), key, addDays(key, 1)].map((k) => at(k, minutes))
+    .reduce((best, ts) => (Math.abs(ts - ref) < Math.abs(best - ref) ? ts : best));
 }
 
 /** Local minutes since midnight. */
@@ -104,8 +241,11 @@ export function weekStart(key) {
   return addDays(key, -weekday(key));
 }
 
+/** Calendar days from a to b, whatever the length of the days between. */
 export function daysBetween(a, b) {
-  return Math.round((dayStart(b) - dayStart(a)) / DAY);
+  const x = keyParts(a);
+  const y = keyParts(b);
+  return Math.round((Date.UTC(y.y, y.m - 1, y.d) - Date.UTC(x.y, x.m - 1, x.d)) / DAY);
 }
 
 export function fmtTime(ts) {

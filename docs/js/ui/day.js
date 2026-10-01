@@ -12,7 +12,7 @@ import { AMOUNT_OPTIONS, showOutsideSheet } from './outside.js';
 import { mealMeta } from './today.js';
 import { pauseWord } from './pause.js';
 import { fullnessCard } from './fullness.js';
-import { dayTypeText, header, mealsOfDay, outsideOfDay, temptationsOfDay } from './shared.js';
+import { dayTypeText, header, mealsOfDay, outsideOfDay, temptationsOfDay, zoneNoteFor } from './shared.js';
 
 const reasonText = (r, e) => ({ early: 'opened before 16:00', over: `over ${fmtDuration(e.windowMs + GRACE_MS)}`, outside: 'ate outside the window' }[r]);
 
@@ -27,6 +27,12 @@ function resultLine(e) {
   }
 }
 
+/** A day that happened in another zone shows its times in that zone, and says which. */
+function dayZoneNote(ctx, key, rec) {
+  const note = zoneNoteFor(ctx, rec && rec.firstBite ? rec.firstBite : at(key, '12:00'));
+  return note ? `Times in ${note}` : null;
+}
+
 export function renderDay(ctx, app, key) {
   const rec = ctx.days.get(key) || { day: key };
   const e = ctx.evaluate(key);
@@ -34,7 +40,7 @@ export function renderDay(ctx, app, key) {
   const paused = isPaused(rec);
   const tracked = past && !paused; // a paused day shows only its pause
   return h('div', { class: 'day', 'data-day': key },
-    header(ctx, app, { title: 'Day', sub: dayTypeText(key, rec) }),
+    header(ctx, app, { title: 'Day', sub: dayTypeText(key, rec), zone: dayZoneNote(ctx, key, rec) || undefined }),
     h('section', { class: 'section strong' },
       h('h1', { class: 'display' }, fmtDayLong(key)),
       resultLine(e),

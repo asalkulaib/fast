@@ -4,7 +4,7 @@ import { h } from './dom.js';
 import { button, timeField } from './components.js';
 import * as store from '../store.js';
 import { fmtMinutes, toMinutes } from '../core/time.js';
-import { icsTimes } from '../core/ics.js';
+import { icsPinnedToKuwait, icsTimes } from '../core/ics.js';
 import { VERSION } from '../version.js';
 import { ago, header, note } from './shared.js';
 import { openSheet, sheetHead } from './sheet.js';
@@ -122,6 +122,10 @@ function timingSection(ctx, app) {
 function calendarStatus(ctx) {
   const s = ctx.settings;
   if (!s.icsTimes) return h('p', { class: 'small quiet gap-s', 'data-testid': 'ics-status' }, 'Not added yet.');
+  if (icsPinnedToKuwait(s.icsTimes)) {
+    return h('p', { class: 'small gap-s', 'data-testid': 'ics-status' },
+      'Your calendar alerts ring by Kuwait time, even when you travel. Add the new file so they follow your phone\'s clock, then delete the old Fast events: open one, tap Delete Event, then Delete All Future Events.');
+  }
   if (s.icsTimes !== icsTimes(s, { flexible: isFlexible(ctx.todayKey, s) })) {
     return h('p', { class: 'small gap-s', 'data-testid': 'ics-status' },
       'Your times changed since the last file. Add the new file, then delete the old Fast events: open one, tap Delete Event, then Delete All Future Events.');

@@ -5,7 +5,7 @@ import * as store from './store.js';
 import { requestPersistence } from './db.js';
 import { h, fadeIn, fadeOut, updateLive } from './ui/dom.js';
 import { button } from './ui/components.js';
-import { now, dayKey, isDayKey, fmtDayLong } from './core/time.js';
+import { MIN, HOME_ZONE, now, dayKey, isDayKey, fmtDayLong, sameClock, switchZone, zoneName } from './core/time.js';
 import { isFlexible, makeEvaluator, streaks, todayMode, trackingStart, windowMsFor } from './core/rules.js';
 import { buildIcs, icsTimes } from './core/ics.js';
 import { buildCsvFiles } from './core/csv.js';
@@ -169,6 +169,7 @@ function prompts(ctx) {
 
 function tick() {
   if (document.hidden || !store.state.ready) return;
+  if (now() - zoneCheckedAt >= 5 * MIN) followZone();
   const ctx = context();
   if (flash && flash.until <= ctx.nowTs) {
     const el = view.querySelector('[data-flash]');
@@ -183,6 +184,37 @@ function tick() {
     if (sheet.opts.tick) sheet.opts.tick(ctx.nowTs);
   }
   prompts(ctx);
+}
+
+// ---------- Time zone ----------
+
+/** The phone's time zone, or null when the browser does not say. */
+function deviceZone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || null;
+  } catch {
+    return null;
+  }
+}
+
+let zoneCheckedAt = 0;
+
+/**
+ * Follows the phone's time zone. After a change, all that happened since Fast
+ * was last open reads in the new zone, and a message says so. Then notes that
+ * Fast is open now.
+ */
+async function followZone() {
+  const nowTs = now();
+  zoneCheckedAt = nowTs;
+  const s = store.state.settings;
+  const next = switchZone(s.zones, deviceZone(), s.zoneSeenAt ?? store.lastActivityAt(), nowTs);
+  if (next) {
+    await store.setSettings({ zones: next });
+    const zone = next[next.length - 1].zone;
+    showFlash(sameClock(zone, HOME_ZONE, nowTs) ? `Back on ${zoneName(HOME_ZONE)} time.` : `Times now follow ${zoneName(zone)} time.`, { ms: 12000 });
+  }
+  await store.noteSeen(nowTs);
 }
 
 // ---------- Actions ----------
@@ -343,6 +375,7 @@ async function boot() {
     return;
   }
   if (!store.state.settings.installedAt) await store.setSettings({ installedAt: now() });
+  await followZone();
   requestPersistence().then((p) => {
     if (p !== store.state.settings.persisted) store.setSettings({ persisted: p });
   });
@@ -357,10 +390,15 @@ async function boot() {
     if (b) app.go(b.dataset.tab);
   });
   document.addEventListener('visibilitychange', async () => {
-    if (document.hidden) return;
+    // Leaving Fast: a change of zone from here on starts after this moment.
+    if (document.hidden) {
+      if (store.state.ready) store.noteSeen(now());
+      return;
+    }
     for (const key of [...prompted]) if (key.startsWith('f')) prompted.delete(key);
     try {
       await store.load();
+      await followZone();
     } catch {
       /* keep what is in memory */
     }

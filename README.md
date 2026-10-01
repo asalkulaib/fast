@@ -18,7 +18,7 @@ Nafud at midday: sand is the page, umber ink the text, and gold leaf marks the o
 
 ## The rules Fast follows
 
-- Kuwait time (UTC+3). Workdays are Sunday to Thursday, weekends Friday and Saturday.
+- Times follow your phone's time zone: Kuwait time at home, local time when you travel (see Travel). Workdays are Sunday to Thursday, weekends Friday and Saturday, wherever you are.
 - Your goal is an eating window: 16:8, 18:6, 20:4 (the default), 23:1, or any whole number of hours from 1 to 12. The fasting goal is the rest of the 24 hours. Change it in More, Goal, or by tapping Goal on Today. A change applies from that day on; past days keep the goal they had.
 - Starting your first meal opens the window: its start is the first bite, and the countdown of your eating window begins. A window belongs to the day of its first bite, even when it runs past midnight.
 - A day succeeds when all eating falls within the window goal, with 15 minutes of grace. Beyond that it is a miss, shown as the time over the goal.
@@ -140,9 +140,15 @@ Fast cannot ring while it is closed. In More, Alarms, switch it on and build a s
 
 A strip of seven squares opens the week: ink for a success, clay for a miss, sand for a paused day, and a gold dot on days left wanting. Tap a square to open the day. A legend under the strip names each square. Satiety numbers and findings are on the Satiety tab.
 
+## Travel
+
+Fast follows your phone's time zone. When you land somewhere on a different clock, Fast says "Times now follow Dubai time." (for example), and the header shows "Dubai time" while you are away. Every time you see or enter then is local: the time wheels, the window's opening and closing, the 16:00 rule and the planned starts. Days change at local midnight, so a travel day can run 23 or 25 hours; fasting hours and window lengths are always exact.
+
+Each day keeps the times it happened in. Back home Fast says "Back on Kuwait time.", and your Dubai dinner still reads 19:00 to 22:30. A day that happened on another clock says so in its day view, for example "Times in Dubai time". The change starts just after Fast was last open, so anything you log after landing is on local time. Flying west late at night, the date never goes back: the new clock starts at its own midnight. Zones on Kuwait's clock, such as Riyadh, count as home.
+
 ## Calendar reminders
 
-More, Add to Calendar creates four repeating alerts: hold the line at 13:00 and training at 16:30 on workdays, and the window start at your workday and weekend times. With Feasting hours the file keeps the first two and cancels the two window alerts. In the share sheet choose Calendar, or Save to Files and then open the file and tap Add All. If you change the times, add the new file and delete the old Fast events (open one, Delete Event, Delete All Future Events).
+More, Add to Calendar creates four repeating alerts: hold the line at 13:00 and training at 16:30 on workdays, and the window start at your workday and weekend times. With Feasting hours the file keeps the first two and cancels the two window alerts. In the share sheet choose Calendar, or Save to Files and then open the file and tap Add All. If you change the times, add the new file and delete the old Fast events (open one, Delete Event, Delete All Future Events). The alerts use local times, so on a trip they ring by your phone's clock. A file added before 1 October 2026 rang by Kuwait time; More asks you to add the new one.
 
 ## Backups
 

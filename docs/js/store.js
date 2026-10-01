@@ -2,7 +2,7 @@
 // Each change is written to IndexedDB first, then applied here and announced.
 
 import * as db from './db.js';
-import { now, addDays, dayKey, floorToMinute, fmtDayLong, fmtTime, MIN } from './core/time.js';
+import { now, addDays, dayKey, floorToMinute, fmtDayLong, fmtTime, MIN, setZones } from './core/time.js';
 import { DEFAULT_WINDOW_HOURS, isOpen, lastBiteTs } from './core/rules.js';
 import { DEFAULT_CLIMB, switchClimber } from './core/climb.js';
 
@@ -53,6 +53,8 @@ export async function load() {
   state.temptations = new Map(all.temptations.map((t) => [t.id, t]));
   state.weights = new Map(all.weights.map((w) => [w.date, w.kg]));
   state.settings = { ...DEFAULTS, ...Object.fromEntries(all.settings.map((s) => [s.key, s.value])) };
+  // Which time zone was in force when: every clock time and day reads from it.
+  setZones(state.settings.zones);
   state.ready = true;
 }
 
@@ -118,14 +120,40 @@ export async function setSettings(values) {
   // the new value (a time wheel rebuilt from the old one would undo a roll).
   const before = Object.fromEntries(Object.keys(values).map((k) => [k, state.settings[k]]));
   Object.assign(state.settings, values);
+  if ('zones' in values) setZones(state.settings.zones);
   try {
     await db.putMany('settings', Object.entries(values).map(([key, value]) => ({ key, value })));
   } catch (err) {
     Object.assign(state.settings, before);
+    if ('zones' in values) setZones(state.settings.zones);
     changed();
     throw err;
   }
   changed();
+}
+
+/** The latest moment anything was logged, or null: where a change of zone starts when Fast never noted being open. */
+export function lastActivityAt() {
+  let last = null;
+  const take = (v) => { if (typeof v === 'number' && v <= now() && (last == null || v > last)) last = v; };
+  for (const r of state.days.values()) { take(r.firstBite); take(r.lastBite); take(r.fastFrom); take(r.updatedAt); }
+  for (const m of state.meals.values()) { take(m.startedAt); take(m.finishedAt); }
+  for (const o of state.outside.values()) take(o.at);
+  for (const t of state.temptations.values()) { take(t.startedAt); take(t.endedAt); }
+  return last;
+}
+
+/**
+ * Notes that Fast is open now, without a redraw: a change of time zone
+ * starts just after this moment.
+ */
+export async function noteSeen(ts) {
+  state.settings.zoneSeenAt = ts;
+  try {
+    await db.put('settings', { key: 'zoneSeenAt', value: ts });
+  } catch {
+    /* only a hint for the next change of zone */
+  }
 }
 
 // ---------- Days and windows ----------
@@ -565,7 +593,9 @@ export async function restore(backup) {
     (recorded && recorded.value) || 0,
     Number.isFinite(exported) ? exported : 0,
   ) || null;
-  const keep = { installedAt: state.settings.installedAt, persisted: state.settings.persisted, lastBackupAt };
+  const seen = d.settings.find((s) => s.key === 'zoneSeenAt');
+  const zoneSeenAt = Math.max((seen && seen.value) || 0, Number.isFinite(exported) ? exported : 0) || null;
+  const keep = { installedAt: state.settings.installedAt, persisted: state.settings.persisted, lastBackupAt, zoneSeenAt };
   const settings = d.settings.filter((s) => !(s.key in keep));
   await db.replaceAll({ ...d, settings: [...settings, ...Object.entries(keep).map(([key, value]) => ({ key, value }))] });
   await load();

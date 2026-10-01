@@ -2,7 +2,7 @@
 
 import { h, live } from './dom.js';
 import { button } from './components.js';
-import { DAY, addDays, dayKey, fmtDayLong, fmtDuration, fmtMinutes, fmtWhen } from '../core/time.js';
+import { DAY, HOME_ZONE, addDays, dayKey, fmtDayLong, fmtDuration, fmtMinutes, fmtWhen, sameClock, zoneAt, zoneName } from '../core/time.js';
 import { isFlexible, isOpen, isWorkday, plannedStartMin } from '../core/rules.js';
 
 /** Margin note: a small scholar's note. */
@@ -32,12 +32,30 @@ export function dayTypeText(key, rec) {
 }
 
 /** Screen header. The Tempted? button shows whenever no window is open, except on a paused day. */
-export function header(ctx, app, { title, sub }) {
+/** Away from Kuwait time: 'Dubai time', the zone Fast follows now; null at home. */
+export function awayZone(ctx) {
+  const zone = zoneAt(ctx.nowTs);
+  return sameClock(zone, HOME_ZONE, ctx.nowTs) ? null : `${zoneName(zone)} time`;
+}
+
+/** The zone a moment happened in, as 'Dubai time', when it differs from the zone in force now. */
+export function zoneNoteFor(ctx, ts) {
+  const zone = zoneAt(ts);
+  return sameClock(zone, zoneAt(ctx.nowTs), ts) ? null : `${zoneName(zone)} time`;
+}
+
+/** zone: a note about the time zone in place of the usual one (a day from another clock). */
+export function header(ctx, app, { title, sub, zone }) {
   const tempted = !ctx.openRec && ctx.mode.mode !== 'paused'
     ? button('Tempted?', () => app.tempted(), { kind: 'secondary', name: 'tempted' })
     : null;
+  const away = zone !== undefined ? zone : awayZone(ctx);
   return h('header', { class: 'head' },
-    h('div', { class: 'head-title' }, h('div', { class: 'label' }, title), sub ? h('div', { class: 'label' }, sub) : null),
+    h('div', { class: 'head-title' },
+      h('div', { class: 'label' }, title),
+      sub || away
+        ? h('div', { class: 'label' }, sub || null, away ? h('span', { 'data-testid': 'zone-note' }, `${sub ? ' · ' : ''}${away}`) : null)
+        : null),
     tempted,
   );
 }

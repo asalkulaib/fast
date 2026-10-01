@@ -4,7 +4,7 @@ import { h } from './dom.js';
 import { button, choice, scale, textField, timeField, STOP_OPTIONS } from './components.js';
 import { openSheet, sheetHead } from './sheet.js';
 import * as store from '../store.js';
-import { MIN, HOUR, DAY, dayKey, dayStart, floorToMinute, fmtDuration, fmtTime, minutesOfDay, nearestTime, now } from '../core/time.js';
+import { MIN, HOUR, addDays, at, dayKey, dayStart, floorToMinute, fmtDuration, fmtTime, minutesOfDay, nearestTime, now } from '../core/time.js';
 import { CUTOFF_MIN, LATE_NIGHT_END_MIN, canReopen, cutoffApplies, timeOnOrAfter } from '../core/rules.js';
 import { MEAL_TYPES, guessMealType, typeOfName } from '../core/meal-types.js';
 import { mealInProgress } from './shared.js';
@@ -12,8 +12,9 @@ import { ringIn } from './alarm.js';
 
 /** Most recent moment at or before ref with this clock time (for edits after the fact). */
 export function latestAtOrBefore(minutes, ref) {
-  const ts = dayStart(dayKey(ref)) + minutes * MIN;
-  return ts > ref ? ts - DAY : ts;
+  const key = dayKey(ref);
+  const ts = at(key, minutes);
+  return ts > ref ? at(addDays(key, -1), minutes) : ts;
 }
 
 /**
@@ -23,9 +24,9 @@ export function latestAtOrBefore(minutes, ref) {
  */
 export function resolveFirstBite(key, minutes) {
   const t = now();
-  const ts = dayStart(key) + minutes * MIN;
+  const ts = at(key, minutes);
   if (ts <= t + MIN) return ts;
-  const prev = ts - DAY;
+  const prev = at(addDays(key, -1), minutes);
   if (minutesOfDay(t) < LATE_NIGHT_END_MIN && t - prev < 6 * HOUR) return prev;
   return null;
 }

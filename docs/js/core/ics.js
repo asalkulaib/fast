@@ -1,4 +1,6 @@
 // Builds the reminders calendar file (.ics, RFC 5545). Pure functions only.
+// Times are floating local times (no time zone), so on a trip the alerts
+// ring by the phone's own clock, as Fast's times do.
 
 import { addDays, keyParts, toMinutes, weekday } from './time.js';
 
@@ -90,16 +92,6 @@ export function buildIcs(settings, { nowTs, todayKey, sequence = 0, flexible = f
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     'X-WR-CALNAME:Fast',
-    'X-WR-TIMEZONE:Asia/Kuwait',
-    'BEGIN:VTIMEZONE',
-    'TZID:Asia/Kuwait',
-    'BEGIN:STANDARD',
-    'DTSTART:19700101T000000',
-    'TZOFFSETFROM:+0300',
-    'TZOFFSETTO:+0300',
-    'TZNAME:+03',
-    'END:STANDARD',
-    'END:VTIMEZONE',
   ];
   for (const ev of reminderEvents(settings, { flexible })) {
     const start = firstMatching(todayKey, ev.days);
@@ -108,7 +100,7 @@ export function buildIcs(settings, { nowTs, todayKey, sequence = 0, flexible = f
       `UID:${ev.uid}@fast.reminders`,
       `DTSTAMP:${utcStamp(nowTs)}`,
       `SEQUENCE:${sequence}`,
-      `DTSTART;TZID=Asia/Kuwait:${localStamp(start, ev.time)}`,
+      `DTSTART:${localStamp(start, ev.time)}`,
       'DURATION:PT10M',
       `RRULE:FREQ=WEEKLY;BYDAY=${ev.days.join(',')}`,
       `SUMMARY:${escapeText(ev.summary)}`,
@@ -122,7 +114,14 @@ export function buildIcs(settings, { nowTs, todayKey, sequence = 0, flexible = f
   return lines.map(foldLine).join(CRLF) + CRLF;
 }
 
-/** The times a calendar file was built from, to tell when it is out of date. */
+/**
+ * The times a calendar file was built from, to tell when it is out of date.
+ * 'local' marks files whose alerts follow the phone's clock; older ones were
+ * pinned to Kuwait time.
+ */
 export function icsTimes(s, { flexible = false } = {}) {
-  return [s.holdTime, s.trainingTime, s.workdayStart, s.weekendStart, ...(flexible ? ['flexible'] : [])].join('|');
+  return ['local', s.holdTime, s.trainingTime, s.workdayStart, s.weekendStart, ...(flexible ? ['flexible'] : [])].join('|');
 }
+
+/** A file made before alerts followed the phone's clock. */
+export const icsPinnedToKuwait = (fingerprint) => !!fingerprint && !String(fingerprint).startsWith('local|');

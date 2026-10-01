@@ -408,3 +408,15 @@ test('today before the window: ring legend, Start a meal alone, feasting hours',
   await seed(page, { ...WEEK, settings: [...install, { key: 'flexChanges', value: [{ from: '2026-09-27', on: true }] }] });
   await shot(page, '78-today-before-flexible', { full: true });
 });
+
+test.describe('travel', () => {
+  test.use({ timezoneId: 'Asia/Dubai' });
+
+  test('today in Dubai: the header says whose time it is', async ({ page }) => {
+    await openAt(page, '2026-10-02T18:00');
+    await seed(page, { ...WEEK, settings: [...install, { key: 'zoneSeenAt', value: ms('2026-09-27T10:00') }] });
+    await shot(page, '80-today-dubai');
+    await page.goto('./#day/2026-09-26');
+    await shot(page, '81-day-kuwait-from-dubai');
+  });
+});

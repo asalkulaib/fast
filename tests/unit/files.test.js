@@ -7,18 +7,18 @@ import { buildBackup, parseBackup, describeBackup } from '../../docs/js/core/bac
 const T = (s) => Date.parse(`${s}:00+03:00`);
 const SETTINGS = { workdayStart: '17:30', weekendStart: '14:00', holdTime: '13:00', trainingTime: '16:30' };
 
-test('ics: four weekly events with alerts in Kuwait time', () => {
+test('ics: four weekly events with alerts at local times that follow the phone', () => {
   const ics = buildIcs(SETTINGS, { nowTs: T('2026-09-25T10:00'), todayKey: '2026-09-25', sequence: 2 });
   assert.ok(ics.startsWith('BEGIN:VCALENDAR\r\n'));
   assert.ok(ics.endsWith('END:VCALENDAR\r\n'));
   assert.equal((ics.match(/BEGIN:VEVENT/g) || []).length, 4);
   assert.equal((ics.match(/BEGIN:VALARM/g) || []).length, 4);
-  assert.ok(ics.includes('TZID:Asia/Kuwait'));
+  assert.ok(!ics.includes('TZID'));
   // Friday 25 Sep: workday events start on Sunday 27 Sep; weekend event starts today.
-  assert.ok(ics.includes('DTSTART;TZID=Asia/Kuwait:20260927T130000'));
-  assert.ok(ics.includes('DTSTART;TZID=Asia/Kuwait:20260927T163000'));
-  assert.ok(ics.includes('DTSTART;TZID=Asia/Kuwait:20260927T173000'));
-  assert.ok(ics.includes('DTSTART;TZID=Asia/Kuwait:20260925T140000'));
+  assert.ok(ics.includes('DTSTART:20260927T130000\r\n'));
+  assert.ok(ics.includes('DTSTART:20260927T163000\r\n'));
+  assert.ok(ics.includes('DTSTART:20260927T173000\r\n'));
+  assert.ok(ics.includes('DTSTART:20260925T140000\r\n'));
   assert.equal((ics.match(/RRULE:FREQ=WEEKLY;BYDAY=SU,MO,TU,WE,TH/g) || []).length, 3);
   assert.equal((ics.match(/RRULE:FREQ=WEEKLY;BYDAY=FR,SA/g) || []).length, 1);
   assert.equal((ics.match(/SEQUENCE:2/g) || []).length, 4);
@@ -31,9 +31,16 @@ test('ics: four weekly events with alerts in Kuwait time', () => {
 test('ics: changed times move the events and change the fingerprint', () => {
   const later = { ...SETTINGS, workdayStart: '18:00' };
   const ics = buildIcs(later, { nowTs: T('2026-09-27T10:00'), todayKey: '2026-09-27' });
-  assert.ok(ics.includes('DTSTART;TZID=Asia/Kuwait:20260927T180000'));
+  assert.ok(ics.includes('DTSTART:20260927T180000'));
   assert.ok(ics.includes('opens at 18:00'));
   assert.notEqual(icsTimes(SETTINGS), icsTimes(later));
+});
+
+test('ics: a file made before alerts followed the phone counts as out of date', async () => {
+  const { icsPinnedToKuwait } = await import('../../docs/js/core/ics.js');
+  assert.equal(icsPinnedToKuwait('13:00|16:30|17:30|14:00'), true);
+  assert.equal(icsPinnedToKuwait(icsTimes(SETTINGS)), false);
+  assert.equal(icsPinnedToKuwait(null), false);
 });
 
 test('ics: escaping and folding', () => {

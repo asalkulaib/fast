@@ -11,7 +11,7 @@
 // The eating window is a goal: 4 hours (20:4) unless changed. A change
 // applies from its day on, so past days keep the goal they had.
 
-import { HOUR, MIN, addDays, dayKey, dayStart, minutesOfDay, isWorkweekday, toMinutes } from './time.js';
+import { HOUR, MIN, addDays, at, dayKey, dayStart, minutesOfDay, isWorkweekday, toMinutes } from './time.js';
 
 export const DEFAULT_WINDOW_HOURS = 4;
 export const WINDOW_MS = DEFAULT_WINDOW_HOURS * HOUR; // the default goal, 20:4
@@ -336,6 +336,7 @@ export function lastEatingTs(data) {
  * 22:30 first bite lands on the next day.
  */
 export function timeOnOrAfter(baseTs, minutes) {
-  const ts = dayStart(dayKey(baseTs)) + minutes * MIN;
-  return ts < baseTs ? ts + 24 * HOUR : ts;
+  const key = dayKey(baseTs);
+  const ts = at(key, minutes);
+  return ts < baseTs ? at(addDays(key, 1), minutes) : ts;
 }
