@@ -32,8 +32,10 @@ Nafud at midday: sand is the page, umber ink the text, and gold leaf marks the o
 
 Before your window, Today offers Start a meal. Begin fast appears beside it only when Fast has nothing to time a fast from: on your first day, after a reset, or when no last bite is on record.
 
-- Start a meal: your first meal opens the window. The sheet has the eating reminders, the meal's name, hunger before, and its start time, with quick times (30 min, 1 h, 2 h ago) and the wheel. Already eaten? Log it whole with how you finished. On a workday before 16:00, the sheet says the day will count as a miss.
+- Start a meal: your first meal opens the window. The sheet has the eating reminders; what the meal is: Snack, Breakfast, Lunch or Dinner, or Other to type a name (names you typed before come back as one-tap shortcuts); hunger before; and its start time, with quick times (30 min, 1 h, 2 h ago) and the wheel. Already eaten? Log it whole with how you finished. On a workday before 16:00, the sheet says the day will count as a miss.
 - Begin fast: for a fast already under way, for example on your first day with Fast or after a pause. Pick Now, 1 or 2 hours ago, last night, or any time on the wheel, so none of the fast is lost. Tap Fast began on Today to adjust it later. A fast start never changes the result of the day it falls on, and it cannot be earlier than the last bite on record.
+
+Until you tap a meal, Fast picks one from the start time: breakfast from 05:00, lunch from 11:00, dinner from 16:00 and a snack from 22:00. A snack follows the same rules as any meal. The choice is saved as the meal's name, so it shows in the Meals list and the export, and older meals typed as, say, "dinner" open as Dinner when you edit them.
 
 Each meal is tracked on its own: its start, its finish, hunger before, how you finished and the 20-minute check. One meal at a time: Start another meal first asks how the open one finished. I'm done eating closes the window. After closing, a meal within your goal's hours reopens the window; later, it counts as eating outside the window, so the day is a miss, and its satiety is still tracked.
 

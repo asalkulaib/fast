@@ -10,7 +10,8 @@ test('the first meal opens the window at its start; Undo takes both back', async
   await tap(page, 'start-meal');
   const s = sheet(page, 'start-meal');
   await expect(s.getByTestId('meal-context')).toHaveText('Your first meal opens the window.');
-  await page.locator('input[data-field="meal-name"]').fill('Dinner');
+  // At 18:00 the sheet picks Dinner by itself.
+  await expect(s.locator('button[data-choice="meal-type"][aria-checked="true"]')).toHaveText('Dinner');
   await pick(page, 'hunger', 7);
   await tap(page, 'start-eating');
   await expect(page.getByTestId('flash')).toHaveText('Window open from 18:00.');
@@ -39,6 +40,7 @@ test('one meal at a time: the next meal first asks how the open one finished', a
   await pick(page, 'fullness-now', 6);
   await tap(page, 'save-finish');
   await expect(sheet(page, 'start-meal')).toBeVisible();
+  await choose(page, 'meal-type', 'other');
   await page.locator('input[data-field="meal-name"]').fill('Dessert');
   await tap(page, 'start-eating');
   await expect(page.locator('[data-block="eating"]')).toContainText('Dessert, since 18:30.');
@@ -94,4 +96,66 @@ test('a meal already eaten can be logged whole; the window opens at its start', 
   await expect(page.locator('[data-block="eating"]')).toHaveCount(0);
   const [meal] = (await readDb(page)).meals;
   expect(meal).toMatchObject({ startedAt: ms('2026-09-27T18:00'), finishedAt: ms('2026-09-27T18:30'), stop: 'before_full', fullnessNow: 5 });
+});
+
+test('the meal is picked from its start time until you tap one', async ({ page }) => {
+  await openAt(page, '2026-09-26T13:00'); // a Saturday: no 16:00 rule
+  await tap(page, 'start-meal');
+  const s = sheet(page, 'start-meal');
+  const picked = s.locator('button[data-choice="meal-type"][aria-checked="true"]');
+  await expect(s.locator('button[data-choice="meal-type"]')).toHaveText(['Snack', 'Breakfast', 'Lunch', 'Dinner', 'Other']);
+  await expect(picked).toHaveText('Lunch');
+  await setTime(page, 'meal-start', '10:30');
+  await expect(picked).toHaveText('Breakfast');
+  await tap(page, 'meal-start-60'); // 12:00
+  await expect(picked).toHaveText('Lunch');
+  // A tapped choice stays, whatever the time.
+  await choose(page, 'meal-type', 'Snack');
+  await setTime(page, 'meal-start', '12:30');
+  await expect(picked).toHaveText('Snack');
+  // Typing only under Other.
+  await expect(s.locator('input[data-field="meal-name"]')).toHaveCount(0);
+  await tap(page, 'start-eating');
+  expect((await readDb(page)).meals[0]).toMatchObject({ name: 'Snack', startedAt: ms('2026-09-26T12:30') });
+});
+
+test('Other: a name typed before comes back as a shortcut', async ({ page }) => {
+  await openAt(page, '2026-09-27T18:00');
+  await seed(page, {
+    days: [{ day: '2026-09-26', firstBite: ms('2026-09-26T17:30'), lastBite: ms('2026-09-26T19:15') }],
+    meals: [{ id: 1, day: '2026-09-26', name: 'Dessert', startedAt: ms('2026-09-26T19:00'), finishedAt: ms('2026-09-26T19:15') }],
+    settings: install,
+  });
+  await tap(page, 'start-meal');
+  const s = sheet(page, 'start-meal');
+  await choose(page, 'meal-type', 'other');
+  await s.locator('[data-block="meal-type"] .btn-row button', { hasText: 'Dessert' }).click();
+  await expect(s.locator('input[data-field="meal-name"]')).toHaveValue('Dessert');
+  await tap(page, 'start-eating');
+  const meals = (await readDb(page)).meals.sort((a, b) => a.startedAt - b.startedAt);
+  expect(meals[1]).toMatchObject({ name: 'Dessert', startedAt: ms('2026-09-27T18:00') });
+});
+
+test('editing a meal shows its saved choice, including names typed before the choices', async ({ page }) => {
+  await openAt(page, '2026-09-27T20:00', '#satiety');
+  await seed(page, {
+    days: [{ day: '2026-09-26', firstBite: ms('2026-09-26T17:30'), lastBite: ms('2026-09-26T19:15') }],
+    meals: [
+      { id: 1, day: '2026-09-26', name: 'Dessert', startedAt: ms('2026-09-26T19:00'), finishedAt: ms('2026-09-26T19:15') },
+      { id: 2, day: '2026-09-26', name: 'dinner', startedAt: ms('2026-09-26T17:30'), finishedAt: ms('2026-09-26T18:00') },
+    ],
+    settings: install,
+  });
+  await choose(page, 'satiety-view', 'meals');
+  const s = sheet(page, 'edit-meal');
+  const picked = s.locator('button[data-choice="meal-type"][aria-checked="true"]');
+  await page.locator('[data-meal="2"]').click();
+  await expect(picked).toHaveText('Dinner');
+  await tap(page, 'close-sheet');
+  await page.locator('[data-meal="1"]').click();
+  await expect(picked).toHaveText('Other');
+  await expect(s.locator('input[data-field="meal-name"]')).toHaveValue('Dessert');
+  await choose(page, 'meal-type', 'Snack');
+  await tap(page, 'save-meal-edit');
+  await expect.poll(async () => (await readDb(page)).meals.find((m) => m.id === 1).name).toBe('Snack');
 });

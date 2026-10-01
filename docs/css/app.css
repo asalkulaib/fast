@@ -1601,3 +1601,8 @@ html.locked body {
   background: var(--accent);
   text-decoration: none;
 }
+
+/* A choice that spans two columns, such as Other after the four meals. */
+.choice button.wide {
+  grid-column: span 2;
+}

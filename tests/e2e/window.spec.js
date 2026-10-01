@@ -10,7 +10,7 @@ async function openWindow(page) {
 async function startFirstMeal(page, name = 'Dinner', hunger = 7) {
   await expect(page.getByText('Protein and vegetables first.')).toBeVisible();
   await expect(page.getByText('Pause halfway.')).toBeVisible();
-  await page.locator('input[data-field="meal-name"]').fill(name);
+  await choose(page, 'meal-type', name);
   await pick(page, 'hunger', hunger);
   await tap(page, 'start-eating');
   await expect(sheet(page, 'start-meal')).toBeHidden();

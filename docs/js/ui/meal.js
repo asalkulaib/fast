@@ -6,6 +6,7 @@ import { openSheet, sheetHead } from './sheet.js';
 import * as store from '../store.js';
 import { MIN, HOUR, DAY, dayKey, dayStart, floorToMinute, fmtDuration, fmtTime, minutesOfDay, nearestTime, now } from '../core/time.js';
 import { CUTOFF_MIN, LATE_NIGHT_END_MIN, canReopen, cutoffApplies, timeOnOrAfter } from '../core/rules.js';
+import { MEAL_TYPES, guessMealType, typeOfName } from '../core/meal-types.js';
 import { mealInProgress } from './shared.js';
 import { ringIn } from './alarm.js';
 
@@ -29,19 +30,47 @@ export function resolveFirstBite(key, minutes) {
   return null;
 }
 
-function recentNames(ctx) {
+// ---------- What the meal is ----------
+
+const TYPE_OPTIONS = [...MEAL_TYPES.map((t) => ({ value: t, label: t })), { value: 'other', label: 'Other', wide: true }];
+
+/** Names typed under Other before, most used first, for one-tap reuse. */
+function recentOtherNames(ctx) {
   const counts = new Map();
-  for (const m of ctx.meals) if (m.name) counts.set(m.name, (counts.get(m.name) || 0) + 1);
+  for (const m of ctx.meals) if (typeOfName(m.name) === 'other') counts.set(m.name, (counts.get(m.name) || 0) + 1);
   return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([name]) => name);
 }
 
-function nameSection(ctx, draft, api) {
-  const names = recentNames(ctx);
-  return h('section', { class: 'section' },
-    textField({ label: 'Meal', placeholder: 'Dinner', value: draft.name, onInput: (v) => { draft.name = v; }, name: 'meal-name' }),
-    names.length
-      ? h('div', { class: 'btn-row gap-s' }, names.map((n) => button(n, () => { draft.name = n; api.rerender(); }, { kind: 'secondary' })))
-      : null);
+/** The draft's pick from a stored name: the choice, and any name typed under Other. */
+function pickFromName(name) {
+  const pick = typeOfName(name);
+  return { pick, other: pick === 'other' ? name : '' };
+}
+
+/**
+ * What the meal is: Snack, Breakfast, Lunch, Dinner, or Other with a typed
+ * name, stored as the meal's name. Until one is tapped, the start time picks
+ * it (guessAt gives that time in minutes since midnight); box.refresh()
+ * follows a change of time. Redraws itself, so the wheels stay put.
+ */
+function mealTypeSection(ctx, draft, guessAt = null) {
+  const box = h('section', { class: 'section', 'data-block': 'meal-type' });
+  const draw = () => {
+    const pick = draft.pick ?? (guessAt ? guessMealType(guessAt()) : null);
+    draft.name = pick === 'other' ? (draft.other || '').trim() : pick || '';
+    const others = pick === 'other' ? recentOtherNames(ctx) : [];
+    box.replaceChildren(...[
+      choice({ label: 'Meal', options: TYPE_OPTIONS, value: pick, cols: 3, name: 'meal-type', onChange: (v) => { draft.pick = v; draw(); } }),
+      pick === 'other'
+        ? h('div', { class: 'gap' }, textField({ label: 'Name', placeholder: 'Dessert', value: draft.other, name: 'meal-name',
+          onInput: (v) => { draft.other = v; draft.name = v; } }))
+        : null,
+      others.length ? h('div', { class: 'btn-row gap-s' }, others.map((n) => button(n, () => { draft.other = n; draw(); }, { kind: 'secondary' }))) : null,
+    ].filter(Boolean));
+  };
+  draw();
+  box.refresh = draw;
+  return box;
 }
 
 const hungerScale = (draft) => scale({
@@ -88,11 +117,13 @@ export function showStartMealSheet(app) {
     showFinishMealSheet(app, running.id, { next: () => showStartMealSheet(app), lead: 'One meal at a time. First, how did this one finish?' });
     return;
   }
-  const draft = { name: '', hungerBefore: null, ts: floorToMinute(now()), done: false, stop: null, fullnessNow: null, finishMinutes: minutesOfDay(now()) };
+  const draft = { name: '', pick: null, other: '', hungerBefore: null, ts: floorToMinute(now()), done: false, stop: null, fullnessNow: null, finishMinutes: minutesOfDay(now()) };
   let hint = '';
   openSheet((api) => {
     const ctx = app.ctx();
     const sit = mealSituation(ctx);
+    // Until a meal is tapped, its start time picks it.
+    const typeBox = mealTypeSection(ctx, draft, () => minutesOfDay(draft.ts ?? now()));
     const rec = sit.rec;
     // Only a first meal before 16:00 on a workday makes the day a miss.
     const warnEl = h('p', { class: 'statement gap', 'data-testid': 'meal-warning' });
@@ -109,13 +140,14 @@ export function showStartMealSheet(app) {
       label: 'Started at',
       minutes: draft.ts == null ? minutesOfDay(now()) : minutesOfDay(draft.ts),
       name: 'meal-start',
-      onChange: (m) => { draft.ts = resolveFirstBite(app.ctx().todayKey, m); updateWarn(); },
+      onChange: (m) => { draft.ts = resolveFirstBite(app.ctx().todayKey, m); updateWarn(); typeBox.refresh(); },
     });
     const presets = h('div', { class: 'presets gap-s', role: 'group', 'aria-label': 'Quick times' },
       QUICK.map(([mins, label]) => button(label, () => {
         draft.ts = floorToMinute(now() - mins * MIN);
         field.set(minutesOfDay(draft.ts));
         updateWarn();
+        typeBox.refresh();
       }, { kind: 'secondary', name: `meal-start-${mins}` })));
     updateWarn();
     const context = {
@@ -161,7 +193,7 @@ export function showStartMealSheet(app) {
         h('p', { class: 'statement' }, 'Pause halfway.')),
       h('section', { class: 'section gap' }, presets, field, aheadEl),
       warnEl,
-      nameSection(ctx, draft, api),
+      typeBox,
       h('section', { class: 'section' }, hungerScale(draft)),
       draft.done
         ? [
@@ -187,18 +219,19 @@ export function showLogMealSheet(app, key) {
   const open = !!(rec0 && rec0.firstBite && !rec0.lastBite);
   const startDefault = open || !rec0 || !rec0.firstBite ? minutesOfDay(now()) : minutesOfDay(rec0.firstBite);
   const finishDefault = !open && rec0 && rec0.lastBite ? minutesOfDay(rec0.lastBite) : minutesOfDay(now());
-  const draft = { name: '', minutes: startDefault, hungerBefore: null, done: !open, stop: null, fullnessNow: null, finishMinutes: finishDefault };
+  const draft = { name: '', pick: null, other: '', minutes: startDefault, hungerBefore: null, done: !open, stop: null, fullnessNow: null, finishMinutes: finishDefault };
   let hint = '';
   openSheet((api) => {
     const ctx = app.ctx();
     const rec = ctx.days.get(key);
     const base = rec && rec.firstBite ? rec.firstBite : dayStart(key);
     const startedAt = () => timeOnOrAfter(base, draft.minutes);
+    const typeBox = mealTypeSection(ctx, draft, () => draft.minutes);
     return h('div', {},
       sheetHead(api, 'Log a meal'),
-      nameSection(ctx, draft, api),
+      typeBox,
       h('section', { class: 'section' },
-        timeField({ label: 'Started at', minutes: draft.minutes, name: 'meal-start', onChange: (m) => { draft.minutes = m; } })),
+        timeField({ label: 'Started at', minutes: draft.minutes, name: 'meal-start', onChange: (m) => { draft.minutes = m; typeBox.refresh(); } })),
       h('section', { class: 'section' }, hungerScale(draft)),
       draft.done
         ? [
@@ -334,13 +367,13 @@ export function showFullnessSheet(app, mealId) {
 export function showMealEditSheet(app, mealId) {
   const original = store.state.meals.get(mealId);
   if (!original) return;
-  const draft = { ...original, minutes: minutesOfDay(original.startedAt), finishMinutes: original.finishedAt ? minutesOfDay(original.finishedAt) : null };
+  const draft = { ...original, ...pickFromName(original.name), minutes: minutesOfDay(original.startedAt), finishMinutes: original.finishedAt ? minutesOfDay(original.finishedAt) : null };
   let confirming = false;
   openSheet((api) => {
     const ctx = app.ctx();
     return h('div', {},
       sheetHead(api, 'Meal'),
-      nameSection(ctx, draft, api),
+      mealTypeSection(ctx, draft),
       h('section', { class: 'section' },
         h('div', { class: 'btn-pair' },
           timeField({ label: 'Started', minutes: draft.minutes, name: 'edit-start', onChange: (m) => { draft.minutes = m; } }),

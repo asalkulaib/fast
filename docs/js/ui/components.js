@@ -42,7 +42,8 @@ export function scale({ n, value, onChange, label, low, high, start = 1, name })
 }
 
 /**
- * Grid of text options (one choice). options: [{ value, label }]
+ * Grid of text options (one choice). options: [{ value, label, wide }];
+ * a wide option spans two columns.
  */
 export function choice({ options, value, onChange, label, cols = 3, name }) {
   const labelId = nextId('choice');
@@ -51,6 +52,7 @@ export function choice({ options, value, onChange, label, cols = 3, name }) {
   const buttons = options.map((o) => {
     const b = h('button', {
       type: 'button',
+      class: o.wide ? 'wide' : null,
       role: 'radio',
       'aria-checked': String(o.value === value),
       dataset: { value: String(o.value), choice: name || '' },

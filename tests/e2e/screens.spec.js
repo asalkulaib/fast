@@ -121,7 +121,7 @@ test('today: window open, phases and sheets', async ({ page }) => {
   await openAt(page, '2026-09-27T17:30');
   await seed(page, { ...WEEK, settings: install });
   await tap(page, 'start-meal');
-  await page.locator('input[data-field="meal-name"]').fill('Dinner');
+  await choose(page, 'meal-type', 'Dinner');
   await pick(page, 'hunger', 7);
   await shot(page, '02-start-meal-sheet');
   await tap(page, 'start-eating');
