@@ -1,6 +1,6 @@
 // Shared controls: rating scales, choices, the rolling 24-hour time wheel, fields.
 
-import { h } from './dom.js';
+import { h, s } from './dom.js';
 import { addDays, fmtDayShort, minutesOfDay, now } from '../core/time.js';
 
 let uid = 0;
@@ -336,8 +336,12 @@ export function textField({ value, onInput, label, placeholder, name }) {
   return h('div', { class: 'text-wrap' }, label ? h('label', { class: 'label field-label', for: id }, label) : null, input);
 }
 
+/**
+ * kind: 'primary', the one solid action on a screen; 'outline', an action
+ * beside it; 'secondary', a quiet text action.
+ */
 export function button(label, onClick, { kind = 'primary', block = false, big = false, name, disabled = false } = {}) {
-  const cls = kind === 'secondary' ? 'btn-2' : ['btn', block ? 'block' : '', big ? 'big' : ''].filter(Boolean).join(' ');
+  const cls = kind === 'secondary' ? 'btn-2' : ['btn', kind === 'outline' ? 'outline' : '', block ? 'block' : '', big ? 'big' : ''].filter(Boolean).join(' ');
   // While an action is still saving, further taps are ignored (no double
   // records). The action itself starts inside the tap, so iOS still allows
   // the clipboard and the share sheet.
@@ -355,7 +359,7 @@ export function button(label, onClick, { kind = 'primary', block = false, big = 
     }
   };
   const b = h('button', { type: 'button', class: cls, dataset: { action: name || '' }, disabled, onclick: run }, label);
-  if (kind === 'primary') {
+  if (kind !== 'secondary') {
     // Keep the pressed fill visible briefly on touch devices.
     b.addEventListener('touchstart', () => b.classList.add('pressed'), { passive: true });
     const off = () => setTimeout(() => b.classList.remove('pressed'), 180);
@@ -363,6 +367,43 @@ export function button(label, onClick, { kind = 'primary', block = false, big = 
     b.addEventListener('touchcancel', off);
   }
   return b;
+}
+
+// ---------- Marks drawn in SVG ----------
+
+const INK = '#1E140C'; // --ink
+const CLAY = '#9E3B23'; // --clay
+const GOLD = '#F0B25C'; // --accent
+const SAND = '#E6D0A8'; // --bg
+
+let hatches = 0;
+
+/**
+ * Clay stripes, the mark of a miss wherever it appears, so a miss never
+ * rests on its red alone. Returns the pattern to put in an SVG and its fill.
+ */
+export function hatch() {
+  const id = `miss-hatch-${++hatches}`;
+  return {
+    fill: `url(#${id})`,
+    defs: s('defs', {}, s('pattern', { id, width: 4, height: 4, patternUnits: 'userSpaceOnUse', patternTransform: 'rotate(45)' },
+      s('rect', { width: 4, height: 4, fill: SAND }),
+      s('line', { x1: 1, y1: 0, x2: 1, y2: 4, stroke: CLAY, 'stroke-width': 2 }))),
+  };
+}
+
+/** A legend key CSS cannot draw here (no rounded corners, no gradients): a miss, the sun, eating outside, the 16:00 line. */
+export function key(kind) {
+  const box = (...kids) => s('svg', { class: 'key', viewBox: '0 0 14 14', 'aria-hidden': 'true', focusable: 'false' }, ...kids);
+  if (kind === 'miss') {
+    const m = hatch();
+    return box(m.defs, s('rect', { x: 1, y: 1, width: 12, height: 12, fill: m.fill, stroke: CLAY, 'stroke-width': 1.2 }));
+  }
+  if (kind === 'sun') return box(s('circle', { cx: 7, cy: 7, r: 5, fill: GOLD, stroke: INK, 'stroke-width': 1.2 }));
+  if (kind === 'outside') return box(s('path', { d: 'M3 3 L11 11 M11 3 L3 11', stroke: CLAY, 'stroke-width': 1.8, fill: 'none' }));
+  if (kind === 'stage') return box(s('circle', { cx: 7, cy: 7, r: 6, fill: INK }));
+  if (kind === 'cutoff') return box(s('line', { x1: 7, y1: 0, x2: 7, y2: 14, stroke: INK, 'stroke-width': 1.2, 'stroke-dasharray': '2 2' }));
+  return box();
 }
 
 /**

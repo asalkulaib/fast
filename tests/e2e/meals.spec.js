@@ -71,7 +71,7 @@ test('after the goal: a meal counts as eating outside the window, with its satie
   const closed = page.locator('[data-block="closed"]');
   await expect(closed).toHaveAttribute('data-result', 'miss');
   await expect(closed.getByTestId('result')).toHaveText('Ate outside the window.');
-  await expect(closed.locator('[data-block="eating"]')).toContainText('Eating, outside the window');
+  await expect(closed.locator('[data-block="eating"]')).toContainText('Eating outside the window: ');
   await tap(page, 'finish-meal');
   await choose(page, 'stop', 'full');
   await tap(page, 'save-finish');

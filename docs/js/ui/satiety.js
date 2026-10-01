@@ -238,8 +238,7 @@ function nowView(ctx, app) {
         : h('p', { class: 'small quiet gap-s' }, 'No check waiting. Finish a meal and its 20-minute check appears here.')),
     eating
       ? h('section', { class: 'section', 'data-block': 'eating' },
-        h('div', { class: 'label' }, 'Eating'),
-        h('p', { class: 'gap-s' }, `${eating.name || 'A meal'}, since ${fmtTime(eating.startedAt)}.`),
+        h('p', {}, `Eating: ${eating.name || 'a meal'}, since ${fmtTime(eating.startedAt)}.`),
         h('div', { class: 'gap' }, button('Finished this meal', () => showFinishMealSheet(app, eating.id), { block: true, name: 'finish-meal' })))
       : null,
     fullnessCard(ctx, key));

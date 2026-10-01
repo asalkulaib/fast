@@ -5,7 +5,7 @@
 // repeats the values.
 
 import { h, s, dimOthers } from './dom.js';
-import { button, choice, focusLine, legend } from './components.js';
+import { button, choice, focusLine, hatch, key, legend } from './components.js';
 import * as store from '../store.js';
 import { HOUR, addDays, fmtDayMonth, fmtDayShort, fmtDuration, weekdayShort, keyParts } from '../core/time.js';
 import { dailySeries, hourScale, rollingAverage, summarize } from '../core/history.js';
@@ -16,8 +16,8 @@ const W = 340;
 const HT = 220;
 const PAD = { top: 12, right: 8, bottom: 28, left: 36 };
 const MARK = '#9C6832'; // --rock-500: the series, recessive
-const MISS = '#9E3B23'; // --clay: a missed day
-const PICK = '#F0B25C'; // --accent: the selected day, gold leaf edged in ink
+const MISS = '#9E3B23'; // --clay: a missed day, striped
+const PICK = '#1E140C'; // --ink: the selected day (gold is kept for what you achieved)
 const INK = '#1E140C'; // --ink: the 7-day trend, the average (dashed) and edges
 const BAND = '#D8BF93'; // --sand-300: a paused day
 const SURFACE = '#E6D0A8'; // --bg: ring around markers
@@ -85,7 +85,10 @@ function chart({ series, trend, metric, kind, isMiss, avgMs, onPick, focus }) {
     return s('text', { x, y: HT - 8, 'text-anchor': anchor }, text);
   });
 
-  const colour = (i) => (i === pickIdx ? PICK : isMiss(series[i].day) ? MISS : MARK);
+  // A miss is clay stripes, selected or not, so it never rests on its red alone.
+  const stripes = hatch();
+  const colour = (i) => (isMiss(series[i].day) ? stripes.fill : i === pickIdx ? PICK : MARK);
+  const edge = (i) => (i === pickIdx ? INK : isMiss(series[i].day) ? MISS : null);
   const marks = [];
   const markers = [];
   if (kind === 'bars') {
@@ -96,7 +99,7 @@ function chart({ series, trend, metric, kind, isMiss, avgMs, onPick, focus }) {
       marks.push(s('rect', {
         x: (xc(i) - bw / 2).toFixed(1), y: y(v).toFixed(1), width: bw.toFixed(1), height: (y(0) - y(v)).toFixed(1),
         fill: colour(i), 'data-day': series[i].day, 'data-miss': isMiss(series[i].day) ? 'true' : null, 'data-series': isMiss(series[i].day) ? 'miss' : 'bar',
-        stroke: i === pickIdx ? INK : null, 'stroke-width': i === pickIdx ? 1.5 : null,
+        stroke: edge(i), 'stroke-width': i === pickIdx ? 1.5 : edge(i) ? 1 : null,
       }));
     });
   } else {
@@ -112,7 +115,7 @@ function chart({ series, trend, metric, kind, isMiss, avgMs, onPick, focus }) {
       const size = pick ? 10 : 8;
       markers.push(s('rect', {
         x: (xc(i) - size / 2).toFixed(1), y: (y(v) - size / 2).toFixed(1), width: size, height: size,
-        fill: colour(i), stroke: pick ? INK : SURFACE, 'stroke-width': pick ? 1.5 : 2, 'data-day': series[i].day, 'data-miss': miss ? 'true' : null, 'data-series': miss ? 'miss' : 'bar',
+        fill: colour(i), stroke: edge(i) || SURFACE, 'stroke-width': pick ? 1.5 : miss ? 1 : 2, 'data-day': series[i].day, 'data-miss': miss ? 'true' : null, 'data-series': miss ? 'miss' : 'bar',
       }));
     });
   }
@@ -136,7 +139,7 @@ function chart({ series, trend, metric, kind, isMiss, avgMs, onPick, focus }) {
     'data-testid': 'history-chart',
     'data-kind': kind,
     'aria-label': `${METRICS[metric].name} hours per day, ${n} days, with the 7-day trend and the average. Tap a day to read it.`,
-  }, ...bands, ...grid, ...xLabels, ...marks, trendLine, avgLine, ...markers);
+  }, stripes.defs, ...bands, ...grid, ...xLabels, ...marks, trendLine, avgLine, ...markers);
   dimOthers(svg, focus);
 
   const nearest = (evt) => {
@@ -161,7 +164,7 @@ function chart({ series, trend, metric, kind, isMiss, avgMs, onPick, focus }) {
 function chartLegend(m, { anyTrend, anyPaused, anyPick }, focus, onPick) {
   return legend([
     ['bar', m.mark, 'bar'],
-    ['miss', 'Miss', 'miss'],
+    [key('miss'), 'Miss', 'miss'],
     anyPick ? ['pick', 'Selected day'] : null,
     anyTrend ? ['trend', '7-day trend', 'trend'] : null,
     ['avg', 'Average', 'avg'],

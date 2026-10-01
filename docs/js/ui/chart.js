@@ -10,7 +10,7 @@ const W = 340;
 const H = 190;
 const PAD = { top: 18, right: 46, bottom: 30, left: 38 };
 const LINE = '#9C6832'; // --rock-500: recessive series
-const ACCENT = '#F0B25C'; // --accent: the latest week only, gold leaf edged in ink
+const LATEST = '#1E140C'; // --ink: the latest week (gold is kept for what you achieved)
 const INK = '#1E140C'; // --ink
 const SURFACE = '#E6D0A8'; // --bg: ring around markers
 const GRID = 'rgba(42, 28, 16, 0.14)';
@@ -57,7 +57,7 @@ export function weightChart(points) {
     const size = latest ? 10 : 8;
     return s('rect', {
       x: (x(i) - size / 2).toFixed(1), y: (y(p.avg) - size / 2).toFixed(1), width: size, height: size,
-      fill: latest ? ACCENT : LINE, stroke: latest ? INK : SURFACE, 'stroke-width': latest ? '1.5' : '2', class: latest ? 'latest' : null,
+      fill: latest ? LATEST : LINE, stroke: SURFACE, 'stroke-width': latest ? '1.5' : '2', class: latest ? 'latest' : null,
     });
   };
 

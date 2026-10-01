@@ -1,7 +1,7 @@
 // Weight: the 7-day average, its weekly change and weekly averages.
 // A daily weight is never shown, and there is no way to type one in.
 
-import { h, hl } from './dom.js';
+import { h } from './dom.js';
 import { button, legend } from './components.js';
 import { metricSwitch } from './history.js';
 import { fmtDayMonth } from '../core/time.js';
@@ -93,7 +93,7 @@ export function renderWeight(ctx, app) {
           note('Up to', fmtDayMonth(summary.end)),
           note('Weigh-ins', `${cur.n} of 7`))),
       summary.change != null
-        ? h('p', { class: 'gap', 'data-testid': 'weight-change' }, 'Change from the 7 days before: ', hl(signedKg(summary.change)), '.')
+        ? h('p', { class: 'gap', 'data-testid': 'weight-change' }, `Change from the 7 days before: ${signedKg(summary.change)}.`)
         : h('p', { class: 'quiet small gap' }, 'The change appears once the 7 days before also have 3 weigh-ins.')),
     h('section', { class: 'section', 'data-block': 'chart' },
       h('div', { class: 'label' }, 'Weekly averages'),

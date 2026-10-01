@@ -1,7 +1,7 @@
 // The temptation flow. Fixed and offline. It holds the line and never argues
 // against fasting. Each event records time, trigger and outcome.
 
-import { h, hl, live } from './dom.js';
+import { h, live } from './dom.js';
 import { button, choice, scale, TRIGGER_OPTIONS } from './components.js';
 import { openSheet } from './sheet.js';
 import * as store from '../store.js';
@@ -207,7 +207,7 @@ function render(app, api, id) {
         const plannedMin = plannedStartMin(today, todayRec, ctx.settings);
         const plannedTs = at(today, plannedMin);
         lead = ctx.nowTs < plannedTs
-          ? h('p', { class: 'statement' }, 'Your window opens at ', hl(fmtMinutes(plannedMin)), '. ',
+          ? h('p', { class: 'statement' }, `Your window opens at ${fmtMinutes(plannedMin)}. `,
             live('span', {}, (ts) => `That is ${fmtDuration(Math.max(0, plannedTs - ts))} away.`))
           : h('p', { class: 'statement' }, 'Your planned time has come. Open the window when you sit down to eat.');
       } else if (sit.kind === 'open') {
@@ -284,7 +284,7 @@ function render(app, api, id) {
         const workdayEarly = cutoffApplies(today, todayRec, ctx.settings) && minutesOfDay(ctx.nowTs) < CUTOFF_MIN;
         blocks.push(h('section', { class: 'section flush' },
           h('p', { class: 'statement' }, 'Open the window now'),
-          h('p', { class: 'gap-s' }, `This starts your ${clock}. Everything you eat fits by `, hl(fmtTime(ctx.nowTs + ctx.windowMsFor(today))), '.'),
+          h('p', { class: 'gap-s' }, `This starts your ${clock}. Everything you eat fits by ${fmtTime(ctx.nowTs + ctx.windowMsFor(today))}.`),
           workdayEarly ? h('p', { class: 'gap-s' }, 'Today is a workday and it is before 16:00, so today will count as a miss.') : null,
           h('div', { class: 'gap' }, button(`Start the ${clock}`, openNow, { block: true, name: 'open-now' }))));
       }
@@ -293,7 +293,7 @@ function render(app, api, id) {
           h('p', { class: 'statement' }, 'Eat very little'),
           h('p', { class: 'gap-s' }, 'A small portion. Protein only. Then close it again.'),
           sit.kind === 'late' ? h('p', { class: 'quiet small gap-s' }, 'This counts against last night.') : null,
-          h('div', { class: 'gap' }, button('Log a small portion', () => ateOutside('little'), { block: true, name: 'eat-little' })),
+          h('div', { class: 'gap' }, button('Log a small portion', () => ateOutside('little'), { kind: blocks.length ? 'outline' : 'primary', block: true, name: 'eat-little' })),
           h('div', { class: 'gap-s' }, button('I ate more than that', () => ateOutside('meal'), { kind: 'secondary', name: 'ate-more' }))));
       }
       return h('div', {}, head,

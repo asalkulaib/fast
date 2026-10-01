@@ -6,7 +6,7 @@ Live app: https://asalkulaib.github.io/fast/
 
 ## The look
 
-Nafud at midday: sand is the page, umber ink the text, and gold leaf marks the one value that matters on each screen. Clay appears only for misses. Fonts are Cormorant Garamond, EB Garamond and Jost, with square corners and hairline rules.
+Nafud at midday: sand is the page and umber ink the text. Gold leaf means one thing, that you did it: a successful day, a fasting goal reached, a day left wanting, the fast climber on Uhud; and it is the sun. A miss is always clay stripes, so it never rests on its red alone. Each screen has one solid button for its main action; others are outlined or plain. Cormorant Garamond sets the words and the few big figures, EB Garamond the text, and Jost every other number. Square corners and hairline rules.
 
 ## Use it on your iPhone
 
@@ -62,7 +62,7 @@ Today keeps the meal buttons, the check-in and Uhud. While a fullness check is r
 
 On Satiety and History, tap a legend item to show only that one; the rest fade out. On Satiety you can also tap a mark, line or bar, and the choice applies to every chart and the meal list at once. Tap the item again, or Show all, to see everything; leaving the tab also resets it. (On the History chart, tapping a day still reads that day.)
 
-Every colour-coded visual has a legend that names each colour in words: the ring on Today, the week strip, Uhud, the History chart, the weight chart and the Satiety charts. Clay red always means a miss. Sand means a paused day on the strip and the chart, time still ahead on the ring, and the comfortable zone on Satiety. On Satiety each way of finishing also has its own shape: a triangle for left wanting, a square for satisfied and a diamond for overfull.
+Every colour-coded visual has a legend that names each colour in words: the sun dial and the window band on Today, the Week schedule, Uhud, the History chart, the weight chart and the Satiety charts. Clay stripes always mean a miss. Sand means a paused day on the schedule and the chart, time still ahead on the dial and the band, and the comfortable zone on Satiety. On Satiety each way of finishing also has its own shape: a triangle for left wanting, a square for satisfied and a diamond for overfull.
 
 ## Fullness (شبع)
 
@@ -79,7 +79,9 @@ Thirty steps reach the summit. A climber who arrives stays there, and a new one 
 
 ## Fasting stages
 
-While you fast, Today shows a 24-hour ring timed from your last bite (or from when you began your fast), with the time fasted and the stage in its centre. A cream tick marks your fasting goal, and the line below says how far it is. An icon marks each stage: a plate while digesting, a drop as blood sugar settles, a flame for the metabolic switch and a bolt for ketones. The current stage's icon is gold. Before your window the ring leads Today; after it, the ring sits below the result. The hours are typical, not exact, and never a target. Past 24 hours the ring stays full.
+While you fast, Today shows the fast as the sun crossing the Nafud: it rises from the dunes on the left at your last bite (or when you began your fast), passes overhead at 12 hours and sets on the right at 24. The hours already fasted are laid in dark rock behind it, with the time fasted and the stage under the arc. A dark tick marks your fasting goal, and the line below says how far it is; once you reach it, "reached" turns gold. An icon marks each stage: a plate while digesting, a drop as blood sugar settles, a flame for the metabolic switch and a bolt for ketones; the current one is set in a dark circle. Before your window the dial leads Today; after it, a smaller one sits below the result. The hours are typical, not exact, and never a target. Past 24 hours the sun rests on the far horizon.
+
+While the window is open, a band under the countdown fills as the hours pass: time used in dark rock, time left in sand, then the dashed 15 minutes of grace. Past the grace it turns to clay stripes.
 
 | Stage | Typical time | Based on |
 |---|---|---|
@@ -92,7 +94,7 @@ Autophagy is described as uncertain instead of being given an hour: the evidence
 
 ## History
 
-History has three views: Fast, Feast and Weight. Weight opens the weight averages and import (see below). Fast and Feast chart, day by day, either your fasts or your eating windows, as bars or a line, over 7, 30 or 90 days. A day's fast runs from your last bite before it to that day's first bite. Missed days show in clay. A solid line shows the 7-day trend and a dashed line the average. A legend names every mark: hours, miss, selected day, trend, average and paused. Paused days are shaded and left out. Tap a day to read its value and trend, then Open this day to edit it. Show as a table lists every value. Fast remembers your choices.
+History has three views: Fast, Feast and Weight. Weight opens the weight averages and import (see below). Fast and Feast chart, day by day, either your fasts or your eating windows, as bars or a line, over 7, 30 or 90 days. A day's fast runs from your last bite before it to that day's first bite. Missed days show in clay stripes; the selected day is solid ink. A solid line shows the 7-day trend and a dashed line the average. A legend names every mark: hours, miss, selected day, trend, average and paused. Paused days are shaded and left out. Tap a day to read its value and trend, then Open this day to edit it. Show as a table lists every value. Fast remembers your choices.
 
 ## Pauses
 
@@ -138,7 +140,7 @@ Fast cannot ring while it is closed. In More, Alarms, switch it on and build a s
 
 ## Week
 
-A strip of seven squares opens the week: ink for a success, clay for a miss, sand for a paused day, and a gold dot on days left wanting. Tap a square to open the day. A legend under the strip names each square. Satiety numbers and findings are on the Satiety tab.
+The week opens as a schedule: a row a day, Sunday to Saturday, each eating window drawn on a line from 04:00 to 04:00 (late eating sits with its evening, as Fast counts it), with its times and result beside it. A success is solid ink, a miss clay stripes, a paused day sand; a clay cross marks eating outside the window, and a dashed line marks 16:00 on workdays. The square at the start of each row repeats the result, with a gold dot on days left wanting. Tap a row to open the day. A legend under the schedule names every mark. Satiety numbers and findings are on the Satiety tab.
 
 ## Travel
 

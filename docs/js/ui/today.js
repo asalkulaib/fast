@@ -1,7 +1,7 @@
 // Today: the eating window.
 
-import { h, hl, live } from './dom.js';
-import { button, choice, scale, timeField, TRAINING_OPTIONS, STOP_TEXT } from './components.js';
+import { h, s, live } from './dom.js';
+import { button, choice, hatch, key, legend, scale, timeField, TRAINING_OPTIONS, STOP_TEXT } from './components.js';
 import * as store from '../store.js';
 import {
   HOUR, MIN, addDays, fmtCountdown, fmtDayLong, fmtDayShort, fmtDuration, fmtMinutes, fmtTime, fmtWhen, isWorkweekday, minutesOfDay, now,
@@ -26,7 +26,8 @@ const hoursWord = (ms) => { const n = Math.round(ms / HOUR); return `${n} ${n ==
 export function signature(ctx) {
   const { mode, rec } = ctx.mode;
   const parts = [mode, ctx.todayKey, minutesOfDay(ctx.nowTs) >= CUTOFF_MIN, !!lateNightDay(ctx)];
-  if (mode === 'open') parts.push(windowPhase(rec, ctx.nowTs, ctx.windowMsFor(rec.day)));
+  // While the window is open, its band moves on every minute.
+  if (mode === 'open') parts.push(windowPhase(rec, ctx.nowTs, ctx.windowMsFor(rec.day)), Math.floor((ctx.nowTs - rec.firstBite) / MIN));
   if (mode === 'closed') parts.push(canReopen(rec, ctx.nowTs, ctx.windowMsFor(rec.day)));
   parts.push(runningFullness(ctx).length);
   // While fasting, redraw the ring every 5 minutes; each stage starts on a 5-minute mark.
@@ -76,8 +77,8 @@ function beforeBlock(ctx, app) {
   const late = lateNightDay(ctx);
   // On feasting hours there is no planned time: the window opens when you choose.
   const plannedLine = isFlexible(key, ctx.settings)
-    ? h('p', { class: 'gap', 'data-testid': 'flexible-line' }, 'Your ', hl(`${Math.round(ctx.windowMsFor(key) / HOUR)}-hour window`), ' opens when you choose.')
-    : h('p', { class: 'gap' }, 'Window planned for ', hl(fmtMinutes(planned)), '.');
+    ? h('p', { class: 'gap', 'data-testid': 'flexible-line' }, `Your ${Math.round(ctx.windowMsFor(key) / HOUR)}-hour window opens when you choose.`)
+    : h('p', { class: 'gap' }, `Window planned for ${fmtMinutes(planned)}.`);
   const goalNote = tapNote('Goal', goalLabel(ctx.windowMsFor(key)), () => showGoalSheet(app), 'edit-goal');
   // From Begin fast, a start before the last bite on record leads to that bite.
   const beginFast = () => showBeginFastSheet(app, {
@@ -108,7 +109,7 @@ function beforeBlock(ctx, app) {
       ? h('div', { class: 'gap-l' }, button('Start a meal', () => showStartMealSheet(app), { big: true, block: true, name: 'start-meal' }))
       : h('div', { class: 'btn-pair start-actions gap-l' },
         button('Start a meal', () => showStartMealSheet(app), { big: true, block: true, name: 'start-meal' }),
-        button('Begin fast', beginFast, { big: true, block: true, name: 'begin-fast' })),
+        button('Begin fast', beginFast, { kind: 'outline', big: true, block: true, name: 'begin-fast' })),
     h('p', { class: 'quiet small gap' }, 'Until then: water, sparkling water, black coffee, espresso, plain tea.'),
     late
       ? h('div', { class: 'gap' }, button('Eating late? Count it against last night', () => showOutsideSheet(app, { day: late }), { kind: 'secondary', name: 'late-night' }))
@@ -176,11 +177,12 @@ function openBlock(ctx, app, rec) {
     h('div', { class: 'gap' },
       live('div', { class: 'countdown', 'data-testid': 'countdown', role: 'timer' }, (t) => fmtCountdown(closesAt - t)),
       h('div', { class: 'label countdown-caption' }, `left of ${hoursWord(windowMs)}`)),
+    windowBand(rec, ctx.nowTs, windowMs),
     phase === 'warn'
-      ? h('p', { class: 'gap-l', 'data-testid': 'warn-30' }, live('span', { class: 'hl' }, (t) => minsLeft(t, closesAt)), ` left. The window closes at ${fmtTime(closesAt)}.`)
+      ? h('p', { class: 'gap-l', 'data-testid': 'warn-30' }, live('span', { class: 'num' }, (t) => minsLeft(t, closesAt)), ` left. The window closes at ${fmtTime(closesAt)}.`)
       : null,
     phase === 'grace'
-      ? h('p', { class: 'gap-l', 'data-testid': 'grace' }, `Your ${hoursWord(windowMs)} are up. `, live('span', { class: 'hl' }, (t) => minsLeft(t, rec.firstBite + windowMs + GRACE_MS)), ' of grace left.')
+      ? h('p', { class: 'gap-l', 'data-testid': 'grace' }, `Your ${hoursWord(windowMs)} are up. `, live('span', { class: 'num' }, (t) => minsLeft(t, rec.firstBite + windowMs + GRACE_MS)), ' of grace left.')
       : null,
     phase === 'over'
       ? h('p', { class: 'statement clay gap-l', 'data-testid': 'over' }, live('span', {}, (t) => `Over by ${fmtDuration(t - closesAt)}`))
@@ -188,10 +190,46 @@ function openBlock(ctx, app, rec) {
     e.openedEarly ? h('p', { class: 'gap' }, 'Opened before 16:00, so today counts as a miss.') : null,
     eating
       ? eatingNow(app, eating, { another: true })
-      : h('div', { class: 'gap-l' }, button('Start a meal', () => showStartMealSheet(app), { block: true, name: 'start-meal' })),
-    h('div', { class: 'gap' }, button("I'm done eating", () => showDoneEatingSheet(app, rec.day), { block: true, name: 'done-eating' })),
+      : h('div', { class: 'gap-l' }, button('Start a meal', () => showStartMealSheet(app), { kind: 'outline', block: true, name: 'start-meal' })),
+    // One main action: finishing the meal while eating, closing the window between meals.
+    h('div', { class: 'gap' }, button("I'm done eating", () => showDoneEatingSheet(app, rec.day), { kind: eating ? 'outline' : 'primary', block: true, name: 'done-eating' })),
     h('div', { class: 'gap-s' }, button('Change opening time', () => showOpeningSheet(app, rec.day), { kind: 'secondary', name: 'change-opening' })),
   );
+}
+
+/**
+ * The window as a band: time used in dark rock, time left in sand, then the
+ * dashed 15 minutes of grace. Past the grace the band turns to clay stripes,
+ * the mark of a miss.
+ */
+function windowBand(rec, nowTs, windowMs) {
+  const W = 340;
+  const HT = 46;
+  const X0 = 1;
+  const X1 = 339;
+  const Y = 4;
+  const BH = 16;
+  const total = windowMs + GRACE_MS;
+  const x = (ms) => X0 + (X1 - X0) * Math.min(1, Math.max(0, ms / total));
+  const used = Math.max(0, nowTs - rec.firstBite);
+  const over = used > total;
+  const gx = x(windowMs);
+  const miss = hatch();
+  const ticks = Array.from({ length: Math.floor(windowMs / HOUR) + 1 }, (_, i) => s('line', {
+    x1: x(i * HOUR).toFixed(1), x2: x(i * HOUR).toFixed(1), y1: Y + BH + 2, y2: Y + BH + 7, stroke: '#1E140C', 'stroke-opacity': 0.5,
+  }));
+  return h('div', { class: 'gap', 'data-testid': 'window-band', 'data-used': String(Math.round(used / MIN)), 'data-over': String(over) },
+    s('svg', { class: 'chart band', viewBox: `0 0 ${W} ${HT}`, 'aria-hidden': 'true', focusable: 'false' },
+      miss.defs,
+      s('rect', { x: X0, y: Y, width: (gx - X0).toFixed(1), height: BH, fill: '#D8BF93' }),
+      s('rect', { x: gx.toFixed(1), y: Y + 0.5, width: (X1 - gx - 0.5).toFixed(1), height: BH - 1, fill: 'none', stroke: '#1E140C', 'stroke-width': 1, 'stroke-dasharray': '2 2' }),
+      over
+        ? s('rect', { x: X0, y: Y, width: X1 - X0, height: BH, fill: miss.fill, stroke: '#9E3B23', 'stroke-width': 1.2 })
+        : s('rect', { x: X0, y: Y, width: (x(used) - X0).toFixed(1), height: BH, fill: '#4B2E14' }),
+      ...ticks,
+      s('text', { x: X0, y: HT - 4 }, fmtTime(rec.firstBite)),
+      s('text', { x: gx.toFixed(1), y: HT - 4, 'text-anchor': 'end' }, fmtTime(rec.firstBite + windowMs))),
+    legend([['fasted', 'Time used'], ['ahead', 'Time left'], ['grace', '15 min grace'], over ? [key('miss'), 'Over'] : null], 'band-legend'));
 }
 
 // ---------- Forgotten close ----------
@@ -245,8 +283,7 @@ function reasonLine(reason, e) {
 /** The meal being eaten, with its Finished button (and Start another meal while the window is open). */
 function eatingNow(app, meal, { another = false } = {}) {
   return h('div', { class: 'gap-l', 'data-block': 'eating' },
-    h('div', { class: 'label' }, meal.outside ? 'Eating, outside the window' : 'Eating'),
-    h('p', { class: 'gap-s' }, `${meal.name || 'A meal'}, since ${fmtTime(meal.startedAt)}.`),
+    h('p', {}, `${meal.outside ? 'Eating outside the window: ' : 'Eating: '}${meal.name || 'a meal'}, since ${fmtTime(meal.startedAt)}.`),
     h('div', { class: 'gap' }, button('Finished this meal', () => showFinishMealSheet(app, meal.id), { block: true, name: 'finish-meal' })),
     another ? h('div', { class: 'gap-s' }, button('Start another meal', () => showStartMealSheet(app), { kind: 'secondary', name: 'another-meal' })) : null);
 }

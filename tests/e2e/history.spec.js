@@ -46,7 +46,9 @@ test('history: tap a day to read it, open it, or see the table', async ({ page }
   const bar = page.getByTestId('history-chart').locator('rect[data-day="2026-09-23"]');
   await bar.click();
   await expect(page.getByTestId('history-readout')).toHaveText('Wed 23 Sep: window 4 h 20 min, a miss. 7-day trend 3 h 45 min.');
-  await expect(bar).toHaveAttribute('fill', '#F0B25C');
+  // Selected: an ink edge (this day is a miss, so it keeps its stripes).
+  await expect(bar).toHaveAttribute('stroke', '#1E140C');
+  await expect(bar).toHaveAttribute('stroke-width', '1.5');
   await page.locator('[data-action="history-toggle-table"]').click();
   const rows = page.getByTestId('history-table').locator('tbody tr');
   await expect(rows).toHaveCount(7);
@@ -61,7 +63,7 @@ test('history: nothing logged yet shows a quiet empty state', async ({ page }) =
   await expect(page.locator('.history .dunes')).toBeVisible();
 });
 
-test('history: misses in clay, the average and the 7-day trend, named in a legend', async ({ page }) => {
+test('history: misses in clay stripes, the average and the 7-day trend, named in a legend', async ({ page }) => {
   await openAt(page, '2026-09-26T23:00', '#history');
   await seed(page, WEEK);
   await pick(page, 'history-metric', 'feast');
@@ -69,9 +71,9 @@ test('history: misses in clay, the average and the 7-day trend, named in a legen
   const chart = page.getByTestId('history-chart');
   // Monday opened before 16:00, Wednesday ran over, Thursday had eating outside.
   await expect(chart.locator('rect[data-miss="true"]')).toHaveCount(3);
-  await expect(chart.locator('rect[data-day="2026-09-21"]')).toHaveAttribute('fill', '#9E3B23');
+  await expect(chart.locator('rect[data-day="2026-09-21"]')).toHaveAttribute('fill', /^url\(#miss-hatch/); // clay stripes
   await expect(chart.locator('rect[data-day="2026-09-22"]')).toHaveAttribute('fill', '#9C6832');
-  await expect(chart.locator('rect[data-day="2026-09-26"]')).toHaveAttribute('fill', '#F0B25C'); // selected
+  await expect(chart.locator('rect[data-day="2026-09-26"]')).toHaveAttribute('fill', '#1E140C'); // selected, in ink
   await expect(chart.getByTestId('avg-line')).toHaveCount(1);
   await expect(chart.getByTestId('trend-line')).toHaveCount(1);
   await expect(page.getByTestId('history-legend').locator('.legend-item')).toHaveText(['Hours in the window', 'Miss', 'Selected day', '7-day trend', 'Average']);

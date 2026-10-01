@@ -167,12 +167,15 @@ h3 {
   color: var(--text-display);
 }
 
+/* Data figures share one voice with every other number: Jost, tabular. */
 .figure {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 32px;
-  line-height: 1.1;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 30px;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
   color: var(--text-display);
+  font-variant-numeric: tabular-nums lining-nums;
 }
 
 .num {
@@ -405,8 +408,8 @@ sup.fn {
   font-size: 15px;
   line-height: 1.2;
   letter-spacing: 0.04em;
-  color: var(--ink);
-  background: transparent;
+  color: var(--bg-raised);
+  background: var(--ink);
   border: 1px solid var(--ink);
   text-align: center;
   transition: background-color 250ms ease-out, color 250ms ease-out;
@@ -414,7 +417,21 @@ sup.fn {
 
 .btn:active,
 .btn.pressed {
-  background: var(--accent);
+  background: var(--sand-600);
+  border-color: var(--sand-600);
+  color: var(--bg-raised);
+}
+
+/* An action beside the main one. */
+.btn.outline {
+  color: var(--ink);
+  background: transparent;
+}
+
+.btn.outline:active,
+.btn.outline.pressed {
+  background: var(--shade);
+  border-color: var(--ink);
   color: var(--ink);
 }
 
@@ -863,101 +880,6 @@ sup.fn {
   text-align: right;
 }
 
-.days {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.days > li {
-  border-top: 1px solid var(--rule-quiet);
-}
-
-.dayrow {
-  display: grid;
-  grid-template-columns: 76px minmax(0, 1fr) auto;
-  column-gap: var(--s3);
-  align-items: baseline;
-  width: 100%;
-  min-height: 52px;
-  padding: var(--s3) 0;
-  text-align: left;
-}
-
-.dayrow .d {
-  font-family: var(--font-ui);
-  font-weight: 500;
-  font-size: 14px;
-  letter-spacing: 0.04em;
-  color: var(--text-label);
-}
-
-.dayrow .w {
-  font-family: var(--font-ui);
-  font-weight: 500;
-  font-size: 14px;
-  color: var(--text-body);
-}
-
-.dayrow .r {
-  font-size: 15px;
-  color: var(--text-quiet);
-  text-align: right;
-}
-
-.dayrow .r.ok {
-  color: var(--text-label);
-}
-
-/* ---------- Week strip ---------- */
-
-.strip {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  column-gap: var(--s2);
-}
-
-.strip-day {
-  display: grid;
-  justify-items: center;
-  row-gap: var(--s1);
-  min-height: 44px;
-}
-
-.strip-cell {
-  display: grid;
-  place-items: center;
-  width: 100%;
-  aspect-ratio: 1;
-  max-width: 40px;
-  border: 1px solid var(--rule-quiet);
-}
-
-.strip-day[data-result='success'] .strip-cell {
-  background: var(--ink);
-  border-color: var(--ink);
-}
-
-.strip-day[data-result='miss'] .strip-cell {
-  background: var(--clay);
-  border-color: var(--clay);
-}
-
-.strip-day[data-result='paused'] .strip-cell {
-  background: var(--sand-300);
-}
-
-.strip-day[data-result='future'] .strip-cell {
-  border-style: dashed;
-}
-
-.strip-dot {
-  width: 10px;
-  height: 10px;
-  background: var(--accent);
-  outline: 1px solid var(--ink);
-}
-
 /* A setting shown as a row; tapping it opens its wheel. */
 .setting-row {
   display: flex;
@@ -979,14 +901,6 @@ sup.fn {
   text-decoration: underline;
   text-decoration-color: var(--text-label);
   text-underline-offset: 4px;
-}
-
-.strip-name {
-  font-family: var(--font-ui);
-  font-weight: 500;
-  font-size: 12px;
-  letter-spacing: 0.04em;
-  color: var(--text-quiet);
 }
 
 /* ---------- Notices ---------- */
@@ -1200,12 +1114,12 @@ sup.fn {
 }
 
 .chart .latest {
-  fill: var(--accent);
-  stroke: var(--ink);
+  fill: var(--ink);
+  stroke: var(--bg);
 }
 
 .stage-icon .leaf {
-  fill: var(--accent);
+  fill: var(--ink);
   stroke: none;
 }
 
@@ -1307,7 +1221,7 @@ sup.fn {
 }
 
 .stage-icon.now {
-  stroke: var(--ink);
+  stroke: var(--bg-raised);
 }
 
 .stage-title {
@@ -1482,8 +1396,7 @@ html.locked body {
 .swatch.stage-now {
   width: 10px;
   height: 10px;
-  background: var(--accent);
-  outline: 1.5px solid var(--ink);
+  background: var(--ink);
 }
 
 .swatch.fasted {
@@ -1495,13 +1408,6 @@ html.locked body {
   height: 8px;
   background: var(--sand-300);
   outline: 1px solid var(--rule-quiet);
-}
-
-.swatch.needle {
-  width: 4px;
-  height: 14px;
-  background: var(--accent);
-  outline: 1.5px solid var(--ink);
 }
 
 .swatch.goal {
@@ -1597,12 +1503,120 @@ html.locked body {
 }
 
 .legend-pick[aria-pressed='true'] {
-  color: var(--text-display);
-  background: var(--accent);
+  color: var(--bg-raised);
+  background: var(--ink);
   text-decoration: none;
 }
 
 /* A choice that spans two columns, such as Other after the four meals. */
 .choice button.wide {
   grid-column: span 2;
+}
+
+/* ---------- The sun over the Nafud ---------- */
+
+.ring-wrap.dial-wrap {
+  width: min(340px, 100%);
+}
+
+.ring-wrap.dial-wrap.compact {
+  width: min(300px, 100%);
+}
+
+/* The time and the stage sit under the sun's path, above the dunes. */
+.dial-wrap .ring-centre {
+  inset: 36% 0 22% 0;
+}
+
+/* Legend keys drawn in SVG: the sun, a miss, eating outside, the 16:00 line. */
+.key {
+  flex: none;
+  width: 14px;
+  height: 14px;
+}
+
+/* ---------- Week as a schedule ---------- */
+
+.sched-head,
+.dayrow {
+  display: grid;
+  grid-template-columns: 16px 58px minmax(0, 1fr) 64px;
+  column-gap: var(--s2);
+  align-items: center;
+}
+
+.sched-head {
+  padding-bottom: var(--s1);
+}
+
+.sched-head text {
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 11px;
+  fill: var(--text-quiet);
+}
+
+.dayrow {
+  width: 100%;
+  min-height: 52px;
+  padding: var(--s2) 0;
+  border-top: 1px solid var(--rule-quiet);
+  text-align: left;
+}
+
+.dayrow .cell {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+.sched-line {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.dayrow .d {
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  color: var(--text-label);
+}
+
+.dayrow .t {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--text-body);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.dayrow .r {
+  font-size: 14px;
+  color: var(--text-quiet);
+  text-align: right;
+}
+
+.dayrow .r.ok {
+  color: var(--text-label);
+}
+
+/* ---------- The window as a band ---------- */
+
+.chart.band {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.swatch.grace {
+  width: 14px;
+  height: 10px;
+  border: 1px dashed var(--ink);
 }

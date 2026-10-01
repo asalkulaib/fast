@@ -1,8 +1,9 @@
 // Weekly review: one screen, weeks run Sunday to Saturday.
 
-import { h, hl } from './dom.js';
-import { button, legend } from './components.js';
-import { addDays, fmtDayShort, fmtDuration, fmtTime, fmtWeekRange, weekStart, weekdayShort, keyParts } from '../core/time.js';
+import { h, s } from './dom.js';
+import { button, hatch, key, legend } from './components.js';
+import { addDays, at, fmtDayShort, fmtDuration, fmtTime, fmtWeekRange, weekStart, weekdayShort, keyParts } from '../core/time.js';
+import { cutoffApplies } from '../core/rules.js';
 import { weekReview } from '../core/review.js';
 import { header, note } from './shared.js';
 import { pauseWord } from './pause.js';
@@ -10,21 +11,108 @@ import { LEFT_WANTING, dayFullness, mealsByDay } from '../core/fullness.js';
 
 const RESULT_WORD = { success: 'success', miss: 'miss', paused: 'paused', pending: 'in progress', unlogged: 'nothing logged' };
 
+// The schedule runs from 04:00 to 04:00, so late eating sits with its evening,
+// as Fast counts it.
+const AXIS_FROM = 4 * 60;
+const VW = 240;
+const INK = '#1E140C'; // --ink: a success
+const CLAY = '#9E3B23'; // --clay: a miss, striped
+const ROCK = '#9C6832'; // --rock-500: a window still open
+const BAND = '#D8BF93'; // --sand-300: a paused day
+const xAt = (minutes) => ((minutes - AXIS_FROM) / 1440) * VW;
+
+/** A day's result as a square: solid ink, clay stripes, sand, an outline, or dashed ahead; a gold dot when left wanting. */
+function resultCell(result, leftWanting) {
+  const sq = { x: 1, y: 3, width: 12, height: 12 };
+  let mark;
+  const parts = [];
+  if (result === 'success') mark = s('rect', { ...sq, fill: INK });
+  else if (result === 'miss') {
+    const m = hatch();
+    parts.push(m.defs);
+    mark = s('rect', { ...sq, fill: m.fill, stroke: CLAY, 'stroke-width': 1.2 });
+  } else if (result === 'paused') mark = s('rect', { ...sq, fill: BAND, stroke: INK, 'stroke-opacity': 0.25 });
+  else mark = s('rect', { ...sq, fill: 'none', stroke: INK, 'stroke-opacity': 0.4, 'stroke-dasharray': result === 'future' ? '2 2' : null });
+  parts.push(mark);
+  if (leftWanting) parts.push(s('rect', { x: 9, y: 0.5, width: 6, height: 6, fill: '#F0B25C', stroke: INK, 'stroke-width': 1, 'data-testid': 'left-wanting-dot' }));
+  return s('svg', { class: 'cell', viewBox: '0 0 16 16', 'aria-hidden': 'true', focusable: 'false' }, ...parts);
+}
+
 /**
- * The week at a glance: a square per day, Sunday to Saturday. Ink for a
- * success, clay for a miss, sand for a paused day, an outline otherwise;
- * a dot of gold leaf on days left wanting. Tap a square to open the day.
+ * The week as a schedule: a row a day, Sunday to Saturday, with the eating
+ * window drawn on a 24-hour line. Solid ink for a success, clay stripes for
+ * a miss, sand for a paused day; a clay cross where eating fell outside the
+ * window, and the 16:00 line on workdays. Tap a row to open the day.
  */
-function weekStrip(ctx, app, r) {
+function schedule(ctx, app, r) {
   const byDay = mealsByDay(ctx.meals);
-  return h('div', { class: 'strip gap', 'data-testid': 'week-strip' }, r.days.map((d) => {
+  const outsideOf = (day) => [
+    ...ctx.outside.filter((o) => o.day === day).map((o) => o.at),
+    ...ctx.meals.filter((m) => m.day === day && m.outside).map((m) => m.startedAt),
+  ];
+  let anyCutoff = false;
+  let anyOutside = false;
+  let anyOpen = false;
+  const rows = r.days.map((d) => {
+    const rec = ctx.days.get(d.day) || {};
     const result = d.future && d.result !== 'paused' ? 'future' : d.result;
     const lw = dayFullness(byDay.get(d.day) || [], ctx.days.get(d.day)) === LEFT_WANTING;
+    const from = at(d.day, '04:00');
+    const to = at(addDays(d.day, 1), '04:00');
+    const x = (ts) => Math.max(0, Math.min(VW, ((ts - from) / (to - from)) * VW));
+    const parts = [s('line', { x1: 0, x2: VW, y1: 8, y2: 8, stroke: INK, 'stroke-opacity': 0.25, 'stroke-dasharray': result === 'future' ? '2 3' : null })];
+    for (const hh of [6, 12, 18, 24]) parts.push(s('line', { x1: xAt(hh * 60), x2: xAt(hh * 60), y1: 5, y2: 11, stroke: INK, 'stroke-opacity': 0.25 }));
+    if (result === 'paused') parts.push(s('rect', { x: 0, y: 3, width: VW, height: 10, fill: BAND }));
+    else {
+      if (!d.future && cutoffApplies(d.day, rec, ctx.settings)) {
+        anyCutoff = true;
+        parts.push(s('line', { x1: xAt(16 * 60), x2: xAt(16 * 60), y1: 0, y2: 16, stroke: INK, 'stroke-width': 1, 'stroke-dasharray': '2 2', 'data-cutoff': d.day }));
+      }
+      if (d.firstBite) {
+        const end = d.lastBite || Math.max(d.firstBite, Math.min(ctx.nowTs, to));
+        const x0 = x(d.firstBite);
+        const x1 = Math.max(x0 + 2, x(end));
+        if (result === 'miss') {
+          const m = hatch();
+          parts.push(m.defs, s('rect', { x: x0.toFixed(1), y: 3, width: (x1 - x0).toFixed(1), height: 10, fill: m.fill, stroke: CLAY, 'stroke-width': 1.2, 'data-window': d.day }));
+        } else {
+          if (!d.lastBite) anyOpen = true;
+          parts.push(s('rect', { x: x0.toFixed(1), y: 3, width: (x1 - x0).toFixed(1), height: 10, fill: d.lastBite ? INK : ROCK, 'data-window': d.day }));
+        }
+      }
+      for (const ts of outsideOf(d.day)) {
+        anyOutside = true;
+        const xx = x(ts);
+        parts.push(s('path', { d: `M${(xx - 3).toFixed(1)} 4 L${(xx + 3).toFixed(1)} 12 M${(xx + 3).toFixed(1)} 4 L${(xx - 3).toFixed(1)} 12`, stroke: CLAY, 'stroke-width': 1.6, fill: 'none', 'data-outside': d.day }));
+      }
+    }
+    const res = dayResult(d);
+    const { d: dd } = keyParts(d.day);
+    const times = d.result === 'paused'
+      ? (pauseWord(d.paused) || '')
+      : d.firstBite ? (d.lastBite ? `${fmtTime(d.firstBite)} to ${fmtTime(d.lastBite)}` : `from ${fmtTime(d.firstBite)}`) : '';
     const words = [fmtDayShort(d.day), RESULT_WORD[result], lw ? 'left wanting' : null].filter(Boolean).join(', ');
-    return h('button', { type: 'button', class: 'strip-day', 'data-day': d.day, 'data-result': result, 'aria-label': words, onclick: () => app.go(`day/${d.day}`) },
-      h('span', { class: 'strip-cell' }, lw ? h('span', { class: 'strip-dot', 'data-testid': 'left-wanting-dot' }) : null),
-      h('span', { class: 'strip-name' }, weekdayShort(d.day).slice(0, 2)));
-  }));
+    return h('button', { type: 'button', class: 'dayrow', 'data-day': d.day, 'data-result': result, 'aria-label': times ? `${words}, ${times}` : words, onclick: () => app.go(`day/${d.day}`) },
+      resultCell(result, lw),
+      h('span', { class: 'd' }, `${weekdayShort(d.day)} ${dd}`),
+      h('span', { class: 'w' },
+        s('svg', { class: 'sched-line', viewBox: `0 0 ${VW} 16`, 'aria-hidden': 'true', focusable: 'false' }, ...parts),
+        times ? h('span', { class: 't' }, times) : null),
+      h('span', { class: `r${res.ok ? ' ok' : ''}` }, res.text));
+  });
+  const head = h('div', { class: 'sched-head', 'aria-hidden': 'true' },
+    h('span'), h('span'),
+    s('svg', { class: 'sched-line', viewBox: `0 0 ${VW} 12`, focusable: 'false' },
+      ...[[6, '06'], [12, '12'], [18, '18'], [24, '00']].map(([hh, t]) => s('text', { x: xAt(hh * 60), y: 10, 'text-anchor': 'middle' }, t))),
+    h('span'));
+  return h('div', { class: 'gap' },
+    h('div', { class: 'sched', 'data-testid': 'week-strip' }, head, rows),
+    legend([
+      ['success', 'Success'], [key('miss'), 'Miss'], ['paused', 'Paused'], ['outline', 'Open or not logged'], ['dashed', 'Still ahead'], ['dot', 'Left wanting'],
+      anyOpen ? ['bar', 'Window still open'] : null,
+      anyCutoff ? [key('cutoff'), '16:00 on workdays'] : null,
+      anyOutside ? [key('outside'), 'Ate outside the window'] : null,
+    ], 'strip-legend'));
 }
 
 const TRIGGER_WORD = { hunger: 'hunger', boredom: 'boredom', social: 'social', stress: 'stress', tired: 'tired', other: 'other' };
@@ -56,11 +144,6 @@ function dayResult(d) {
   }
 }
 
-/** What each square means: miss (clay red) and paused (sand) are always named. */
-const stripLegend = () => legend([
-  ['success', 'Success'], ['miss', 'Miss'], ['paused', 'Paused'], ['outline', 'Open or not logged'], ['dashed', 'Still ahead'], ['dot', 'Left wanting'],
-], 'strip-legend');
-
 export function renderWeek(ctx, app, weekKey) {
   const start = weekStart(weekKey || ctx.todayKey);
   const thisWeek = weekStart(ctx.todayKey);
@@ -81,8 +164,7 @@ export function renderWeek(ctx, app, weekKey) {
     header(ctx, app, { title: 'Week', sub: isCurrent ? 'This week' : null }),
     h('section', { class: 'section strong' },
       h('h1', { class: 'display', 'data-testid': 'week-range' }, fmtWeekRange(start)),
-      weekStrip(ctx, app, r),
-      stripLegend(),
+      schedule(ctx, app, r),
       h('div', { class: 'btn-row gap-s' },
         button('‹ Previous', () => app.go(`week/${addDays(start, -7)}`), { kind: 'secondary', name: 'prev-week' }),
         isCurrent ? null : button('Next ›', () => app.go(`week/${addDays(start, 7)}`), { kind: 'secondary', name: 'next-week' }))),
@@ -91,7 +173,7 @@ export function renderWeek(ctx, app, weekKey) {
         h('div', { class: 'main' },
           h('div', { class: 'label' }, 'Successful days'),
           // Paused days are not tracked, so they leave the count.
-          h('div', { class: 'figure gap-s', 'data-testid': 'success-count' }, hl(String(r.successCount)), ` of ${7 - r.pausedCount}`)),
+          h('div', { class: 'figure gap-s', 'data-testid': 'success-count' }, `${r.successCount} of ${7 - r.pausedCount}`)),
         h('div', { class: 'margin' },
           note('Best streak', days(r.streak.best)),
           r.pausedCount ? note('Paused', days(r.pausedCount)) : null)),
@@ -126,19 +208,5 @@ export function renderWeek(ctx, app, weekKey) {
         stat('Count', String(t.count), 'temptations'),
         stat('Held', t.decided ? `${t.held} of ${t.decided} (${Math.round(t.holdRate * 100)}%)` : 'none yet', 'hold-rate'),
         t.triggers.length ? stat('Top triggers', t.triggers.slice(0, 3).map((x) => `${TRIGGER_WORD[x.key] || x.key} ${x.count}`).join(', '), 'triggers') : null)),
-    h('section', { class: 'section' },
-      h('div', { class: 'label' }, 'Days'),
-      h('ul', { class: 'days gap-s' }, r.days.map((d) => {
-        const res = dayResult(d);
-        const { d: dd } = keyParts(d.day);
-        const span = d.result === 'paused'
-          ? (pauseWord(d.paused) || '')
-          : d.firstBite ? (d.lastBite ? `${fmtTime(d.firstBite)} to ${fmtTime(d.lastBite)}` : `from ${fmtTime(d.firstBite)}`) : '';
-        return h('li', {},
-          h('button', { type: 'button', class: 'dayrow', 'data-day': d.day, 'aria-label': `${fmtDayShort(d.day)} ${res.text}`, onclick: () => app.go(`day/${d.day}`) },
-            h('span', { class: 'd' }, `${weekdayShort(d.day)} ${dd}`),
-            h('span', { class: 'w' }, span),
-            h('span', { class: `r${res.ok ? ' ok' : ''}` }, res.text)));
-      }))),
   );
 }

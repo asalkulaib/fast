@@ -3,18 +3,23 @@ import { WEEK } from './seed-data.js';
 
 // The week strip, satiety insights, the shorter More screen and Alarms.
 
-test('the week strip: a square per day, coloured by result, a dot on days left wanting', async ({ page }) => {
+test('the week schedule: a row per day, its square by result, a dot on days left wanting', async ({ page }) => {
   await openAt(page, '2026-09-26T23:00', '#week');
   await seed(page, WEEK);
   const strip = page.getByTestId('week-strip');
-  await expect(strip.locator('.strip-day')).toHaveCount(7);
+  await expect(strip.locator('.dayrow')).toHaveCount(7);
   const result = (day) => strip.locator(`[data-day="${day}"]`);
   await expect(result('2026-09-20')).toHaveAttribute('data-result', 'success');
   await expect(result('2026-09-21')).toHaveAttribute('data-result', 'miss');
   await expect(result('2026-09-26')).toHaveAttribute('data-result', 'success');
   // Every meal left wanting on the 20th and the 24th.
   await expect(strip.getByTestId('left-wanting-dot')).toHaveCount(2);
-  await expect(result('2026-09-24')).toHaveAttribute('aria-label', 'Thu 24 Sep, miss, left wanting');
+  await expect(result('2026-09-24')).toHaveAttribute('aria-label', 'Thu 24 Sep, miss, left wanting, 18:00 to 20:00');
+  // Each window sits on the day's line; a miss is striped, eating outside is a cross.
+  await expect(strip.locator('rect[data-window="2026-09-21"]')).toHaveAttribute('fill', /^url\(#miss-hatch/);
+  await expect(strip.locator('rect[data-window="2026-09-20"]')).toHaveAttribute('fill', '#1E140C');
+  await expect(strip.locator('[data-outside="2026-09-24"]')).toHaveCount(1);
+  await expect(strip.locator('[data-cutoff]')).toHaveCount(5); // the 16:00 line on Sunday to Thursday
   await result('2026-09-23').click();
   await expect(page.locator('.day[data-day="2026-09-23"]')).toBeVisible();
 });
