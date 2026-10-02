@@ -60,7 +60,7 @@ test('a normal window: first bite, a meal, the 20-minute check, done eating', as
 
   await advance(page, 160); // 21:00
   await closeWindowAt(page);
-  await expect(page.getByTestId('window-length')).toHaveText('3 h 30 min');
+  await expect(page.getByTestId('window-length')).toHaveText('3h 30m');
   await expect(page.locator('[data-block="closed"]')).toHaveAttribute('data-result', 'success');
   await expect(page.getByTestId('result')).toHaveText('Success. All eating inside the window.');
   await expect(page.getByTestId('climb-fast').locator('.stat-value')).toHaveText('1 of 30');
@@ -85,7 +85,7 @@ test('4 h 10 min is a success inside the grace period', async ({ page }) => {
   await expect(page.getByTestId('grace')).toContainText('10 min of grace left');
   await advance(page, 5); // 21:10
   await closeWindowAt(page);
-  await expect(page.getByTestId('window-length')).toHaveText('4 h 10 min');
+  await expect(page.getByTestId('window-length')).toHaveText('4h 10m');
   await expect(page.locator('[data-block="closed"]')).toHaveAttribute('data-result', 'success');
 });
 
@@ -96,7 +96,7 @@ test('4 h 20 min is a miss, shown as over by 20 min', async ({ page }) => {
   await advance(page, 260); // 21:20
   await expect(page.getByTestId('over')).toHaveText('Over by 20 min');
   await closeWindowAt(page);
-  await expect(page.getByTestId('window-length')).toHaveText('4 h 20 min');
+  await expect(page.getByTestId('window-length')).toHaveText('4h 20m');
   await expect(page.getByTestId('window-length')).toHaveClass(/clay/);
   await expect(page.locator('[data-block="closed"]')).toHaveAttribute('data-result', 'miss');
   await expect(page.getByTestId('result')).toHaveText('Over by 20 min.');
@@ -134,7 +134,7 @@ test('weekend windows can move earlier or later', async ({ page }) => {
   await startFirstMeal(page);
   await advance(page, 225); // 22:45
   await closeWindowAt(page);
-  await expect(page.getByTestId('window-length')).toHaveText('3 h 45 min');
+  await expect(page.getByTestId('window-length')).toHaveText('3h 45m');
   await expect(page.locator('[data-block="closed"]')).toHaveAttribute('data-result', 'success');
   await expect(page.getByTestId('climb-fast').locator('.stat-value')).toHaveText('2 of 30');
 });
@@ -180,7 +180,7 @@ test('reopening inside the 4 hours keeps the day a success', async ({ page }) =>
   await expect(page.locator('[data-block="open"]')).toBeVisible();
   await advance(page, 60); // 20:30
   await closeWindowAt(page);
-  await expect(page.getByTestId('window-length')).toHaveText('3 h');
+  await expect(page.getByTestId('window-length')).toHaveText('3h');
   await expect(page.locator('[data-block="closed"]')).toHaveAttribute('data-result', 'success');
 });
 
@@ -306,7 +306,7 @@ test('just after midnight, last night\'s window can still be reopened inside its
   await expect(page.getByTestId('countdown')).toHaveText('0:30');
   await advance(page, 10); // 00:40
   await closeWindowAt(page); // last bite now, still Friday's window
-  await expect(page.getByTestId('window-length')).toHaveText('3 h 40 min');
+  await expect(page.getByTestId('window-length')).toHaveText('3h 40m');
   const db = await readDb(page);
   expect(db.days.find((d) => d.day === '2026-09-25').lastBite).toBe(ms('2026-09-26T00:40'));
   expect(db.days.find((d) => d.day === '2026-09-26' && d.firstBite)).toBeUndefined();

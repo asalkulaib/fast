@@ -7,9 +7,9 @@
 // sun rests on the far horizon. The stages are never a target.
 
 import { h, s, live } from './dom.js';
-import { button, key, legend } from './components.js';
+import { button, durationFigure, key, legend } from './components.js';
 import { openSheet, sheetHead } from './sheet.js';
-import { HOUR, fmtDuration, fmtElapsed } from '../core/time.js';
+import { HOUR, MIN, fmtDuration } from '../core/time.js';
 import { AUTOPHAGY_NOTE, SCALE_HOURS, SOURCES, STAGES, VARIATION_NOTE, fastingState } from '../core/stages.js';
 import { stageGlyph, stageIcon } from './icons.js';
 
@@ -126,7 +126,8 @@ function fastingRing(state, lastBiteTs, compact, goalHours) {
     dialSvg(state, goalHours),
     h('div', { class: 'ring-centre' },
       h('span', { class: 'sr-only' }, 'Fasting for'),
-      live('div', { class: 'ring-time', 'data-testid': 'fasting-for' }, (t) => fmtElapsed(t - lastBiteTs)),
+      // Redrawn each minute: large digits, small units.
+      live('div', { class: 'ring-time', 'data-testid': 'fasting-for' }, (t) => String(Math.round(Math.max(0, t - lastBiteTs) / MIN)), (mins) => durationFigure(Number(mins) * MIN)),
       stageChip(state.stage)));
 }
 

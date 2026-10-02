@@ -41,23 +41,33 @@ export function s(tag, props, ...children) {
 export const hl = (text) => h('span', { class: 'hl' }, text);
 
 /**
- * A text node whose content is recomputed on every tick.
- * fn(nowTs) -> string
+ * An element whose content is recomputed on every tick. fn(nowTs) -> string.
+ * With render, that string is a key and render(key) draws the children, as a
+ * figure with small units is drawn.
  */
-export function live(tag, props, fn) {
+export function live(tag, props, fn, render = null) {
   const el = h(tag, props);
   el.__live = fn;
-  el.textContent = fn(Date.now());
+  el.__render = render;
+  paint(el, fn(Date.now()));
   return el;
+}
+
+function paint(el, value) {
+  if (el.__shown === value) return;
+  el.__shown = value;
+  if (!el.__render) {
+    el.textContent = value;
+    return;
+  }
+  el.replaceChildren();
+  append(el, [el.__render(value)]);
 }
 
 /** Recomputes every live element under root. */
 export function updateLive(root, nowTs) {
   for (const el of root.querySelectorAll('*')) {
-    if (typeof el.__live === 'function') {
-      const text = el.__live(nowTs);
-      if (el.textContent !== text) el.textContent = text;
-    }
+    if (typeof el.__live === 'function') paint(el, el.__live(nowTs));
   }
 }
 

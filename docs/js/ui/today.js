@@ -1,7 +1,7 @@
 // Today: the eating window.
 
 import { h, s, live } from './dom.js';
-import { button, choice, closeButton, hatch, key, legend, scale, timeField, TRAINING_OPTIONS, STOP_TEXT } from './components.js';
+import { button, choice, closeButton, durationFigure, figureParts, hatch, key, legend, scale, timeField, TRAINING_OPTIONS, STOP_TEXT } from './components.js';
 import * as store from '../store.js';
 import {
   HOUR, MIN, addDays, fmtCountdown, fmtDayLong, fmtDayShort, fmtDuration, fmtMinutes, fmtTime, fmtWhen, isWorkweekday, minutesOfDay, now,
@@ -168,7 +168,7 @@ function fastDone(ctx, rec) {
     h('div', { class: 'row-x' },
       h('div', { class: 'label' }, 'Fast complete'),
       closeButton(() => store.updateDay(rec.day, { fastNoteClosed: rec.firstBite }), { name: 'close-fast-done' })),
-    h('div', { class: `display gap-s${reached ? ' hl' : ''}`, 'data-testid': 'fast-length' }, fmtDuration(fastMs)),
+    h('div', { class: `display gap-s${reached ? ' hl' : ''}`, 'data-testid': 'fast-length' }, durationFigure(fastMs)),
     reached ? h('p', { class: 'gap-s', 'data-testid': 'fast-goal' }, `Fasting goal of ${goalHours} h reached.`) : null);
 }
 
@@ -350,7 +350,7 @@ function closedBlock(ctx, app, rec) {
     h('div', { class: 'row' },
       h('div', { class: 'main' },
         h('div', { class: 'label' }, 'Window closed'),
-        h('h1', { class: `display gap-s ${success ? 'hl' : 'clay'}`, 'data-testid': 'window-length' }, fmtDuration(e.lengthMs))),
+        h('h1', { class: `display gap-s ${success ? 'hl' : 'clay'}`, 'data-testid': 'window-length' }, durationFigure(e.lengthMs))),
       h('div', { class: 'margin' },
         tapNote('First bite', fmtTime(rec.firstBite), () => showBiteTimeSheet(app, rec.day, 'first'), 'edit-first-bite'),
         tapNote('Last bite', fmtWhen(rec.lastBite, ctx.todayKey), () => showBiteTimeSheet(app, rec.day, 'last'), 'edit-last-bite'))),
@@ -385,7 +385,7 @@ function streakSection(ctx) {
     h('div', { class: 'row' },
       h('div', { class: 'main' },
         h('div', { class: 'label' }, 'Streak'),
-        h('div', { class: 'figure gap-s', 'data-testid': 'streak' }, days(ctx.streak.current))),
+        h('div', { class: 'figure gap-s', 'data-testid': 'streak' }, figureParts([[ctx.streak.current, ctx.streak.current === 1 ? ' day' : ' days']]))),
       h('div', { class: 'margin' }, note('Best', days(ctx.streak.best)))));
 }
 

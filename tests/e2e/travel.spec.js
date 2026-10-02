@@ -35,7 +35,7 @@ test.describe('in Dubai', () => {
     await advance(page, 210);
     await tap(page, 'done-eating');
     await tap(page, 'close-window');
-    await expect(page.getByTestId('window-length')).toHaveText('3 h 30 min');
+    await expect(page.getByTestId('window-length')).toHaveText('3h 30m');
     await expect(page.locator('[data-block="closed"]')).toHaveAttribute('data-result', 'success');
 
     // Thursday, seen from Dubai, says its times are Kuwait time.

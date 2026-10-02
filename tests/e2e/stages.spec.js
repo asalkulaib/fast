@@ -13,7 +13,7 @@ test('before the window: the ring leads Today and shows where the fast stands', 
   await seed(page, LAST_NIGHT);
   const before = page.locator('[data-block="before"]');
   await expect(before.getByTestId('fasting-ring')).toHaveAttribute('data-stage', 'switch');
-  await expect(page.getByTestId('fasting-for')).toHaveText('16 h 10 min');
+  await expect(page.getByTestId('fasting-for')).toHaveText('16h 10m');
   await expect(page.getByTestId('stage-name')).toHaveText('Metabolic switch');
   await expect(page.getByTestId('stage-next')).toHaveText('Next: ketones climbing, in about 7 h 50 min.');
   await expect(page.getByTestId('stage-marker')).toHaveAttribute('data-hours', '16.2');
@@ -40,7 +40,7 @@ test('a new stage arrives while the app is open', async ({ page }) => {
   await expect(page.locator('[data-block="stages"]')).toHaveClass(/fade-in/);
   // Later redraws within the same stage do not fade again.
   await advance(page, 5);
-  await expect(page.getByTestId('fasting-for')).toHaveText('12 h 6 min');
+  await expect(page.getByTestId('fasting-for')).toHaveText('12h 6m');
   await expect(page.locator('.ring-hero')).not.toHaveClass(/fade-in/);
 });
 
@@ -58,7 +58,7 @@ test('hidden while the window is open, then below the main block from the last b
   const stages = page.locator('[data-block="stages"]');
   await expect(stages.getByTestId('fasting-ring')).toBeVisible();
   await expect(page.getByTestId('stage-name')).toHaveText('Digesting');
-  await expect(page.getByTestId('fasting-for')).toHaveText('0 min');
+  await expect(page.getByTestId('fasting-for')).toHaveText('0m');
 });
 
 test('past 24 hours the ring is full and the last stage shows', async ({ page }) => {
@@ -66,7 +66,7 @@ test('past 24 hours the ring is full and the last stage shows', async ({ page })
   await seed(page, LAST_NIGHT);
   await expect(page.getByTestId('stage-name')).toHaveText('Ketones climbing');
   await expect(page.getByTestId('stage-next')).toHaveCount(0);
-  await expect(page.getByTestId('fasting-for')).toHaveText('26 h 30 min');
+  await expect(page.getByTestId('fasting-for')).toHaveText('26h 30m');
   await expect(ring(page).locator('.stage-icon.now')).toHaveAttribute('data-stage-icon', 'ketones');
 });
 

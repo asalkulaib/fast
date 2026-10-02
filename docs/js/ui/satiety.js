@@ -6,7 +6,7 @@
 // a diamond for overfull.
 
 import { h, s, live, dimOthers } from './dom.js';
-import { button, choice, focusLine, legend, STOP_TEXT } from './components.js';
+import { button, choice, figureParts, focusLine, legend, STOP_TEXT } from './components.js';
 import * as store from '../store.js';
 import { addDays, fmtDayShort, fmtDuration, fmtTime } from '../core/time.js';
 import { STOPS, ZONE, completed, satietyStats } from '../core/satiety.js';
@@ -71,6 +71,16 @@ const signed = (v) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toFixed(
 function tile(label, value, note, testid) {
   return h('div', { class: 'tile', 'data-testid': testid }, h('div', { class: 'label' }, label), h('div', { class: 'figure gap-s' }, value), h('p', { class: 'small quiet gap-s' }, note));
 }
+
+/** The number a chart leads with: large digits, small units. */
+function lead(parts, testid) {
+  return h('div', { class: 'figure lead gap-s', 'data-testid': testid }, figureParts(parts));
+}
+
+const average = (rows, value, weight) => {
+  const n = rows.reduce((a, r) => a + weight(r), 0);
+  return n ? rows.reduce((a, r) => a + value(r) * weight(r), 0) / n : null;
+};
 
 /** Fullness 20 minutes after each meal, with the comfortable zone as a band. */
 function landingChart(st) {
@@ -170,30 +180,38 @@ function insightsView(ctx, app, st) {
     return h('section', { class: 'section', 'data-block': 'satiety-insights' },
       h('p', { class: 'quiet' }, 'Your insights start with your first rated meal. Finish a meal and rate how it ended, then answer the fullness check 20 minutes later.'));
   }
-  const pct = (n, d) => (d ? `${Math.round((n / d) * 100)}%` : 'none');
+  const pct = (n, d) => (d ? figureParts([[Math.round((n / d) * 100), '%']]) : 'none');
+  // What each chart leads with.
+  const landing = st.landings.length ? st.landings.reduce((a, p) => a + p.value, 0) / st.landings.length : null;
+  const wanting = st.byStop.find((r) => r.stop === 'before_full');
+  const hunger = average(st.byStop.filter((r) => r.hungers), (r) => r.hunger, (r) => r.hungers);
   return h('div', { 'data-block': 'satiety-insights' },
     h('section', { class: 'section' },
       h('div', { class: 'tiles' },
-        tile('Satiety drift', st.drift == null ? 'not yet' : `${signed(st.drift)} pts`,
+        tile('Satiety drift', st.drift == null ? 'not yet' : figureParts([[signed(st.drift), ' pts']]),
           st.drift == null ? 'Needs a meal with both fullness readings.' : st.drift >= 1.5 ? 'Fullness keeps climbing after you stop. Stopping earlier would still land you satisfied.' : 'How much fullness rises in the 20 minutes after a meal.', 'tile-drift'),
-        tile('Landed in zone', `${st.landed} of ${st.done}`, `Meals that ended between ${ZONE[0]} and ${ZONE[1]} out of 10.`, 'tile-zone'),
-        tile('Meals complete', `${st.done} of ${st.meals}`, st.done === st.meals ? 'Every meal has both readings.' : `${st.meals - st.done} still missing the 20-minute check.`, 'tile-complete'),
+        tile('Landed in zone', figureParts([[st.landed, ` of ${st.done}`]]), `Meals that ended between ${ZONE[0]} and ${ZONE[1]} out of 10.`, 'tile-zone'),
+        tile('Meals complete', figureParts([[st.done, ` of ${st.meals}`]]), st.done === st.meals ? 'Every meal has both readings.' : `${st.meals - st.done} still missing the 20-minute check.`, 'tile-complete'),
         tile('Stopped past full', pct(st.pastFull, st.rated), st.pastFull ? 'Share of rated meals that ended overfull.' : 'You have not ended a meal overfull.', 'tile-past'))),
     h('section', { class: 'section' },
       h('div', { class: 'label' }, 'Where you land'),
-      h('p', { class: 'small quiet gap-s' }, 'Fullness 20 minutes after each meal. The shaded band is your comfortable zone; the shape and colour show how the meal ended.'),
+      landing != null ? lead([[landing.toFixed(1), ' of 10']], 'lead-landing') : null,
+      h('p', { class: 'small quiet gap-s' }, 'Average fullness 20 minutes after a meal, over the meals below. Each point is one meal; the shaded band is your comfortable zone, and the shape and colour show how the meal ended.'),
       st.landings.length ? landingChart(st) : h('p', { class: 'small gap' }, 'Answer one fullness check and your first point appears here.')),
     h('section', { class: 'section' },
       h('div', { class: 'label' }, 'The 20-minute lag'),
-      h('p', { class: 'small quiet gap-s' }, 'Average fullness right after eating, and again 20 minutes later. The steeper the line, the more your body was still catching up. The figure on the right is the rise.'),
+      st.drift != null ? lead([[signed(st.drift), ' pts']], 'lead-lag') : null,
+      h('p', { class: 'small quiet gap-s' }, 'The average rise in fullness over the 20 minutes after a meal. Below, by how you stopped: fullness right after and 20 minutes later. The steeper the line, the more your body was still catching up; the figure on the right is the rise.'),
       st.done ? lagChart(st) : h('p', { class: 'small gap' }, 'Answer one fullness check and the lines appear here.')),
     h('section', { class: 'section' },
       h('div', { class: 'label' }, 'How often you stop where'),
-      h('p', { class: 'small quiet gap-s' }, 'Across every rated meal.'),
+      lead([[wanting.count, ` of ${st.rated}`]], 'lead-stops'),
+      h('p', { class: 'small quiet gap-s' }, 'Meals you left wanting, the goal, out of every rated meal. Below, how often you stop each way.'),
       h('div', { class: 'gap' }, stopBars(st.byStop, { max: Math.max(1, ...st.byStop.map((r) => r.count)), value: (r) => r.count, text: (r) => `${r.count} (${Math.round(r.share * 100)}%)`, testid: 'stop-chart', label: 'Number of meals by how they ended.' }))),
     h('section', { class: 'section' },
       h('div', { class: 'label' }, 'Arriving hungry'),
-      h('p', { class: 'small quiet gap-s' }, 'Average hunger before the meal, 1 to 10, by how it ended.'),
+      hunger != null ? lead([[hunger.toFixed(1), ' of 10']], 'lead-hunger') : null,
+      h('p', { class: 'small quiet gap-s' }, 'Average hunger before a meal, 1 to 10. Below, by how the meal ended.'),
       h('div', { class: 'gap' }, stopBars(st.byStop, { max: 10, value: (r) => r.hunger, text: (r) => `${r.hunger.toFixed(1)} (${r.hungers})`, testid: 'hunger-chart', label: 'Average hunger before meals, by how they ended.' }))),
     findings(ctx),
     h('section', { class: 'section' },

@@ -83,7 +83,7 @@ test('starting the first meal ends the fast: its length, gold when it reached th
   await startMeal(page);
   const done = page.locator('[data-block="fast-done"]');
   await expect(done).toHaveAttribute('data-reached', 'true');
-  await expect(done.getByTestId('fast-length')).toHaveText('20 h 30 min');
+  await expect(done.getByTestId('fast-length')).toHaveText('20h 30m');
   await expect(done.getByTestId('fast-length')).toHaveClass(/hl/);
   await expect(done.getByTestId('fast-goal')).toHaveText('Fasting goal of 20 h reached.');
   await tap(page, 'close-fast-done');
@@ -99,7 +99,7 @@ test('a shorter fast gets its length alone, and nothing shows without a fast on 
   await seed(page, LAST_NIGHT);
   await startMeal(page);
   const done = page.locator('[data-block="fast-done"]');
-  await expect(done.getByTestId('fast-length')).toHaveText('19 h 30 min');
+  await expect(done.getByTestId('fast-length')).toHaveText('19h 30m');
   await expect(done.getByTestId('fast-length')).not.toHaveClass(/hl/);
   await expect(done.getByTestId('fast-goal')).toHaveCount(0);
   // Once the window closes, the note goes with it.

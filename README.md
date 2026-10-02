@@ -6,7 +6,7 @@ Live app: https://asalkulaib.github.io/fast/
 
 ## The look
 
-Nafud at midday: sand is the page and umber ink the text. Gold leaf means one thing, that you did it: a successful day, a fasting goal reached, a day left wanting, the fast climber on Uhud; and it is the sun. A miss is always clay stripes, so it never rests on its red alone. Each screen has one solid button for its main action; others are outlined or plain. Cormorant Garamond sets the words and the few big figures, EB Garamond the text, and Jost every other number. Each section sits on its own panel of lighter sand with soft corners, and what you tap is rounded: buttons and choices are pills. The dial, the chart marks and the legend keys keep their drawn shapes.
+Nafud at midday: sand is the page and umber ink the text. Gold leaf means one thing, that you did it: a successful day, a fasting goal reached, a day left wanting, the fast climber on Uhud; and it is the sun. A miss is always clay stripes, so it never rests on its red alone. Each screen has one solid button for its main action; others are outlined or plain. Cormorant Garamond sets the words and the few big figures, EB Garamond the text, and Jost every other number. Big figures have large digits and small units, as in 15h 10m, 5 of 7 or 104.7 kg, so the eye lands on the number first. Each section sits on its own panel of lighter sand with soft corners, and what you tap is rounded: buttons and choices are pills. The dial, the chart marks and the legend keys keep their drawn shapes.
 
 ## Use it on your iPhone
 
@@ -58,7 +58,7 @@ Every time in Fast is set on a rolling 24-hour wheel, like the iPhone clock. The
 
 Satiety has its own tab, laid out after your earlier satiety page. It has three views, and it opens on the last one you used:
 
-- Insights (the default) has four tiles: satiety drift (how much fullness rises in the 20 minutes after a meal), meals landed in the comfortable zone (6 to 8), meals complete, and meals stopped past full. Four charts follow: Where you land, The 20-minute lag (a line per way of finishing, from fullness right after to 20 minutes on), How often you stop where, and Arriving hungry. Then come findings from your own meals once ten are rated, and a table view.
+- Insights (the default) has four tiles: satiety drift (how much fullness rises in the 20 minutes after a meal), meals landed in the comfortable zone (6 to 8), meals complete, and meals stopped past full. Four charts follow, each led by its number: Where you land (average fullness 20 minutes after a meal), The 20-minute lag (the average rise, then a line per way of finishing, from fullness right after to 20 minutes on), How often you stop where (meals left wanting, the goal, out of all rated meals) and Arriving hungry (average hunger before a meal). Then come findings from your own meals once ten are rated, and a table view.
 - Now shows the fullness check waiting, with its countdown and Score my fullness now; any meal in progress, with Finished this meal; and how the day's eating ended.
 - Meals lists the last 30 days by day, newest first. Each meal reads hunger before → fullness right after → fullness at 20 minutes, followed by the drift. Tap one to edit it.
 
@@ -102,7 +102,7 @@ Autophagy is described as uncertain instead of being given an hour: the evidence
 
 ## History
 
-History has three views: Fast, Feast and Weight. Weight opens the weight averages and import (see below). Fast and Feast chart, day by day, either your fasts or your eating windows, as bars or a line, over 7, 30 or 90 days; those switches sit at the top of the chart's panel. A day's fast runs from your last bite before it to that day's first bite. Missed days show in clay stripes; the selected day is solid ink. A solid line shows the 7-day trend and a dashed line the average. A legend names every mark: hours, miss, selected day, trend, average and paused. Paused days are shaded and left out. Tap a day to read its value and trend, then Open this day to edit it. Show as a table lists every value. Fast remembers your choices.
+History has three views: Fast, Feast and Weight. Weight opens the weight averages and import (see below). Fast and Feast chart, day by day, either your fasts or your eating windows, as bars or a line, over 7, 30 or 90 days. It is one card: those switches on one slim line, then the average as a big figure with the dates it covers, then the chart, so the chart is on the first screen. Over 7 days each bar carries its hours. A day's fast runs from your last bite before it to that day's first bite. Fasts that reached your fasting goal are gold, and the rest rock brown. Missed days show in clay stripes, even after a long fast; the selected day is solid ink. A solid line shows the 7-day trend and a dashed line the average. A legend names every mark: goal reached, short of the goal (or hours in the window), miss, selected day, trend, average and paused. Paused days are shaded and left out. Tap a day to read its value and trend, then Open this day to edit it. Show as a table lists every value. Fast remembers your choices.
 
 ## Pauses
 

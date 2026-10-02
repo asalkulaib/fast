@@ -24,7 +24,7 @@ test('Undo reverses a time change, from a bar above the tabs', async ({ page }) 
   await expect(page.getByTestId('flash')).toHaveText('Undone.');
   await expect(page.locator('[data-action="undo"]')).toHaveCount(0);
   expect((await readDb(page)).days[0].lastBite).toBe(ms('2026-09-26T21:00'));
-  await expect(page.getByTestId('fasting-for')).toHaveText('16 h 10 min');
+  await expect(page.getByTestId('fasting-for')).toHaveText('16h 10m');
 });
 
 test('Undo brings back a window removed by mistake, with its meal', async ({ page }) => {

@@ -19,7 +19,7 @@ test('before the window: tap Last bite and roll it to a new time', async ({ page
   await expect(s.getByTestId('bite-summary')).toHaveText('Window 17:00 to 20:40, 3 h 40 min.');
   await tap(page, 'save-last-bite');
   await expect(page.getByTestId('flash')).toHaveText('Last bite saved: 20:40.');
-  await expect(page.getByTestId('fasting-for')).toHaveText('16 h 30 min');
+  await expect(page.getByTestId('fasting-for')).toHaveText('16h 30m');
   expect((await readDb(page)).days[0].lastBite).toBe(ms('2026-09-26T20:40'));
 });
 
@@ -35,7 +35,7 @@ test('after the window: tap First bite or Last bite to change just that time', a
   await tap(page, 'edit-last-bite');
   await setTime(page, 'edit-last-bite', '21:30');
   await tap(page, 'save-last-bite');
-  await expect(page.getByTestId('window-length')).toHaveText('3 h 50 min');
+  await expect(page.getByTestId('window-length')).toHaveText('3h 50m');
   const db = await readDb(page);
   expect(db.days[0]).toMatchObject({ firstBite: ms('2026-09-27T17:40'), lastBite: ms('2026-09-27T21:30') });
 });

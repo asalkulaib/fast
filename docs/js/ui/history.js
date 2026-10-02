@@ -1,13 +1,14 @@
 // History: fast or feast hours per day, as bars or a line, over 7, 30 or
-// 90 days. One series in recessive rock, missed days in clay and the
-// selected day in gold; a solid 7-day trend line and a dashed average line
-// on top; paused days shaded behind. A tap reads any day; a table view
-// repeats the values.
+// 90 days, in one card that leads with the average. One series in recessive
+// rock, fasts that reached the goal in gold, missed days in clay stripes and
+// the selected day in ink; a solid 7-day trend line and a dashed average line
+// on top; paused days shaded behind. Over 7 days each bar carries its hours.
+// A tap reads any day; a table view repeats the values.
 
 import { h, s, dimOthers } from './dom.js';
-import { button, choice, focusLine, hatch, key, legend } from './components.js';
+import { button, choice, durationFigure, focusLine, hatch, key, legend } from './components.js';
 import * as store from '../store.js';
-import { HOUR, addDays, fmtDayMonth, fmtDayShort, fmtDuration, weekdayShort, keyParts } from '../core/time.js';
+import { HOUR, addDays, fmtDayMonth, fmtDayShort, fmtDuration, fmtFigure, weekdayShort, keyParts } from '../core/time.js';
 import { dailySeries, hourScale, rollingAverage, summarize } from '../core/history.js';
 import { dunes } from './art.js';
 import { header } from './shared.js';
@@ -17,20 +18,21 @@ const HT = 220;
 const PAD = { top: 12, right: 8, bottom: 28, left: 36 };
 const MARK = '#9C6832'; // --rock-500: the series, recessive
 const MISS = '#9E3B23'; // --clay: a missed day, striped
-const PICK = '#1E140C'; // --ink: the selected day (gold is kept for what you achieved)
+const PICK = '#1E140C'; // --ink: the selected day
+const GOLD = '#F0B25C'; // --accent: a fast that reached its goal, edged in ink
 const INK = '#1E140C'; // --ink: the 7-day trend, the average (dashed) and edges
 const BAND = '#D8BF93'; // --sand-300: a paused day
 const SURFACE = '#F1E3C7'; // --bg-raised, the panel: ring around markers
 const GRID = 'rgba(42, 28, 16, 0.14)';
 
 const METRICS = {
-  fast: { key: 'fastMs', name: 'Fast', mark: 'Hours fasted', noun: 'fast', empty: 'Fasts appear here from the day after your first logged window.' },
+  fast: { key: 'fastMs', name: 'Fast', mark: 'Hours fasted', short: 'Short of the goal', noun: 'fast', empty: 'Fasts appear here from the day after your first logged window.' },
   feast: { key: 'feastMs', name: 'Feast', mark: 'Hours in the window', noun: 'window', empty: 'Your eating windows appear here once you close one.' },
 };
 
 const FOR_REASON = { travel: ' for travel', illness: ' for illness', ramadan: ' for Ramadan' };
 
-const FOCUS_KEYS = ['bar', 'miss', 'trend', 'avg', 'paused'];
+const FOCUS_KEYS = ['bar', 'goal', 'miss', 'trend', 'avg', 'paused'];
 
 let selected = null; // the day the reader tapped, kept across redraws
 
@@ -52,7 +54,7 @@ function linePath(values, xc, y) {
   return d.trim();
 }
 
-function chart({ series, trend, metric, kind, isMiss, avgMs, onPick, focus }) {
+function chart({ series, trend, metric, kind, isMiss, avgMs, onPick, focus, goalMs }) {
   const key = METRICS[metric].key;
   const n = series.length;
   const values = series.map((d) => d[key]);
@@ -86,9 +88,12 @@ function chart({ series, trend, metric, kind, isMiss, avgMs, onPick, focus }) {
   });
 
   // A miss is clay stripes, selected or not, so it never rests on its red alone.
+  // A fast that reached its goal is gold, edged in ink so it shows on the sand.
   const stripes = hatch();
-  const colour = (i) => (isMiss(series[i].day) ? stripes.fill : i === pickIdx ? PICK : MARK);
-  const edge = (i) => (i === pickIdx ? INK : isMiss(series[i].day) ? MISS : null);
+  const reached = (i) => metric === 'fast' && values[i] != null && !isMiss(series[i].day) && values[i] >= goalMs(series[i].day);
+  const colour = (i) => (isMiss(series[i].day) ? stripes.fill : i === pickIdx ? PICK : reached(i) ? GOLD : MARK);
+  const edge = (i) => (i === pickIdx ? INK : isMiss(series[i].day) ? MISS : reached(i) ? INK : null);
+  const seriesOf = (i) => (isMiss(series[i].day) ? 'miss' : reached(i) ? 'goal' : 'bar');
   const marks = [];
   const markers = [];
   if (kind === 'bars') {
@@ -98,8 +103,8 @@ function chart({ series, trend, metric, kind, isMiss, avgMs, onPick, focus }) {
       if (v == null) return;
       marks.push(s('rect', {
         x: (xc(i) - bw / 2).toFixed(1), y: y(v).toFixed(1), width: bw.toFixed(1), height: (y(0) - y(v)).toFixed(1),
-        fill: colour(i), 'data-day': series[i].day, 'data-miss': isMiss(series[i].day) ? 'true' : null, 'data-series': isMiss(series[i].day) ? 'miss' : 'bar',
-        stroke: edge(i), 'stroke-width': i === pickIdx ? 1.5 : edge(i) ? 1 : null,
+        fill: colour(i), 'data-day': series[i].day, 'data-miss': isMiss(series[i].day) ? 'true' : null, 'data-goal': reached(i) ? 'true' : null, 'data-series': seriesOf(i),
+        stroke: edge(i), 'stroke-width': i === pickIdx ? 1.5 : reached(i) && n > 7 ? 0.75 : edge(i) ? 1 : null,
       }));
     });
   } else {
@@ -115,10 +120,15 @@ function chart({ series, trend, metric, kind, isMiss, avgMs, onPick, focus }) {
       const size = pick ? 10 : 8;
       markers.push(s('rect', {
         x: (xc(i) - size / 2).toFixed(1), y: (y(v) - size / 2).toFixed(1), width: size, height: size,
-        fill: colour(i), stroke: edge(i) || SURFACE, 'stroke-width': pick ? 1.5 : miss ? 1 : 2, 'data-day': series[i].day, 'data-miss': miss ? 'true' : null, 'data-series': miss ? 'miss' : 'bar',
+        fill: colour(i), stroke: edge(i) || SURFACE, 'stroke-width': pick ? 1.5 : edge(i) ? 1 : 2, 'data-day': series[i].day, 'data-miss': miss ? 'true' : null, 'data-goal': reached(i) ? 'true' : null, 'data-series': seriesOf(i),
       }));
     });
   }
+
+  // Over 7 days, each day's hours sit above its mark.
+  const valueLabels = n <= 7
+    ? values.map((v, i) => (v == null ? null : s('text', { x: xc(i).toFixed(1), y: (y(v) - 6).toFixed(1), 'text-anchor': 'middle', class: 'bar-value', 'data-value-for': series[i].day, 'data-series': seriesOf(i) }, fmtFigure(v)))).filter(Boolean)
+    : [];
 
   const trendD = linePath(trend, xc, y);
   const trendLine = trendD
@@ -139,7 +149,7 @@ function chart({ series, trend, metric, kind, isMiss, avgMs, onPick, focus }) {
     'data-testid': 'history-chart',
     'data-kind': kind,
     'aria-label': `${METRICS[metric].name} hours per day, ${n} days, with the 7-day trend and the average. Tap a day to read it.`,
-  }, stripes.defs, ...bands, ...grid, ...xLabels, ...marks, trendLine, avgLine, ...markers);
+  }, stripes.defs, ...bands, ...grid, ...xLabels, ...marks, trendLine, avgLine, ...markers, ...valueLabels);
   dimOthers(svg, focus);
 
   const nearest = (evt) => {
@@ -161,9 +171,10 @@ function chart({ series, trend, metric, kind, isMiss, avgMs, onPick, focus }) {
 // Miss (clay red) and the day's own mark (rock brown) are always named, so the
 // two are never told apart by colour alone.
 // Tap an item to show only that series; the chart itself still picks a day.
-function chartLegend(m, { anyTrend, anyPaused, anyPick }, focus, onPick) {
+function chartLegend(m, { anyTrend, anyPaused, anyPick, anyGoal }, focus, onPick) {
   return legend([
-    ['bar', m.mark, 'bar'],
+    anyGoal ? ['goal-met', 'Goal reached', 'goal'] : null,
+    ['bar', anyGoal ? m.short : m.mark, 'bar'],
     [key('miss'), 'Miss', 'miss'],
     anyPick ? ['pick', 'Selected day'] : null,
     anyTrend ? ['trend', '7-day trend', 'trend'] : null,
@@ -172,7 +183,7 @@ function chartLegend(m, { anyTrend, anyPaused, anyPick }, focus, onPick) {
   ], 'history-legend', { focus, onPick });
 }
 
-const FOCUS_WORD = { bar: 'days that were not a miss', miss: 'misses', trend: 'the 7-day trend', avg: 'the average', paused: 'paused days' };
+const FOCUS_WORD = { bar: 'days that were not a miss', goal: 'fasts that reached the goal', miss: 'misses', trend: 'the 7-day trend', avg: 'the average', paused: 'paused days' };
 
 /** Fast, Feast or Weight: the three views of History, on both of its pages, above the panels. */
 export function metricSwitch(app, value) {
@@ -184,12 +195,12 @@ export function metricSwitch(app, value) {
 /** A duration that never breaks across lines ('3 h 31 min'). */
 const whole = (ms) => fmtDuration(ms).replace(/ /g, ' ');
 
-function readout(d, m, trendMs, miss) {
+function readout(d, m, trendMs, miss, reached) {
   if (!d) return '';
   const day = fmtDayShort(d.day);
   if (d.paused) return `${day}: paused${FOR_REASON[d.paused] || ''}.`;
   const v = d[m.key];
-  const first = v != null ? `${day}: ${m.noun} ${whole(v)}${miss ? ', a miss' : ''}.` : `${day}: no ${m.noun} recorded.`;
+  const first = v != null ? `${day}: ${m.noun} ${whole(v)}${miss ? ', a miss' : reached ? ', goal reached' : ''}.` : `${day}: no ${m.noun} recorded.`;
   return trendMs != null ? `${first} 7-day trend ${whole(trendMs)}.` : first;
 }
 
@@ -203,10 +214,10 @@ function table(series, trend, m, isMiss) {
       h('td', {}, t != null && !d.paused ? fmtDuration(t) : '')))));
 }
 
-function summaryLine(sum, m, range) {
+/** Which days the average covers. */
+function summaryLine(sum, range) {
   if (!sum.count) return `Nothing yet in the last ${range} days.`;
-  const avg = `Average ${m.noun} ${fmtDuration(sum.avgMs)}`;
-  return sum.count === range ? `${avg} over the last ${range} days.` : `${avg}, from ${sum.count} of the last ${range} days.`;
+  return sum.count === range ? `Over the last ${range} days.` : `From ${sum.count} of the last ${range} days.`;
 }
 
 export function renderHistory(ctx, app) {
@@ -230,31 +241,40 @@ export function renderHistory(ctx, app) {
   const set = (values) => store.setSettings(values);
   const focus = FOCUS_KEYS.includes(app.ui.historyFocus) ? app.ui.historyFocus : null;
   const setFocus = (v) => { app.ui.historyFocus = v; app.refresh(); };
+  // The fasting goal each day had: the day less its eating window.
+  const goalMs = (day) => (24 * HOUR) - ctx.windowMsFor(day);
+  const reachedGoal = (d) => p.metric === 'fast' && d && d.fastMs != null && !isMiss(d.day) && d.fastMs >= goalMs(d.day);
 
-  // The chart's own controls sit at the top of its panel.
-  const controls = h('div', { 'data-block': 'history-controls' },
-    choice({ options: [{ value: 'bars', label: 'Bars' }, { value: 'line', label: 'Line' }], value: p.chart, cols: 2, name: 'history-chart', onChange: (v) => set({ historyChart: v }) }),
-    h('div', { class: 'gap-s' },
-      choice({ options: [{ value: 7, label: '7 days' }, { value: 30, label: '30 days' }, { value: 90, label: '90 days' }], value: p.range, cols: 3, name: 'history-range', onChange: (v) => set({ historyRange: v }) })));
+  // The chart's own switches, slim, on one line at the top of its card.
+  const controls = h('div', { class: 'chart-switches', 'data-block': 'history-controls' },
+    choice({ options: [{ value: 7, label: '7 days' }, { value: 30, label: '30 days' }, { value: 90, label: '90 days' }], value: p.range, cols: 3, name: 'history-range', slim: true, ariaLabel: 'Days shown', onChange: (v) => set({ historyRange: v }) }),
+    choice({ options: [{ value: 'bars', label: 'Bars' }, { value: 'line', label: 'Line' }], value: p.chart, cols: 2, name: 'history-chart', slim: true, ariaLabel: 'Chart', onChange: (v) => set({ historyChart: v }) }));
 
-  const body = sum.count
-    ? h('section', { class: 'section', 'data-block': 'history-chart' },
+  // Then the number it leads with: the average, and the days it covers.
+  const lead = h('div', { class: 'chart-lead gap-l' },
+    h('div', { class: 'chart-lead-row' },
+      h('div', { class: 'label' }, `Average ${m.noun}`),
+      h('div', { class: 'chart-dates', 'data-testid': 'history-dates' }, `${fmtDayMonth(from)} to ${fmtDayMonth(ctx.todayKey)}`)),
+    sum.count ? h('div', { class: 'figure lead gap-s', 'data-testid': 'history-average' }, durationFigure(sum.avgMs)) : null,
+    h('p', { class: 'small quiet gap-s', 'data-testid': 'history-summary' }, summaryLine(sum, p.range)));
+
+  const anyGoal = p.metric === 'fast' && series.some((d) => d.fastMs != null && !isMiss(d.day) && d.fastMs >= goalMs(d.day));
+  const card = sum.count
+    ? h('section', { class: 'section strong', 'data-block': 'history-chart' },
       controls,
+      lead,
       focus ? focusLine(`Showing ${FOCUS_WORD[focus]} only.`, () => setFocus(null), 'history-focus') : null,
-      h('div', { class: 'gap-l' }, chart({ series, trend, metric: p.metric, kind: p.chart, isMiss, avgMs: sum.avgMs, focus, onPick: (day) => { selected = day; app.refresh(); } })),
-      chartLegend(m, { anyTrend: trend.some((t) => t != null), anyPaused: series.some((d) => d.paused), anyPick: pickIdx >= 0 }, focus, setFocus),
-      h('p', { class: 'small gap-s', 'data-testid': 'history-readout' }, readout(pick, m, pick ? trend[pickIdx] : null, pick ? isMiss(pick.day) : false)),
+      h('div', { class: 'gap' }, chart({ series, trend, metric: p.metric, kind: p.chart, isMiss, avgMs: sum.avgMs, focus, goalMs, onPick: (day) => { selected = day; app.refresh(); } })),
+      chartLegend(m, { anyTrend: trend.some((t) => t != null), anyPaused: series.some((d) => d.paused), anyPick: pickIdx >= 0, anyGoal }, focus, setFocus),
+      h('p', { class: 'small gap-s', 'data-testid': 'history-readout' }, readout(pick, m, pick ? trend[pickIdx] : null, pick ? isMiss(pick.day) : false, reachedGoal(pick))),
       pick ? h('div', {}, button('Open this day', () => app.go(`day/${pick.day}`), { kind: 'secondary', name: 'history-open-day' })) : null,
       app.ui.showHistoryTable ? h('div', { class: 'gap' }, table(series, trend, m, isMiss)) : null,
       button(app.ui.showHistoryTable ? 'Hide the table' : 'Show as a table', () => { app.ui.showHistoryTable = !app.ui.showHistoryTable; app.refresh(); }, { kind: 'secondary', name: 'history-toggle-table' }))
-    : h('section', { class: 'section empty' }, controls, h('p', { class: 'quiet gap-l' }, m.empty), dunes());
+    : h('section', { class: 'section strong empty', 'data-block': 'history-chart' }, controls, lead, h('p', { class: 'quiet gap' }, m.empty), dunes());
 
   return h('div', { class: 'history', 'data-metric': p.metric },
     header(ctx, app, { title: 'History' }),
     metricSwitch(app, p.metric),
-    h('section', { class: 'section strong' },
-      h('h1', { class: 'display' }, p.metric === 'fast' ? 'Fasts' : 'Eating windows'),
-      h('p', { class: 'gap', 'data-testid': 'history-summary' }, summaryLine(sum, m, p.range))),
-    body,
+    card,
   );
 }

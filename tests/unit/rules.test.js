@@ -32,6 +32,17 @@ test('time: Kuwait day boundaries and week start on Sunday', () => {
   assert.equal(time.fmtWeekRange('2026-09-27'), '27 September to 3 October');
 });
 
+test('time: a duration as a figure, number and unit apart so the unit can be set small', () => {
+  assert.deepEqual(time.durationParts(15 * 60 * MIN + 10 * MIN), [['15', 'h'], ['10', 'm']]);
+  assert.deepEqual(time.durationParts(45 * MIN), [['45', 'm']]);
+  assert.deepEqual(time.durationParts(20 * 60 * MIN), [['20', 'h']]);
+  assert.deepEqual(time.durationParts(0), [['0', 'm']]);
+  assert.equal(time.fmtFigure(15 * 60 * MIN + 10 * MIN + 29000), '15h 10m');
+  // Past two days, days and whole hours, as the dial has always counted them.
+  assert.equal(time.fmtFigure(6 * 24 * 60 * MIN + 12 * 60 * MIN + 40 * MIN), '6 days 12h');
+  assert.equal(time.fmtFigure(3 * 24 * 60 * MIN + 20 * MIN), '3 days');
+});
+
 test('time: formatting and parsing', () => {
   assert.equal(time.fmtDuration(4 * 60 * MIN + 10 * MIN), '4 h 10 min');
   assert.equal(time.fmtDuration(52 * MIN), '52 min');

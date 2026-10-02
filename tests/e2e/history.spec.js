@@ -11,9 +11,11 @@ test('history: fasts as bars by default, over 30 days', async ({ page }) => {
   await expect(chart).toHaveAttribute('data-kind', 'bars');
   // Seven windows logged; the first has no known fast before it.
   await expect(chart.locator('rect[data-day]')).toHaveCount(6);
-  await expect(page.getByTestId('history-summary')).toHaveText('Average fast 20 h 35 min, from 6 of the last 30 days.');
+  await expect(page.getByTestId('history-average')).toHaveText('20h 35m');
+  await expect(page.getByTestId('history-summary')).toHaveText('From 6 of the last 30 days.');
+  await expect(page.getByTestId('history-dates')).toHaveText('20 Sep to 26 Sep');
   // The latest day is selected and read out.
-  await expect(page.getByTestId('history-readout')).toHaveText('Sat 26 Sep: fast 26 h. 7-day trend 20 h 35 min.');
+  await expect(page.getByTestId('history-readout')).toHaveText('Sat 26 Sep: fast 26 h, goal reached. 7-day trend 20 h 35 min.');
 });
 
 test('history: switch to feast, to a line, and to 7 days; the choice is remembered', async ({ page }) => {
@@ -21,14 +23,15 @@ test('history: switch to feast, to a line, and to 7 days; the choice is remember
   await seed(page, WEEK);
   await pick(page, 'history-metric', 'feast');
   await expect(page.locator('.history')).toHaveAttribute('data-metric', 'feast');
-  await expect(page.getByTestId('history-summary')).toHaveText('Average window 3 h 17 min, from 7 of the last 30 days.');
+  await expect(page.getByTestId('history-average')).toHaveText('3h 17m');
+  await expect(page.getByTestId('history-summary')).toHaveText('From 7 of the last 30 days.');
   await pick(page, 'history-chart', 'line');
   await expect(page.getByTestId('history-chart')).toHaveAttribute('data-kind', 'line');
   // The day-by-day line and the 7-day trend.
   await expect(page.getByTestId('history-chart').locator('path')).toHaveCount(2);
   await expect(page.getByTestId('trend-line')).toHaveCount(1);
   await pick(page, 'history-range', '7');
-  await expect(page.getByTestId('history-summary')).toHaveText('Average window 3 h 17 min over the last 7 days.');
+  await expect(page.getByTestId('history-summary')).toHaveText('Over the last 7 days.');
   await expect(page.getByTestId('history-chart').locator('text')).toContainText(['Su 20', 'Sa 26']);
 
   await page.reload();
@@ -90,7 +93,8 @@ test('history: paused days are shaded, left out, and read as paused', async ({ p
   const chart = page.getByTestId('history-chart');
   await expect(chart.locator('rect[data-paused="2026-09-24"]')).toHaveCount(1);
   await expect(chart.locator('rect[data-day="2026-09-24"]')).toHaveCount(0);
-  await expect(page.getByTestId('history-summary')).toHaveText('Average window 3 h 30 min, from 6 of the last 7 days.');
+  await expect(page.getByTestId('history-average')).toHaveText('3h 30m');
+  await expect(page.getByTestId('history-summary')).toHaveText('From 6 of the last 7 days.');
   await expect(page.getByTestId('history-legend').locator('.legend-item').last()).toHaveText('Paused');
   await chart.locator('rect[data-paused="2026-09-24"]').click();
   await expect(page.getByTestId('history-readout')).toHaveText('Thu 24 Sep: paused for travel.');

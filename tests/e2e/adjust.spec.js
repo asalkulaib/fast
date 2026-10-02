@@ -94,7 +94,7 @@ test('after closing: change both times, and the result follows', async ({ page }
   await tap(page, 'save-times');
   await expect(page.getByTestId('flash')).toHaveText('Window times saved.');
   await expect(page.locator('[data-block="closed"]')).toHaveAttribute('data-result', 'success');
-  await expect(page.getByTestId('window-length')).toHaveText('4 h 5 min');
+  await expect(page.getByTestId('window-length')).toHaveText('4h 5m');
   const db = await readDb(page);
   expect(db.days[0]).toMatchObject({ firstBite: ms('2026-09-27T17:45'), lastBite: ms('2026-09-27T21:50') });
   expect(db.meals[0]).toMatchObject({ startedAt: ms('2026-09-27T17:45'), finishedAt: ms('2026-09-27T18:20') });

@@ -1,7 +1,7 @@
 // Weekly review: one screen, weeks run Sunday to Saturday.
 
 import { h, s } from './dom.js';
-import { button, hatch, key, legend } from './components.js';
+import { button, figureParts, hatch, key, legend } from './components.js';
 import { addDays, at, fmtDayShort, fmtDuration, fmtTime, fmtWeekRange, weekStart, weekdayShort, keyParts } from '../core/time.js';
 import { cutoffApplies } from '../core/rules.js';
 import { weekReview } from '../core/review.js';
@@ -213,7 +213,7 @@ export function renderWeek(ctx, app, weekKey) {
         h('div', { class: 'main' },
           h('div', { class: 'label' }, 'Successful days'),
           // Paused days are not tracked, so they leave the count.
-          h('div', { class: 'figure gap-s', 'data-testid': 'success-count' }, `${r.successCount} of ${7 - r.pausedCount}`)),
+          h('div', { class: 'figure gap-s', 'data-testid': 'success-count' }, figureParts([[r.successCount, ` of ${7 - r.pausedCount}`]]))),
         h('div', { class: 'margin' },
           note('Best streak', days(r.streak.best)),
           r.pausedCount ? note('Paused', days(r.pausedCount)) : null)),

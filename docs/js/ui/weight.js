@@ -2,7 +2,7 @@
 // A daily weight is never shown, and there is no way to type one in.
 
 import { h } from './dom.js';
-import { button, legend } from './components.js';
+import { button, legend, figureParts } from './components.js';
 import { metricSwitch } from './history.js';
 import { fmtDayMonth } from '../core/time.js';
 import { rollingSummary, weeklyAverages, MIN_WEIGH_INS } from '../core/weight.js';
@@ -87,7 +87,7 @@ export function renderWeight(ctx, app) {
         h('div', { class: 'main' },
           h('div', { class: 'label' }, '7-day average'),
           cur.avg != null
-            ? h('h1', { class: 'display gap-s', 'data-testid': 'weight-average' }, `${cur.avg.toFixed(1)} kg`)
+            ? h('h1', { class: 'display gap-s', 'data-testid': 'weight-average' }, figureParts([[cur.avg.toFixed(1), ' kg']]))
             : h('p', { class: 'statement gap-s', 'data-testid': 'weight-average' }, `Needs ${MIN_WEIGH_INS} weigh-ins in 7 days.`)),
         h('div', { class: 'margin' },
           note('Up to', fmtDayMonth(summary.end)),

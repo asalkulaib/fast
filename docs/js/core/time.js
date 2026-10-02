@@ -307,6 +307,29 @@ export function fmtElapsed(ms) {
   return rest ? `${days} days ${rest} h` : `${days} days`;
 }
 
+/**
+ * A duration as a figure, in parts of [number, unit] so the units can be set
+ * small: [['15', 'h'], ['10', 'm']], [['45', 'm']], and past two days
+ * [['6', ' days'], ['12', 'h']], rounded as fmtElapsed rounds.
+ */
+export function durationParts(ms) {
+  if (ms >= 2 * DAY) {
+    const hours = Math.floor(ms / HOUR);
+    const rest = hours % 24;
+    const days = [String(Math.floor(hours / 24)), ' days'];
+    return rest ? [days, [String(rest), 'h']] : [days];
+  }
+  const total = Math.round(Math.max(0, ms) / MIN);
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  if (h === 0) return [[String(m), 'm']];
+  if (m === 0) return [[String(h), 'h']];
+  return [[String(h), 'h'], [String(m), 'm']];
+}
+
+/** A duration as figure text: '15h 10m', '45m', '6 days 12h'. */
+export const fmtFigure = (ms) => durationParts(ms).map(([n, unit]) => n + unit).join(' ');
+
 /** Countdown 'H:MM', rounded up so it reads 0:00 only at the deadline. */
 export function fmtCountdown(ms) {
   const mins = Math.max(0, Math.ceil(ms / MIN));

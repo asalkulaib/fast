@@ -23,7 +23,7 @@ test('a 16:8 goal from More: the window counts down 8 hours, and 7 hours is a su
   await tap(page, 'done-eating');
   await tap(page, 'close-window');
   await expect(page.locator('[data-block="closed"]')).toHaveAttribute('data-result', 'success');
-  await expect(page.getByTestId('window-length')).toHaveText('7 h');
+  await expect(page.getByTestId('window-length')).toHaveText('7h');
 });
 
 test('past days keep the goal they had', async ({ page }) => {

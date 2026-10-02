@@ -1,7 +1,7 @@
 // Shared controls: rating scales, choices, the rolling 24-hour time wheel, fields.
 
 import { h, s } from './dom.js';
-import { addDays, fmtDayShort, minutesOfDay, now } from '../core/time.js';
+import { addDays, durationParts, fmtDayShort, minutesOfDay, now } from '../core/time.js';
 
 let uid = 0;
 const nextId = (p) => `${p}-${++uid}`;
@@ -42,13 +42,35 @@ export function scale({ n, value, onChange, label, low, high, start = 1, name })
 }
 
 /**
- * Grid of text options (one choice). options: [{ value, label, wide }];
- * a wide option spans two columns.
+ * A figure: large digits with small units, as in 15h 10m, 5 of 7 or 104.7 kg.
+ * parts: [[number, unit], ...]; the text reads the same as it looks.
  */
-export function choice({ options, value, onChange, label, cols = 3, name }) {
+export function figureParts(parts) {
+  const out = [];
+  parts.forEach(([num, unit], i) => {
+    // WebKit draws a digit that stands alone in its text without the lining
+    // form, so Cormorant's old-style 3 would drop below the line. Each number
+    // keeps a second character: its leading space, or a zero-width space.
+    const n = String(num);
+    out.push(i ? ` ${n}` : n.length === 1 ? `${n}​` : n);
+    if (unit) out.push(h('span', { class: 'unit' }, unit));
+  });
+  return h('span', { class: 'fig' }, out);
+}
+
+/** A duration as a figure: 15h 10m, 45m, 6 days 12h. */
+export const durationFigure = (ms) => figureParts(durationParts(ms));
+
+/**
+ * Grid of text options (one choice). options: [{ value, label, wide }];
+ * a wide option spans two columns. slim: a small segmented switch that
+ * sizes to its words, for a chart's own controls.
+ */
+export function choice({ options, value, onChange, label, cols = 3, name, slim = false, ariaLabel = null }) {
   const labelId = nextId('choice');
   // Five or more across: smaller pills, so each word keeps clear of the rounded ends.
-  const grid = h('div', { class: cols >= 5 ? 'choice many' : 'choice', role: 'radiogroup', 'aria-labelledby': label ? labelId : null });
+  const cls = slim ? 'choice slim' : cols >= 5 ? 'choice many' : 'choice';
+  const grid = h('div', { class: cls, role: 'radiogroup', 'aria-labelledby': label ? labelId : null, 'aria-label': label ? null : ariaLabel });
   grid.style.setProperty('--cols', String(cols));
   const buttons = options.map((o) => {
     const b = h('button', {

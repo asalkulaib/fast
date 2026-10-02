@@ -20,7 +20,7 @@ test('a first day with Fast: Begin fast from last night, so no fasting hours are
   await expect(s.getByTestId('fast-summary')).toHaveText('Fasting since 18:00 yesterday: 15 h so far.');
   await tap(page, 'save-fast');
   await expect(page.getByTestId('flash')).toHaveText('Fast began 18:00 yesterday.');
-  await expect(page.getByTestId('fasting-for')).toHaveText('15 h');
+  await expect(page.getByTestId('fasting-for')).toHaveText('15h');
   await expect(page.locator('[data-action="edit-fast-start"]')).toContainText('18:00 yesterday');
   await expect(page.locator('[data-notice="unlogged"]')).toHaveCount(0); // yesterday was before Fast
   expect((await readDb(page)).days).toEqual([expect.objectContaining({ day: '2026-09-26', fastFrom: ms('2026-09-26T18:00') })]);
@@ -30,7 +30,7 @@ test('with a last bite on record, Begin fast is hidden: Start a meal is the one 
   await openAt(page, '2026-09-27T09:00');
   await seed(page, LAST_NIGHT);
   const before = page.locator('[data-block="before"]');
-  await expect(page.getByTestId('fasting-for')).toHaveText('12 h');
+  await expect(page.getByTestId('fasting-for')).toHaveText('12h');
   await expect(before.locator('[data-action="begin-fast"]')).toHaveCount(0);
   await expect(before.getByTestId('begin-fast-hint')).toHaveCount(0);
   await expect(before.locator('[data-action="start-meal"]')).toBeVisible();
@@ -46,7 +46,7 @@ test('the start can be moved later; before the last bite on record it is refused
   await setTime(page, 'fast-start', '22:30');
   await expect(s.getByTestId('fast-summary')).toHaveText('Fasting since 22:30 yesterday: 10 h 30 min so far.');
   await tap(page, 'save-fast');
-  await expect(page.getByTestId('fasting-for')).toHaveText('10 h 30 min');
+  await expect(page.getByTestId('fasting-for')).toHaveText('10h 30m');
   // The day it began keeps its result: no eating is logged outside the window.
   expect((await readDb(page)).outside).toEqual([]);
   await page.goto('./#day/2026-09-26');
@@ -79,5 +79,5 @@ test('after a pause, a fast begun on its last day counts', async ({ page }) => {
   await tap(page, 'begin-fast');
   await tap(page, 'fast-last');
   await tap(page, 'save-fast');
-  await expect(page.getByTestId('fasting-for')).toHaveText('15 h');
+  await expect(page.getByTestId('fasting-for')).toHaveText('15h');
 });
