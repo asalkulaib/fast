@@ -23,7 +23,7 @@ async function audit(page) {
     };
     const background = (el) => {
       // The chosen option of a sliding track sits on its ink pill, a sibling drawn behind it.
-      if (el.closest('.choice button[aria-checked="true"], .scale button[aria-checked="true"]')) return { r: 30, g: 20, b: 12, a: 1 };
+      if (el.closest('.choice button[aria-checked="true"], .scale button[aria-checked="true"], .tab[aria-current="page"]')) return { r: 30, g: 20, b: 12, a: 1 };
       for (let e = el; e; e = e.parentElement) {
         const c = parse(getComputedStyle(e).backgroundColor);
         if (c && c.a > 0.5) return c;

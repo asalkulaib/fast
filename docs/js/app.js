@@ -4,7 +4,7 @@
 import * as store from './store.js';
 import { requestPersistence } from './db.js';
 import { h, fadeIn, fadeOut, updateLive } from './ui/dom.js';
-import { button } from './ui/components.js';
+import { button, sliding } from './ui/components.js';
 import { MIN, HOME_ZONE, now, dayKey, isDayKey, fmtDayLong, sameClock, switchZone, zoneName } from './core/time.js';
 import { isFlexible, makeEvaluator, streaks, todayMode, trackingStart, windowMsFor } from './core/rules.js';
 import { buildIcs, icsTimes } from './core/ics.js';
@@ -28,6 +28,7 @@ import { VERSION } from './version.js';
 
 const view = document.getElementById('view');
 const tabbar = document.getElementById('tabbar');
+let tabSlide = null; // the tabs' sliding pill, once the app has started
 const sheetRoot = document.getElementById('sheet-root');
 
 const ROUTES = ['today', 'week', 'day', 'satiety', 'history', 'weight', 'more', 'help'];
@@ -116,6 +117,8 @@ function render(fresh) {
     if (b.dataset.tab === tab) b.setAttribute('aria-current', 'page');
     else b.removeAttribute('aria-current');
   }
+  // The pill glides to the tab, however the screen was reached.
+  if (tabSlide) tabSlide.sync();
   lastSignature = signatureOf(ctx);
 }
 
@@ -385,10 +388,10 @@ async function boot() {
     route = parseRoute(location.hash);
     render(true);
   });
-  tabbar.addEventListener('click', (e) => {
-    const b = e.target.closest('.tab');
-    if (b) app.go(b.dataset.tab);
-  });
+  // The tabs are one sliding track: tap a name, or drag the pill along.
+  const tabButtons = [...tabbar.querySelectorAll('.tab')];
+  tabSlide = sliding(tabbar.querySelector('.tabs'), tabButtons, { line: true, current: true, pick: (b) => app.go(b.dataset.tab) });
+  for (const b of tabButtons) b.addEventListener('click', () => tabSlide.choose(b, { tap: true }));
   document.addEventListener('visibilitychange', async () => {
     // Leaving Fast: a change of zone from here on starts after this moment.
     if (document.hidden) {

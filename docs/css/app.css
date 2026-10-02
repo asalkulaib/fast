@@ -1038,29 +1038,42 @@ sup.fn {
   right: 0;
   bottom: 0;
   z-index: 10;
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  padding-bottom: env(safe-area-inset-bottom);
+  padding: 5px var(--gutter-r) calc(6px + env(safe-area-inset-bottom)) var(--gutter-l);
   background: var(--bg-raised);
   border-top: 1px solid var(--rule-quiet);
 }
 
+/* The tabs are one sliding track, like every choice: the ink pill sits under
+   the screen you are on and glides to the next; drag it along to switch. */
+.tabs {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  padding: 4px;
+  background: var(--shade);
+  border-radius: var(--r-pill);
+}
+
+.tabs.line {
+  touch-action: pan-y;
+}
+
 .tab {
-  height: var(--tabbar-h);
-  margin-top: -1px;
+  position: relative;
+  z-index: 1;
+  height: 38px;
   font-family: var(--font-ui);
   font-weight: 500;
-  font-size: 13px;
+  font-size: 12px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--text-quiet);
-  border-top: 2px solid transparent;
-  transition: color 250ms ease-out, border-color 250ms ease-out;
+  border-radius: var(--r-pill);
+  transition: color 250ms ease-out;
 }
 
 .tab[aria-current='page'] {
-  color: var(--ink);
-  border-top-color: var(--ink);
+  color: var(--bg-raised);
 }
 
 /* ---------- Sheets ---------- */

@@ -71,6 +71,31 @@ test('drag the pill along a rating: the number it lands on is saved', async ({ p
   await pillOn(trackOf(page, 'scale', 'energy'), trackOf(page, 'scale', 'energy').locator('[data-value="4"]'));
 });
 
+test('the tabs are one sliding track: tap or drag to switch, and the pill follows any way in', async ({ page }) => {
+  await openAt(page, '2026-09-26T23:00');
+  await seed(page, WEEK);
+  const track = page.locator('#tabbar .tabs');
+  const tab = (name) => page.locator(`.tab[data-tab="${name}"]`);
+  await expect(track.locator('.pill')).toHaveCount(1);
+  await pillOn(track, tab('today'));
+  await tab('week').click();
+  await expect(tab('week')).toHaveAttribute('aria-current', 'page');
+  await pillOn(track, tab('week'));
+  // A day opened from Week stays under Week's pill.
+  await page.locator('.dayrow[data-day="2026-09-24"]').click();
+  await expect(page.locator('.day')).toBeVisible();
+  await pillOn(track, tab('week'));
+  // Drag the pill along to History.
+  await drag(page, tab('week'), tab('history'));
+  await expect(page).toHaveURL(/#history$/);
+  await expect(tab('history')).toHaveAttribute('aria-current', 'page');
+  await pillOn(track, tab('history'));
+  // Reached without the tabs (the link from Today's notices, the back button): the pill follows.
+  await page.goBack();
+  await expect(tab('week')).toHaveAttribute('aria-current', 'page');
+  await pillOn(track, tab('week'));
+});
+
 test('drag along a single line of choices: History moves from 30 to 90 days', async ({ page }) => {
   await openAt(page, '2026-09-26T23:00', '#history');
   await seed(page, WEEK);

@@ -14,15 +14,18 @@ const moves = new Map();
 const GLIDE_MS = 600;
 
 /**
- * Makes a track of option buttons slide: an ink pill sits under the chosen
- * option and glides to the next one. Tap an option; on a single line, the
- * pill can also be dragged along. Returns choose(button, { tap }), which
- * marks a button chosen, moves the pill and calls pick(button).
+ * Makes a track of buttons slide: an ink pill sits under the chosen one and
+ * glides to the next. Tap a button; on a single line, the pill can also be
+ * dragged along. The chosen button carries aria-checked, or aria-current for
+ * the tabs. Returns { choose(button, { tap }), sync() }: choose marks a
+ * button, moves the pill and calls pick(button); sync follows a choice
+ * made elsewhere.
  */
-function sliding(track, buttons, { key, line, pick }) {
+export function sliding(track, buttons, { key = null, line = false, pick, current = false }) {
   const pill = h('span', { class: 'pill', 'aria-hidden': 'true', hidden: true });
   track.prepend(pill);
-  let committed = buttons.find((b) => b.getAttribute('aria-checked') === 'true') || null;
+  const isChosen = current ? (b) => b.getAttribute('aria-current') === 'page' : (b) => b.getAttribute('aria-checked') === 'true';
+  let committed = buttons.find(isChosen) || null;
   let shown = null; // the pill's place: { x, y, w, h }
   let placed = false;
   const rectOf = (b) => ({ x: b.offsetLeft, y: b.offsetTop, w: b.offsetWidth, h: b.offsetHeight });
@@ -33,7 +36,13 @@ function sliding(track, buttons, { key, line, pick }) {
     pill.style.setProperty('--h', `${r.h}px`);
     shown = r;
   };
-  const mark = (b) => { for (const x of buttons) x.setAttribute('aria-checked', String(x === b)); };
+  const mark = (b) => {
+    for (const x of buttons) {
+      if (!current) x.setAttribute('aria-checked', String(x === b));
+      else if (x === b) x.setAttribute('aria-current', 'page');
+      else x.removeAttribute('aria-current');
+    }
+  };
   const show = (b) => {
     pill.hidden = !b;
     if (b && track.clientWidth) put(rectOf(b));
@@ -106,7 +115,16 @@ function sliding(track, buttons, { key, line, pick }) {
     track.addEventListener('pointercancel', (e) => end(e, false));
     track.addEventListener('click', (e) => { if (swallow) e.stopPropagation(); }, true);
   }
-  return choose;
+  // A choice made elsewhere: glide to it.
+  const sync = () => {
+    const b = buttons.find(isChosen) || null;
+    if (b === committed) return;
+    committed = b;
+    if (!placed) return;
+    if (shown) pill.classList.add('glide');
+    show(b);
+  };
+  return { choose, sync };
 }
 
 /**
@@ -120,7 +138,7 @@ export function scale({ n, value, onChange, label, low, high, start = 1, name })
   const row = h('div', { class: short ? 'scale short' : 'scale', role: 'radiogroup', 'aria-labelledby': labelId });
   row.style.setProperty('--n', String(n));
   const buttons = [];
-  let choose = null;
+  let slide = null;
   for (let i = 0; i < n; i++) {
     const v = start + i;
     const b = h('button', {
@@ -129,12 +147,12 @@ export function scale({ n, value, onChange, label, low, high, start = 1, name })
       'aria-checked': String(v === value),
       'aria-label': `${v}`,
       dataset: { value: String(v), scale: name || '' },
-      onclick: () => choose(b, { tap: true }),
+      onclick: () => slide.choose(b, { tap: true }),
     }, String(v));
     buttons.push(b);
     row.append(b);
   }
-  choose = sliding(row, buttons, { key: name ? `scale:${name}` : null, line: true, pick: (b) => onChange(Number(b.dataset.value)) });
+  slide = sliding(row, buttons, { key: name ? `scale:${name}` : null, line: true, pick: (b) => onChange(Number(b.dataset.value)) });
   const wrap = h('div', { class: short ? 'scale-wrap short' : 'scale-wrap' },
     label ? h('div', { class: 'label field-label', id: labelId }, label) : null,
     row,
@@ -179,7 +197,7 @@ export function choice({ options, value, onChange, label, cols = 3, name, slim =
   const cls = ['choice', slim ? 'slim' : cols >= 5 ? 'many' : '', line ? '' : 'grid'].filter(Boolean).join(' ');
   const grid = h('div', { class: cls, role: 'radiogroup', 'aria-labelledby': label ? labelId : null, 'aria-label': label ? null : ariaLabel });
   grid.style.setProperty('--cols', String(cols));
-  let choose = null;
+  let slide = null;
   const buttons = options.map((o) => {
     const b = h('button', {
       type: 'button',
@@ -187,12 +205,12 @@ export function choice({ options, value, onChange, label, cols = 3, name, slim =
       role: 'radio',
       'aria-checked': String(o.value === value),
       dataset: { value: String(o.value), choice: name || '' },
-      onclick: () => choose(b, { tap: true }),
+      onclick: () => slide.choose(b, { tap: true }),
     }, o.label);
     return b;
   });
   grid.append(...buttons);
-  choose = sliding(grid, buttons, { key: name ? `choice:${name}` : null, line, pick: (b) => onChange(options[buttons.indexOf(b)].value) });
+  slide = sliding(grid, buttons, { key: name ? `choice:${name}` : null, line, pick: (b) => onChange(options[buttons.indexOf(b)].value) });
   return h('div', { class: 'choice-wrap' }, label ? h('div', { class: 'label field-label', id: labelId }, label) : null, grid);
 }
 
