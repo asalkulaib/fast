@@ -365,7 +365,8 @@ export function showFullnessSheet(app, mealId) {
 
 // ---------- Edit a meal ----------
 
-export function showMealEditSheet(app, mealId) {
+/** lastBite: opened from Last bite on Today, so Just now sets when the meal finished. */
+export function showMealEditSheet(app, mealId, { lastBite = false } = {}) {
   const original = store.state.meals.get(mealId);
   if (!original) return;
   const draft = { ...original, ...pickFromName(original.name), minutes: minutesOfDay(original.startedAt), finishMinutes: original.finishedAt ? minutesOfDay(original.finishedAt) : null };
@@ -378,7 +379,15 @@ export function showMealEditSheet(app, mealId) {
       h('section', { class: 'section' },
         h('div', { class: 'btn-pair' },
           timeField({ label: 'Started', minutes: draft.minutes, name: 'edit-start', onChange: (m) => { draft.minutes = m; } }),
-          timeField({ label: 'Finished', minutes: draft.finishMinutes, name: 'edit-finish', allowUnset: true, fallback: draft.minutes, hint: draft.finishMinutes == null ? 'Still eating' : '', onChange: (m) => { draft.finishMinutes = m; } }))),
+          timeField({ label: 'Finished', minutes: draft.finishMinutes, name: 'edit-finish', allowUnset: true, fallback: draft.minutes, hint: draft.finishMinutes == null ? 'Still eating' : '', onChange: (m) => { draft.finishMinutes = m; draft.finishExact = null; } })),
+        lastBite
+          ? h('div', { class: 'presets gap-s', role: 'group', 'aria-label': 'Quick times' }, button('Finished just now', () => {
+            const ts = floorToMinute(now());
+            draft.finishExact = ts;
+            draft.finishMinutes = minutesOfDay(ts);
+            api.rerender();
+          }, { kind: 'secondary', name: 'last-bite-now' }))
+          : null),
       h('section', { class: 'section' }, hungerScale(draft)),
       h('section', { class: 'section' }, stopChoice(draft)),
       h('section', { class: 'section' }, fullnessScale(draft)),
@@ -389,7 +398,8 @@ export function showMealEditSheet(app, mealId) {
           ? original.startedAt
           : nearestTime(original.startedAt, draft.minutes);
         let finishedAt = null;
-        if (draft.finishMinutes != null) {
+        if (draft.finishExact != null) finishedAt = draft.finishExact;
+        else if (draft.finishMinutes != null) {
           if (original.finishedAt && draft.finishMinutes === minutesOfDay(original.finishedAt)) finishedAt = original.finishedAt;
           else finishedAt = timeOnOrAfter(startedAt, draft.finishMinutes);
         }

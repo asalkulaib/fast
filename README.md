@@ -49,7 +49,7 @@ Each meal is tracked on its own: its start, its finish, hunger before, how you f
 
 Every time in Fast is set on a rolling 24-hour wheel, like the iPhone clock. The hours and minutes wrap around, so 23 rolls straight on to 00.
 
-- On Today, tap Last bite (before your window) or First bite and Last bite (after it) to change that time.
+- On Today, tap Last bite (before your window) or First bite and Last bite (after it) to change that time. On Last bite, Just now moves it to this minute; the sheet shows the window's new length before you save, so you can see if it stretches the window.
 - While the window is open, tap Opened to move the opening time, or remove a window opened by mistake.
 - Any day can be corrected from Week: tap the day.
 - After a change is saved, the message above the tabs offers Undo for 10 seconds. Removing a window, a meal or an entry can be undone the same way.

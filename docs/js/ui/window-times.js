@@ -6,7 +6,7 @@ import { h } from './dom.js';
 import { button, timeField } from './components.js';
 import { openSheet, sheetHead } from './sheet.js';
 import * as store from '../store.js';
-import { MIN, fmtDuration, fmtOnDay, fmtTime, minutesOfDay, nearestTime, now } from '../core/time.js';
+import { MIN, floorToMinute, fmtDuration, fmtOnDay, fmtTime, minutesOfDay, nearestTime, now } from '../core/time.js';
 import { timeOnOrAfter } from '../core/rules.js';
 import { resolveFirstBite } from './meal.js';
 import { mealsOfDay } from './shared.js';
@@ -14,6 +14,18 @@ import { mealsOfDay } from './shared.js';
 const meals = (n) => (n === 1 ? 'Its meal goes too.' : `Its ${n} meals go too.`);
 
 const span = (first, last, key) => `Window ${fmtTime(first)} to ${fmtOnDay(last, key)}, ${fmtDuration(last - first)}.`;
+
+/** This minute, for Just now. */
+const thisMinute = () => floorToMinute(now());
+
+/**
+ * Just now, above a last-bite wheel: sets the wheel to this minute and keeps
+ * the moment itself, so a fast of days still lands on today.
+ */
+function justNow(onPick) {
+  return h('div', { class: 'presets', role: 'group', 'aria-label': 'Quick times' },
+    button('Just now', () => onPick(thisMinute()), { kind: 'secondary', name: 'last-bite-now' }));
+}
 
 /** While the window is open: change when it opened, or remove it. */
 export function showOpeningSheet(app, initialKey) {
@@ -67,12 +79,13 @@ export function showBiteTimeSheet(app, initialKey, which) {
   const start = store.state.days.get(key);
   const title = which === 'first' ? 'First bite' : 'Last bite';
   let minutes = minutesOfDay(which === 'first' ? start.firstBite : start.lastBite);
+  let exact = null; // Just now: the moment itself, until the wheel is rolled
   openSheet((api) => {
     const rec = store.state.days.get(key);
     if (!rec || !rec.firstBite || (which === 'last' && !rec.lastBite)) return h('div', {}, sheetHead(api, title), h('p', {}, 'This window has changed.'));
     const times = () => {
       if (which === 'first') return { first: resolveFirstBite(key, minutes), last: rec.lastBite || null };
-      return { first: rec.firstBite, last: timeOnOrAfter(rec.firstBite, minutes) };
+      return { first: rec.firstBite, last: exact ?? timeOnOrAfter(rec.firstBite, minutes) };
     };
     const summaryText = () => {
       const t = times();
@@ -81,10 +94,13 @@ export function showBiteTimeSheet(app, initialKey, which) {
     };
     const summary = h('p', { class: 'quiet small gap-s', 'data-testid': 'bite-summary' }, summaryText());
     const hintEl = h('p', { class: 'small', 'data-testid': 'bite-hint' });
+    const field = timeField({ label: `${title} at`, minutes, name: `edit-${which}-bite`, onChange: (m) => { minutes = m; exact = null; summary.textContent = summaryText(); } });
     return h('div', {},
       sheetHead(api, title),
       h('section', { class: 'section flush' },
-        timeField({ label: `${title} at`, minutes, name: `edit-${which}-bite`, onChange: (m) => { minutes = m; summary.textContent = summaryText(); } }),
+        // The new length shows below before anything is saved.
+        which === 'last' ? justNow((ts) => { exact = ts; minutes = minutesOfDay(ts); field.set(minutes); summary.textContent = summaryText(); }) : null,
+        field,
         summary),
       hintEl,
       h('div', { class: 'gap' }, button('Save', async () => {
@@ -105,16 +121,19 @@ export function showOutsideTimeSheet(app, id) {
   const entry = store.state.outside.get(id);
   if (!entry) return;
   let minutes = minutesOfDay(entry.at);
+  let exact = null; // Just now: the moment itself, until the wheel is rolled
   openSheet((api) => {
     const hintEl = h('p', { class: 'small', 'data-testid': 'bite-hint' });
+    const field = timeField({ label: 'Last bite at', minutes, name: 'edit-outside-bite', onChange: (m) => { minutes = m; exact = null; } });
     return h('div', {},
       sheetHead(api, 'Last bite'),
       h('p', {}, 'Your last bite was logged outside the window.'),
       h('section', { class: 'section gap' },
-        timeField({ label: 'Last bite at', minutes, name: 'edit-outside-bite', onChange: (m) => { minutes = m; } })),
+        justNow((ts) => { exact = ts; minutes = minutesOfDay(ts); field.set(minutes); }),
+        field),
       hintEl,
       h('div', { class: 'gap' }, button('Save', async () => {
-        const at = minutes === minutesOfDay(entry.at) ? entry.at : nearestTime(entry.at, minutes);
+        const at = exact ?? (minutes === minutesOfDay(entry.at) ? entry.at : nearestTime(entry.at, minutes));
         if (at > now() + MIN) { hintEl.textContent = 'That time is still ahead.'; return; }
         const undo = store.undoPoint({ outside: [id] });
         await store.updateOutside(id, { at });

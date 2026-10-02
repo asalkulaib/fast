@@ -23,6 +23,30 @@ test('before the window: tap Last bite and roll it to a new time', async ({ page
   expect((await readDb(page)).days[0].lastBite).toBe(ms('2026-09-26T20:40'));
 });
 
+test('Just now moves the last bite to this minute; the sheet shows the new window before saving', async ({ page }) => {
+  await openAt(page, '2026-09-27T13:10'); // the next day: the window stretches into today
+  await seed(page, LAST_NIGHT);
+  await tap(page, 'edit-last-bite');
+  const s = sheet(page, 'last-bite-time');
+  await tap(page, 'last-bite-now');
+  await expect(s.getByTestId('bite-summary')).toHaveText('Window 17:00 to 13:10 next day, 20 h 10 min.');
+  await tap(page, 'save-last-bite');
+  await expect(page.getByTestId('flash')).toHaveText('Last bite saved: 13:10.');
+  expect((await readDb(page)).days[0].lastBite).toBe(ms('2026-09-27T13:10'));
+  await expect(page.getByTestId('fasting-for')).toHaveText('0m');
+});
+
+test('Just now on eating logged outside the window moves that entry to this minute', async ({ page }) => {
+  await openAt(page, '2026-09-27T13:10');
+  await seed(page, { ...LAST_NIGHT, outside: [{ id: 1, day: '2026-09-26', at: ms('2026-09-26T23:15'), trigger: 'boredom', amount: 'little', source: 'today' }] });
+  await tap(page, 'edit-last-bite');
+  await expect(sheet(page, 'outside-bite-time')).toBeVisible();
+  await tap(page, 'last-bite-now');
+  await tap(page, 'save-outside-bite');
+  await expect(page.getByTestId('flash')).toHaveText('Last bite saved: 13:10.');
+  expect((await readDb(page)).outside[0].at).toBe(ms('2026-09-27T13:10'));
+});
+
 test('after the window: tap First bite or Last bite to change just that time', async ({ page }) => {
   await openAt(page, '2026-09-27T22:30');
   await seed(page, { days: [{ day: '2026-09-27', firstBite: ms('2026-09-27T17:30'), lastBite: ms('2026-09-27T21:50') }], settings: LAST_NIGHT.settings });

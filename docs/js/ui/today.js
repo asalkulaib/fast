@@ -196,7 +196,7 @@ function pausedBlock(ctx, app) {
 function editLastBite(app, src) {
   if (src.kind === 'window') return showBiteTimeSheet(app, src.day, 'last');
   if (src.kind === 'outside') return showOutsideTimeSheet(app, src.id);
-  if (src.kind === 'meal') return showMealEditSheet(app, src.id);
+  if (src.kind === 'meal') return showMealEditSheet(app, src.id, { lastBite: true });
   return showOpeningSheet(app, src.day);
 }
 
