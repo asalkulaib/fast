@@ -524,12 +524,66 @@ sup.fn {
   font-size: 17px;
 }
 
-/* Quick times above a wheel: a wrapping row of text buttons. */
+/* Quick times are pills you tap: Just now beside a wheel, and the rows of
+   Now, 30 min ago and the like above one. */
 .presets {
   display: flex;
   flex-wrap: wrap;
-  column-gap: var(--s4);
-  row-gap: 0;
+  gap: var(--s2);
+  margin-bottom: var(--s3);
+}
+
+.chip,
+.presets .btn-2 {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  column-gap: 6px;
+  min-height: 40px;
+  padding: 0 13px;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+  background: var(--bg-raised-2);
+  border: 1px solid var(--rule-quiet);
+  border-radius: var(--r-pill);
+  transition: background-color 250ms ease-out;
+}
+
+.chip:active,
+.chip.pressed,
+.presets .btn-2:active {
+  background: var(--shade);
+}
+
+/* In a column, a pill keeps to the width of its words. */
+.btn-pair > .chip {
+  justify-self: start;
+}
+
+.chip .glyph {
+  width: 17px;
+  height: 17px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* A wheel with a quick time beside it, level with the chosen row. */
+.wheel-row {
+  display: flex;
+  align-items: center;
+  column-gap: var(--s5);
+}
+
+.wheel-row .wheel {
+  margin-top: 0;
 }
 
 /* ---------- Inputs ---------- */

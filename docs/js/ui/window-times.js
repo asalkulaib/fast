@@ -3,6 +3,7 @@
 // note, or both times once it is closed. Every time rolls on a wheel.
 
 import { h } from './dom.js';
+import { clockGlyph } from './icons.js';
 import { button, timeField } from './components.js';
 import { openSheet, sheetHead } from './sheet.js';
 import * as store from '../store.js';
@@ -19,12 +20,11 @@ const span = (first, last, key) => `Window ${fmtTime(first)} to ${fmtOnDay(last,
 const thisMinute = () => floorToMinute(now());
 
 /**
- * Just now, above a last-bite wheel: sets the wheel to this minute and keeps
- * the moment itself, so a fast of days still lands on today.
+ * Just now, a pill beside a last-bite wheel: sets the wheel to this minute
+ * and keeps the moment itself, so a fast of days still lands on today.
  */
 function justNow(onPick) {
-  return h('div', { class: 'presets', role: 'group', 'aria-label': 'Quick times' },
-    button('Just now', () => onPick(thisMinute()), { kind: 'secondary', name: 'last-bite-now' }));
+  return button([clockGlyph(), 'Just now'], () => onPick(thisMinute()), { kind: 'chip', name: 'last-bite-now' });
 }
 
 /** While the window is open: change when it opened, or remove it. */
@@ -94,12 +94,12 @@ export function showBiteTimeSheet(app, initialKey, which) {
     };
     const summary = h('p', { class: 'quiet small gap-s', 'data-testid': 'bite-summary' }, summaryText());
     const hintEl = h('p', { class: 'small', 'data-testid': 'bite-hint' });
-    const field = timeField({ label: `${title} at`, minutes, name: `edit-${which}-bite`, onChange: (m) => { minutes = m; exact = null; summary.textContent = summaryText(); } });
+    // Just now sits beside the wheel; the new length shows below before anything is saved.
+    const quick = which === 'last' ? justNow((ts) => { exact = ts; minutes = minutesOfDay(ts); field.set(minutes); summary.textContent = summaryText(); }) : null;
+    const field = timeField({ label: `${title} at`, minutes, name: `edit-${which}-bite`, aside: quick, onChange: (m) => { minutes = m; exact = null; summary.textContent = summaryText(); } });
     return h('div', {},
       sheetHead(api, title),
       h('section', { class: 'section flush' },
-        // The new length shows below before anything is saved.
-        which === 'last' ? justNow((ts) => { exact = ts; minutes = minutesOfDay(ts); field.set(minutes); summary.textContent = summaryText(); }) : null,
         field,
         summary),
       hintEl,
@@ -124,12 +124,12 @@ export function showOutsideTimeSheet(app, id) {
   let exact = null; // Just now: the moment itself, until the wheel is rolled
   openSheet((api) => {
     const hintEl = h('p', { class: 'small', 'data-testid': 'bite-hint' });
-    const field = timeField({ label: 'Last bite at', minutes, name: 'edit-outside-bite', onChange: (m) => { minutes = m; exact = null; } });
+    const quick = justNow((ts) => { exact = ts; minutes = minutesOfDay(ts); field.set(minutes); });
+    const field = timeField({ label: 'Last bite at', minutes, name: 'edit-outside-bite', aside: quick, onChange: (m) => { minutes = m; exact = null; } });
     return h('div', {},
       sheetHead(api, 'Last bite'),
       h('p', {}, 'Your last bite was logged outside the window.'),
       h('section', { class: 'section gap' },
-        justNow((ts) => { exact = ts; minutes = minutesOfDay(ts); field.set(minutes); }),
         field),
       hintEl,
       h('div', { class: 'gap' }, button('Save', async () => {

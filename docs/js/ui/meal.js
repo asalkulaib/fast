@@ -1,6 +1,7 @@
 // Meals: first bite, logging, finishing, closing the window, 20-minute check.
 
 import { h } from './dom.js';
+import { clockGlyph } from './icons.js';
 import { button, choice, scale, textField, timeField, STOP_OPTIONS } from './components.js';
 import { openSheet, sheetHead } from './sheet.js';
 import * as store from '../store.js';
@@ -380,13 +381,14 @@ export function showMealEditSheet(app, mealId, { lastBite = false } = {}) {
         h('div', { class: 'btn-pair' },
           timeField({ label: 'Started', minutes: draft.minutes, name: 'edit-start', onChange: (m) => { draft.minutes = m; } }),
           timeField({ label: 'Finished', minutes: draft.finishMinutes, name: 'edit-finish', allowUnset: true, fallback: draft.minutes, hint: draft.finishMinutes == null ? 'Still eating' : '', onChange: (m) => { draft.finishMinutes = m; draft.finishExact = null; } })),
+        // Just now sits under the Finished wheel, so it plainly sets when the meal finished.
         lastBite
-          ? h('div', { class: 'presets gap-s', role: 'group', 'aria-label': 'Quick times' }, button('Finished just now', () => {
+          ? h('div', { class: 'btn-pair gap-s' }, h('span'), button([clockGlyph(), 'Just now'], () => {
             const ts = floorToMinute(now());
             draft.finishExact = ts;
             draft.finishMinutes = minutesOfDay(ts);
             api.rerender();
-          }, { kind: 'secondary', name: 'last-bite-now' }))
+          }, { kind: 'chip', name: 'last-bite-now' }))
           : null),
       h('section', { class: 'section' }, hungerScale(draft)),
       h('section', { class: 'section' }, stopChoice(draft)),

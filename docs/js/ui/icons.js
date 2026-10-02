@@ -43,6 +43,13 @@ export function stageIcon(key, { x = 12, y = 12, size = 24, current = false, mar
   }, current ? s('circle', { class: 'leaf', cx: 12, cy: 12, r: 14 }) : null, ...PATHS[key].map((d) => s('path', { d })));
 }
 
+/** A small clock face, for Just now. */
+export function clockGlyph() {
+  return s('svg', { class: 'glyph', viewBox: '0 0 24 24', 'aria-hidden': 'true', focusable: 'false' },
+    s('circle', { cx: 12, cy: 12, r: 8.5 }),
+    s('path', { d: 'M12 7.5 V12 L15 14' }));
+}
+
 /** A stage icon as its own small picture, for buttons and lists. */
 export function stageGlyph(key, { mark = true } = {}) {
   return s('svg', { viewBox: '0 0 24 24', 'aria-hidden': 'true', focusable: 'false' }, stageIcon(key, { mark }));

@@ -358,7 +358,8 @@ function wheelColumn({ count, index, label, part, onSettle, text = pad2, keyOf =
  * minutes may be null (not set yet): the wheel then shows `fallback` quietly
  * until it is rolled. With allowUnset, a Clear button sets it back to null.
  */
-export function timeField({ minutes, onChange, label, hint, name, fallback = null, allowUnset = false }) {
+/** aside: a control beside the wheel, level with the chosen time (Just now). */
+export function timeField({ minutes, onChange, label, hint, name, fallback = null, allowUnset = false, aside = null }) {
   const id = nextId('time');
   let value = minutes;
   const start = minutes ?? fallback ?? minutesOfDay(now());
@@ -396,7 +397,7 @@ export function timeField({ minutes, onChange, label, hint, name, fallback = nul
 
   const wrap = h('div', { class: 'time-wrap', dataset: { time: name || '' } },
     label ? h('div', { class: 'label field-label', id }, label) : null,
-    wheel,
+    aside ? h('div', { class: 'wheel-row' }, wheel, aside) : wheel,
     h('div', { class: 'time-foot' }, hintEl, clearBtn),
   );
   wrap.set = (m) => {
@@ -485,10 +486,11 @@ export function textField({ value, onInput, label, placeholder, name }) {
 
 /**
  * kind: 'primary', the one solid action on a screen; 'outline', an action
- * beside it; 'secondary', a quiet text action.
+ * beside it; 'secondary', a quiet text action; 'chip', a small pill for a
+ * quick value such as Just now. label may be text or nodes (an icon and text).
  */
 export function button(label, onClick, { kind = 'primary', block = false, big = false, name, disabled = false } = {}) {
-  const cls = kind === 'secondary' ? 'btn-2' : ['btn', kind === 'outline' ? 'outline' : '', block ? 'block' : '', big ? 'big' : ''].filter(Boolean).join(' ');
+  const cls = kind === 'secondary' ? 'btn-2' : kind === 'chip' ? 'chip' : ['btn', kind === 'outline' ? 'outline' : '', block ? 'block' : '', big ? 'big' : ''].filter(Boolean).join(' ');
   // While an action is still saving, further taps are ignored (no double
   // records). The action itself starts inside the tap, so iOS still allows
   // the clipboard and the share sheet.
