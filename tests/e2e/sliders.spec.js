@@ -22,12 +22,17 @@ async function pillOn(track, button) {
 
 /** Drags with the mouse from the centre of one option to the centre of another. */
 async function drag(page, from, to) {
-  await from.scrollIntoViewIfNeeded();
-  const [a, b] = [centre(await from.boundingBox()), centre(await to.boundingBox())];
-  await page.mouse.move(...a);
-  await page.mouse.down();
-  await page.mouse.move(...b, { steps: 8 });
-  await page.mouse.up();
+  // The screen can redraw once just after it opens (startup settings are
+  // saved); find the track again until it holds still, then drag.
+  await expect(async () => {
+    await from.scrollIntoViewIfNeeded({ timeout: 1000 });
+    const [a, b] = [await from.boundingBox(), await to.boundingBox()];
+    expect(a && b).toBeTruthy();
+    await page.mouse.move(...centre(a));
+    await page.mouse.down();
+    await page.mouse.move(...centre(b), { steps: 8 });
+    await page.mouse.up();
+  }).toPass({ timeout: 5000 });
 }
 
 test('a choice is one track: the pill sits under the chosen option and moves to the next', async ({ page }) => {

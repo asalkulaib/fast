@@ -29,11 +29,27 @@ export const test = base.extend({
   },
 });
 
+/**
+ * Just after Fast opens it records whether iOS keeps its storage, and that
+ * redraws the screen once. Waits for that redraw, so a test never holds an
+ * element the redraw is about to replace.
+ */
+async function settle(page) {
+  await page.waitForFunction(async () => {
+    const db = await import('/fast/js/db.js');
+    const all = await db.readAll();
+    return all.settings.some((s) => s.key === 'persisted');
+  });
+  // The redraw follows the saved setting within the same turn of the page.
+  await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 0)));
+}
+
 /** Freezes the page clock at a Kuwait time and opens a route. */
 export async function openAt(page, when, route = '') {
   await page.clock.install({ time: T(when) });
   await page.goto(`./${route}`);
   await expect(page.locator('#view')).not.toHaveAttribute('aria-busy', 'true');
+  await settle(page);
 }
 
 /** Replaces the whole database, then reloads so the app reads it. */
@@ -46,6 +62,7 @@ export async function seed(page, data) {
   });
   await page.reload();
   await expect(page.locator('#view')).not.toHaveAttribute('aria-busy', 'true');
+  await settle(page);
 }
 
 export async function readDb(page) {
