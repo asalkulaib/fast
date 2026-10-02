@@ -1064,7 +1064,7 @@ sup.fn {
   position: absolute;
   inset: 0;
   background: var(--shade);
-  border-radius: inherit;
+  border-radius: var(--r-pill);
   pointer-events: none;
 }
 
