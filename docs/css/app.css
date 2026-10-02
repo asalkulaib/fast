@@ -333,8 +333,9 @@ sup.fn {
   max-width: none;
 }
 
+/* The dunes run to the foot of the screen, and the tabs float over them. */
 .screen.with-dunes {
-  padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
+  padding-bottom: 0;
 }
 
 .row {
@@ -1032,6 +1033,8 @@ sup.fn {
 
 /* ---------- Tab bar ---------- */
 
+/* No strip behind the tabs: the track floats over the page, and a tap beside
+   it reaches the page. */
 .tabbar {
   position: fixed;
   left: 0;
@@ -1039,19 +1042,30 @@ sup.fn {
   bottom: 0;
   z-index: 10;
   padding: 5px var(--gutter-r) calc(6px + env(safe-area-inset-bottom)) var(--gutter-l);
-  background: var(--bg-raised);
-  border-top: 1px solid var(--rule-quiet);
+  pointer-events: none;
 }
 
 /* The tabs are one sliding track, like every choice: the ink pill sits under
-   the screen you are on and glides to the next; drag it along to switch. */
+   the screen you are on and glides to the next; drag it along to switch.
+   Solid, so nothing scrolling under it shows through: the panel sand with
+   the track's shade laid over it. */
 .tabs {
   position: relative;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   padding: 4px;
-  background: var(--shade);
+  background: var(--bg-raised);
   border-radius: var(--r-pill);
+  pointer-events: auto;
+}
+
+.tabs::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--shade);
+  border-radius: inherit;
+  pointer-events: none;
 }
 
 .tabs.line {
