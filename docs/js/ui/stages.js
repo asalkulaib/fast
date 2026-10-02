@@ -6,12 +6,12 @@
 // line icon marks each stage, the current one set in ink. Past 24 hours the
 // sun rests on the far horizon. The stages are never a target.
 
-import { h, s, live, hl } from './dom.js';
+import { h, s, live } from './dom.js';
 import { button, key, legend } from './components.js';
 import { openSheet, sheetHead } from './sheet.js';
 import { HOUR, fmtDuration, fmtElapsed } from '../core/time.js';
 import { AUTOPHAGY_NOTE, SCALE_HOURS, SOURCES, STAGES, VARIATION_NOTE, fastingState } from '../core/stages.js';
-import { stageIcon } from './icons.js';
+import { stageGlyph, stageIcon } from './icons.js';
 
 const W = 340;
 const HT = 214;
@@ -23,7 +23,7 @@ const ICON_R = 158; // icons sit just outside the path
 const GAP = 0.12; // hours of surface gap between stages
 const FILL = '#4B2E14'; // --rock-700: hours already fasted
 const TRACK = '#D8BF93'; // --sand-300: hours still ahead
-const SURFACE = '#E6D0A8'; // --bg: halo around the marks
+const SURFACE = '#F1E3C7'; // --bg-raised, the panel: halo around the marks
 const SUN = '#F0B25C'; // --accent: the sun, gold leaf
 const INK = '#1E140C'; // --ink: edges, ticks and the fasting goal
 
@@ -104,32 +104,43 @@ function dialSvg(state, goalHours) {
   }, ...ticks, ...arcs, goalLine(SURFACE, 5), goalLine(INK, 2, 'goal-tick'), ...sun, ...dunes(), ...icons);
 }
 
+/** The current stage as a small button under the time: it opens the stages at this one. */
+function stageChip(stage) {
+  return h('button', {
+    type: 'button',
+    class: 'stage-chip',
+    'data-action': 'open-stages',
+    'data-testid': 'stage-name',
+    'aria-label': `Stage: ${stage.name}. About the stages`,
+    onclick: () => showStagesSheet(stage.key),
+  }, stageGlyph(stage.key, { mark: false }), h('span', {}, stage.name));
+}
+
 /** The dial with the time fasted and the stage under the arc. */
 function fastingRing(state, lastBiteTs, compact, goalHours) {
   return h('div', {
     class: `ring-wrap dial-wrap${compact ? ' compact' : ''}`,
-    role: 'img',
     'data-testid': 'fasting-ring',
     'data-stage': state.stage.key,
-    'aria-label': `Fasting for ${fmtDuration(state.elapsedMs)}. Stage: ${state.stage.name}.`,
   },
     dialSvg(state, goalHours),
-    h('div', { class: 'ring-centre', 'aria-hidden': 'true' },
+    h('div', { class: 'ring-centre' },
+      h('span', { class: 'sr-only' }, 'Fasting for'),
       live('div', { class: 'ring-time', 'data-testid': 'fasting-for' }, (t) => fmtElapsed(t - lastBiteTs)),
-      h('div', { class: 'ring-stage', 'data-testid': 'stage-name' }, state.stage.name)));
+      stageChip(state.stage)));
 }
 
-/** What each mark on the dial means. */
-const ringLegend = () => legend([
-  ['fasted', 'Hours fasted'], ['ahead', 'Still ahead'], [key('sun'), 'Now'], ['goal', 'Fasting goal'], [key('stage'), 'Current stage icon'],
-], 'ring-legend');
+/** What each mark on the dial means, in one row. */
+const ringLegend = () => h('div', { class: 'ring-legend' }, legend([
+  ['fasted', 'Fasted'], ['ahead', 'Ahead'], [key('sun'), 'Now'], ['goal', 'Goal'], [key('stage'), 'Stage'],
+], 'ring-legend'));
 
-/** Under the dial, live: how far the fasting goal is, then the next stage. Gold once the goal is reached. */
+/** How far the fasting goal is, then the next stage; live. */
 function ringLines(state, lastBiteTs, goalHours) {
   const reached = state.elapsedMs >= goalHours * HOUR;
   return h('p', { class: 'quiet small gap ring-lines' },
     reached
-      ? h('span', { 'data-testid': 'goal-line' }, `Fasting goal of ${goalHours} h `, hl('reached'), '.')
+      ? h('span', { 'data-testid': 'goal-line' }, `Fasting goal of ${goalHours} h reached.`)
       : live('span', { 'data-testid': 'goal-line' }, (t) => {
         const left = goalHours * HOUR - (t - lastBiteTs);
         return left > 0 ? `Fasting goal ${goalHours} h: ${fmtDuration(left)} to go.` : `Fasting goal of ${goalHours} h reached.`;
@@ -151,48 +162,92 @@ function markStage(el, state, renderTs) {
   return el;
 }
 
-/** Before the window: the ring leads Today. */
-export function ringHero(ctx, lastBiteTs) {
+/** The fasting goal in hours: the day less today's eating window. */
+const goalHoursFor = (ctx) => 24 - Math.round(ctx.windowMsFor(ctx.todayKey) / HOUR);
+
+/** Before the window: the dial leads Today, with the fast's two times under it. */
+export function ringHero(ctx, lastBiteTs, times = null) {
   const state = fastingState(lastBiteTs, ctx.nowTs);
-  const goalHours = 24 - Math.round(ctx.windowMsFor(ctx.todayKey) / HOUR);
   return markStage(h('div', { class: 'ring-hero gap' },
-    fastingRing(state, lastBiteTs, false, goalHours), ringLegend(), ringLines(state, lastBiteTs, goalHours)), state, ctx.nowTs);
+    fastingRing(state, lastBiteTs, false, goalHoursFor(ctx)), ringLegend(), times), state, ctx.nowTs);
 }
 
 /**
- * The stage section. Before the window it holds the explanation under the
- * hero ring; after the window it holds a smaller ring as well.
+ * The stage panel: the stage, what happens in it, and how far the goal and
+ * the next stage are. After the window it holds a smaller dial and its times
+ * as well; before it, the dial leads Today above.
  */
-export function stagesSection(ctx, app, lastBiteTs, { withRing }) {
+export function stagesSection(ctx, app, lastBiteTs, { withRing, times = null }) {
   if (!lastBiteTs) return null;
   const state = fastingState(lastBiteTs, ctx.nowTs);
-  const goalHours = 24 - Math.round(ctx.windowMsFor(ctx.todayKey) / HOUR);
+  const goalHours = goalHoursFor(ctx);
   return markStage(h('section', { class: 'section', 'data-block': 'stages', 'data-stage': state.stage.key },
-    withRing
-      ? [fastingRing(state, lastBiteTs, true, goalHours), ringLegend(), ringLines(state, lastBiteTs, goalHours)]
-      : h('div', { class: 'label' }, state.stage.name),
+    withRing ? [fastingRing(state, lastBiteTs, true, goalHours), ringLegend(), times] : null,
+    h('div', { class: withRing ? 'label gap-l' : 'label' }, state.stage.name),
     h('p', { class: 'gap-s' }, state.stage.text),
-    h('div', { class: 'gap-s' }, button('About the stages', () => showStagesSheet(), { kind: 'secondary', name: 'about-stages' })),
+    ringLines(state, lastBiteTs, goalHours),
+    h('div', { class: 'gap-s' }, button('About the stages', () => showStagesSheet(state.stage.key), { kind: 'secondary', name: 'about-stages' })),
   ), state, ctx.nowTs);
 }
 
-export function showStagesSheet() {
-  openSheet((api) => h('div', {},
-    sheetHead(api, 'Fasting stages'),
-    h('p', {}, 'Typical changes after your last bite, from human studies.'),
-    h('ul', { class: 'list gap', 'data-testid': 'stage-list' }, STAGES.map((st) => h('li', {},
-      h('div', { class: 'stage-row' },
-        h('span', { class: 'stage-title' },
-          s('svg', { class: 'stage-row-icon', viewBox: '0 0 24 24', 'aria-hidden': 'true' }, stageIcon(st.key)),
-          h('span', { class: 'statement' }, st.name)),
-        h('span', { class: 'label' }, st.range)),
-      h('p', { class: 'gap-s' }, st.text)))),
-    h('p', { class: 'small quiet gap' }, VARIATION_NOTE),
-    h('section', { class: 'section gap' },
-      h('div', { class: 'label' }, 'Autophagy'),
-      h('p', { class: 'gap-s', 'data-testid': 'autophagy-note' }, AUTOPHAGY_NOTE)),
-    h('section', { class: 'section' },
-      h('div', { class: 'label' }, 'Sources'),
-      h('ol', { class: 'steps gap-s small' }, SOURCES.map((src) => h('li', {}, h('span', {}, src))))),
-  ), { name: 'stages', label: 'Fasting stages' });
+// The hours of each stage, short enough for the line across the sheet.
+const SHORT_HOURS = { digesting: '0–4 h', settling: '4–12 h', switch: '12 h+', ketones: '24 h+' };
+
+/**
+ * The stages one at a time: the four along a line across the top, the one
+ * the fast is in now ringed in the sun's gold, and a card for each below,
+ * each a shade deeper, from pale sand to dark rock. Swipe the cards or tap
+ * a stage; the sheet opens on the stage the fast is in now.
+ */
+export function showStagesSheet(currentKey = null) {
+  openSheet((api) => {
+    const cards = h('ul', { class: 'stage-cards', 'data-testid': 'stage-list' }, STAGES.map((st) => h('li', {
+      class: `stage-card s-${st.key}`,
+      'data-stage': st.key,
+    },
+      h('div', { class: 'stage-card-head' },
+        h('div', { class: 'label' }, st.range),
+        st.key === currentKey ? h('span', { class: 'now-badge', 'data-testid': 'stage-now' }, 'Now') : null),
+      h('h2', { class: 'h2' }, st.name),
+      h('p', { class: 'gap-s' }, st.text))));
+    const stops = STAGES.map((st) => h('button', {
+      type: 'button',
+      class: `stage-stop${st.key === currentKey ? ' now' : ''}`,
+      'data-action': `stage-${st.key}`,
+      'aria-label': `${st.name}, ${st.range}${st.key === currentKey ? ', now' : ''}`,
+      onclick: () => show(STAGES.indexOf(st), true),
+    },
+      h('span', { class: `disc s-${st.key}` }, stageGlyph(st.key)),
+      h('span', { class: 'name' }, st.name),
+      h('span', { class: 'hrs' }, SHORT_HOURS[st.key])));
+    const mark = (i) => stops.forEach((b, j) => b.setAttribute('aria-current', String(j === i)));
+    const step = () => (cards.children[1] ? cards.children[1].offsetLeft - cards.children[0].offsetLeft : cards.clientWidth);
+    function show(i, smooth) {
+      const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      cards.scrollTo({ left: i * step(), behavior: smooth && !reduce ? 'smooth' : 'auto' });
+      mark(i);
+    }
+    // Swiping moves the mark along the line.
+    let frame = 0;
+    cards.addEventListener('scroll', () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => mark(Math.max(0, Math.min(STAGES.length - 1, Math.round(cards.scrollLeft / step())))));
+    }, { passive: true });
+    const start = Math.max(0, STAGES.findIndex((st) => st.key === currentKey));
+    mark(start);
+    // Open on the stage the fast is in, once the cards have their width.
+    requestAnimationFrame(() => show(start, false));
+    return h('div', {},
+      sheetHead(api, 'Fasting stages'),
+      h('p', {}, 'Typical changes after your last bite, from human studies. Swipe the cards or tap a stage.'),
+      h('div', { class: 'stage-line', role: 'group', 'aria-label': 'Stages' }, stops),
+      cards,
+      h('p', { class: 'small quiet gap' }, VARIATION_NOTE),
+      h('section', { class: 'section gap' },
+        h('div', { class: 'label' }, 'Autophagy'),
+        h('p', { class: 'gap-s', 'data-testid': 'autophagy-note' }, AUTOPHAGY_NOTE)),
+      h('section', { class: 'section' },
+        h('div', { class: 'label' }, 'Sources'),
+        h('ol', { class: 'steps gap-s small' }, SOURCES.map((src) => h('li', {}, h('span', {}, src))))));
+  }, { name: 'stages', label: 'Fasting stages' });
 }

@@ -25,6 +25,19 @@ export function tapNote(title, value, onClick, name) {
   }, h('b', {}, title), h('span', { class: 'tap-value' }, value));
 }
 
+/** A labelled time in a pill you tap to change (when the fast began, when it reaches its goal). */
+export function timePill(title, value, onClick, name, { reached = false } = {}) {
+  return h('div', { class: 'time-pill' },
+    h('div', { class: 'label', 'aria-hidden': 'true' }, title),
+    h('button', {
+      type: 'button',
+      class: reached ? 'reached' : null,
+      'data-action': name,
+      'aria-label': `${title}, ${value}. Change`,
+      onclick: onClick,
+    }, value));
+}
+
 export function dayTypeText(key, rec) {
   if (rec && rec.paused) return 'Paused';
   if (rec && rec.dayOff) return 'Day off';

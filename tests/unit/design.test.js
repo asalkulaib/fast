@@ -46,10 +46,18 @@ test('no colour outside the palette anywhere', () => {
   }
 });
 
-test('square corners, no shadows, gradients, glass or banned fonts', () => {
+test('corners only from the radius tokens; no shadows, gradients, glass or banned fonts', () => {
+  // Rounded: what you tap (pills and controls), panels and sheets. Every
+  // radius comes from a token, so the shapes stay a small, deliberate set.
+  assert.match(css, /--r-pill:\s*999px;/);
+  assert.match(css, /--r-control:\s*\d+px;/);
+  assert.match(css, /--r-panel:\s*\d+px;/);
+  assert.match(css, /--r-sheet:\s*\d+px;/);
   for (const f of files.filter((x) => /\.(css|js|html)$/.test(x))) {
     const text = read(f);
-    for (const [decl] of text.matchAll(/border-radius\s*:\s*([^;]+);/g)) assert.match(decl, /:\s*0;/, `${rel(f)}: ${decl}`);
+    for (const [decl] of text.matchAll(/border-radius\s*:\s*([^;]+);/g)) {
+      assert.match(decl, /:\s*(0|var\(--r-[a-z]+\))( (0|var\(--r-[a-z]+\)))*;$/, `${rel(f)}: ${decl}`);
+    }
     assert.doesNotMatch(text, /box-shadow|text-shadow|drop-shadow/, rel(f));
     assert.doesNotMatch(text, /gradient\(/, rel(f));
     assert.doesNotMatch(text, /backdrop-filter|filter:\s*blur/, rel(f));

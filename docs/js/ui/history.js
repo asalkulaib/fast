@@ -20,7 +20,7 @@ const MISS = '#9E3B23'; // --clay: a missed day, striped
 const PICK = '#1E140C'; // --ink: the selected day (gold is kept for what you achieved)
 const INK = '#1E140C'; // --ink: the 7-day trend, the average (dashed) and edges
 const BAND = '#D8BF93'; // --sand-300: a paused day
-const SURFACE = '#E6D0A8'; // --bg: ring around markers
+const SURFACE = '#F1E3C7'; // --bg-raised, the panel: ring around markers
 const GRID = 'rgba(42, 28, 16, 0.14)';
 
 const METRICS = {
@@ -174,9 +174,9 @@ function chartLegend(m, { anyTrend, anyPaused, anyPick }, focus, onPick) {
 
 const FOCUS_WORD = { bar: 'days that were not a miss', miss: 'misses', trend: 'the 7-day trend', avg: 'the average', paused: 'paused days' };
 
-/** Fast, Feast or Weight: the three views of History, on both of its pages. */
+/** Fast, Feast or Weight: the three views of History, on both of its pages, above the panels. */
 export function metricSwitch(app, value) {
-  return h('section', { class: 'section', 'data-block': 'history-metric' },
+  return h('div', { class: 'page-switch', 'data-block': 'history-metric' },
     choice({ options: [{ value: 'fast', label: 'Fast' }, { value: 'feast', label: 'Feast' }, { value: 'weight', label: 'Weight' }], value, cols: 3, name: 'history-metric',
       onChange: async (v) => { await store.setSettings({ historyMetric: v }); app.go(v === 'weight' ? 'weight' : 'history'); } }));
 }
@@ -231,21 +231,23 @@ export function renderHistory(ctx, app) {
   const focus = FOCUS_KEYS.includes(app.ui.historyFocus) ? app.ui.historyFocus : null;
   const setFocus = (v) => { app.ui.historyFocus = v; app.refresh(); };
 
-  const controls = h('section', { class: 'section', 'data-block': 'history-controls' },
+  // The chart's own controls sit at the top of its panel.
+  const controls = h('div', { 'data-block': 'history-controls' },
     choice({ options: [{ value: 'bars', label: 'Bars' }, { value: 'line', label: 'Line' }], value: p.chart, cols: 2, name: 'history-chart', onChange: (v) => set({ historyChart: v }) }),
-    h('div', { class: 'gap' },
+    h('div', { class: 'gap-s' },
       choice({ options: [{ value: 7, label: '7 days' }, { value: 30, label: '30 days' }, { value: 90, label: '90 days' }], value: p.range, cols: 3, name: 'history-range', onChange: (v) => set({ historyRange: v }) })));
 
   const body = sum.count
     ? h('section', { class: 'section', 'data-block': 'history-chart' },
+      controls,
       focus ? focusLine(`Showing ${FOCUS_WORD[focus]} only.`, () => setFocus(null), 'history-focus') : null,
-      chart({ series, trend, metric: p.metric, kind: p.chart, isMiss, avgMs: sum.avgMs, focus, onPick: (day) => { selected = day; app.refresh(); } }),
+      h('div', { class: 'gap-l' }, chart({ series, trend, metric: p.metric, kind: p.chart, isMiss, avgMs: sum.avgMs, focus, onPick: (day) => { selected = day; app.refresh(); } })),
       chartLegend(m, { anyTrend: trend.some((t) => t != null), anyPaused: series.some((d) => d.paused), anyPick: pickIdx >= 0 }, focus, setFocus),
       h('p', { class: 'small gap-s', 'data-testid': 'history-readout' }, readout(pick, m, pick ? trend[pickIdx] : null, pick ? isMiss(pick.day) : false)),
       pick ? h('div', {}, button('Open this day', () => app.go(`day/${pick.day}`), { kind: 'secondary', name: 'history-open-day' })) : null,
       app.ui.showHistoryTable ? h('div', { class: 'gap' }, table(series, trend, m, isMiss)) : null,
       button(app.ui.showHistoryTable ? 'Hide the table' : 'Show as a table', () => { app.ui.showHistoryTable = !app.ui.showHistoryTable; app.refresh(); }, { kind: 'secondary', name: 'history-toggle-table' }))
-    : h('section', { class: 'section empty' }, h('p', { class: 'quiet' }, m.empty), dunes());
+    : h('section', { class: 'section empty' }, controls, h('p', { class: 'quiet gap-l' }, m.empty), dunes());
 
   return h('div', { class: 'history', 'data-metric': p.metric },
     header(ctx, app, { title: 'History' }),
@@ -253,7 +255,6 @@ export function renderHistory(ctx, app) {
     h('section', { class: 'section strong' },
       h('h1', { class: 'display' }, p.metric === 'fast' ? 'Fasts' : 'Eating windows'),
       h('p', { class: 'gap', 'data-testid': 'history-summary' }, summaryLine(sum, m, p.range))),
-    controls,
     body,
   );
 }

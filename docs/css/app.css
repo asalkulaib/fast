@@ -1,8 +1,9 @@
-/* Fast: the Nafud theme. Always dark; no light mode. */
+/* Fast: the Nafud theme at midday. */
 
 :root {
   /* Nafud at midday: sand is the page, umber ink the text, gold leaf the one
-     highlight (always a fill, never text), clay for misses only. */
+     highlight (always a fill, never text), clay for misses only. Each section
+     sits on a panel of lighter sand. */
   color-scheme: light;
 
   --bg: #E6D0A8;
@@ -42,11 +43,19 @@
   --font-body: 'EB Garamond', 'Iowan Old Style', Palatino, Georgia, serif;
   --font-ui: 'Jost', 'Avenir Next', Futura, 'Helvetica Neue', Arial, sans-serif;
 
-  --gutter-l: 26px;
+  --gutter-l: 16px;
   --gutter-r: 16px;
+  --panel-x: 18px; /* inside a panel; page text lines up with it */
   --margin-w: 82px;
   --col-gap: 14px;
   --tabbar-h: 58px;
+
+  /* Soft shapes: what you tap is rounded, panels and sheets have soft corners.
+     The dial, chart marks and legend keys stay as drawn. */
+  --r-pill: 999px;
+  --r-control: 12px;
+  --r-panel: 18px;
+  --r-sheet: 22px;
   --fade-in: 320ms ease-out;
   --fade-out: 250ms ease-out;
 }
@@ -376,7 +385,7 @@ sup.fn {
   justify-content: space-between;
   align-items: baseline;
   gap: var(--s3);
-  padding-bottom: var(--s4);
+  padding: 0 var(--panel-x) var(--s2);
 }
 
 .head .label + .label {
@@ -411,6 +420,7 @@ sup.fn {
   color: var(--bg-raised);
   background: var(--ink);
   border: 1px solid var(--ink);
+  border-radius: var(--r-pill);
   text-align: center;
   transition: background-color 250ms ease-out, color 250ms ease-out;
 }
@@ -450,9 +460,9 @@ sup.fn {
 .btn.big {
   display: flex;
   width: 100%;
-  min-height: 72px;
-  font-size: 19px;
-  letter-spacing: 0.06em;
+  min-height: 60px;
+  font-size: 18px;
+  letter-spacing: 0.05em;
 }
 
 .btn-2 {
@@ -492,7 +502,7 @@ sup.fn {
 /* First bite and Begin fast: two equal ways in. */
 .start-actions .btn.big {
   padding: 0 var(--s2);
-  font-size: 18px;
+  font-size: 17px;
 }
 
 /* Quick times above a wheel: a wrapping row of text buttons. */
@@ -635,8 +645,7 @@ sup.fn {
   right: 0;
   top: calc(var(--row) * 2);
   height: var(--row);
-  border-top: 1px solid var(--rule-quiet);
-  border-bottom: 1px solid var(--rule-quiet);
+  border-radius: var(--r-control);
   pointer-events: none;
 }
 
@@ -679,11 +688,13 @@ sup.fn {
 
 /* ---------- Scales and choices ---------- */
 
-/* Rating scales: rows of square tap targets. Five-point scales hang from the
-   left at 52px; ten-point scales use the full column so each square stays tappable. */
+/* Rating scales: rows of rounded tap targets. Five-point scales hang from the
+   left at 52px; ten-point scales use the full column so each one stays tappable. */
 .scale {
+  --scale-gap: 5px;
   display: grid;
   grid-template-columns: repeat(var(--n, 10), minmax(0, 1fr));
+  gap: var(--scale-gap);
   container-type: inline-size;
 }
 
@@ -692,7 +703,7 @@ sup.fn {
 }
 
 .scale button {
-  height: calc(100cqw / var(--n, 10));
+  height: calc((100cqw - (var(--n, 10) - 1) * var(--scale-gap)) / var(--n, 10));
 }
 
 .scale.short button {
@@ -700,25 +711,21 @@ sup.fn {
 }
 
 .scale-wrap.short .scale-ends {
-  width: calc(var(--n, 5) * 52px - var(--n, 5) * 1px + 1px);
+  width: calc(var(--n, 5) * 52px + (var(--n, 5) - 1) * 5px);
 }
 
 .scale button,
 .choice button {
   position: relative;
   min-height: 34px;
-  margin-left: -1px;
   font-family: var(--font-ui);
   font-weight: 500;
   font-size: 15px;
   letter-spacing: 0.02em;
   color: var(--text-quiet);
   border: 1px solid var(--rule-quiet);
-  transition: color 250ms ease-out, border-color 250ms ease-out;
-}
-
-.scale button:first-child {
-  margin-left: 0;
+  border-radius: var(--r-control);
+  transition: color 250ms ease-out, border-color 250ms ease-out, background-color 250ms ease-out;
 }
 
 .scale button[aria-checked='true'],
@@ -738,16 +745,28 @@ sup.fn {
   color: var(--text-quiet);
 }
 
+/* Choices: a pill for each option, the chosen one in ink. */
 .choice {
   display: grid;
   grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr));
-  margin-left: 1px;
+  gap: var(--s2);
 }
 
 .choice button {
-  min-height: 48px;
-  margin-top: -1px;
-  padding: 10px 6px;
+  min-height: 44px;
+  padding: 8px 10px;
+  line-height: 1.25;
+  border-radius: var(--r-pill);
+}
+
+.choice.many {
+  gap: 6px;
+}
+
+.choice.many button {
+  padding: 8px 2px;
+  font-size: 14px;
+  letter-spacing: 0;
 }
 
 /* ---------- Countdown ---------- */
@@ -906,7 +925,10 @@ sup.fn {
 /* ---------- Notices ---------- */
 
 .notices {
-  margin-bottom: var(--s4);
+  margin-top: var(--s3);
+  padding: var(--s1) var(--panel-x);
+  background: var(--bg-raised);
+  border-radius: var(--r-panel);
 }
 
 .notices > .notice + .notice {
@@ -938,7 +960,7 @@ sup.fn {
   justify-content: space-between;
   column-gap: var(--s4);
   min-height: 52px;
-  padding: var(--s2) var(--gutter-r) var(--s2) var(--gutter-l);
+  padding: var(--s2) calc(var(--gutter-r) + var(--panel-x)) var(--s2) calc(var(--gutter-l) + var(--panel-x));
   background: var(--bg-raised);
   border-top: 1px solid var(--rule);
   color: var(--text-display);
@@ -1005,15 +1027,15 @@ sup.fn {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
-  padding: var(--s5) var(--gutter-r) calc(var(--s6) + env(safe-area-inset-bottom)) var(--gutter-l);
+  padding: var(--s5) var(--panel-x) calc(var(--s6) + env(safe-area-inset-bottom));
   background: var(--bg-raised);
-  border-top: 3px solid var(--rule);
+  border-radius: var(--r-sheet) var(--r-sheet) 0 0;
 }
 
 .sheet.full {
   top: 0;
   max-height: none;
-  border-top: 0;
+  border-radius: 0;
   padding-top: calc(env(safe-area-inset-top) + var(--s4));
 }
 
@@ -1115,7 +1137,7 @@ sup.fn {
 
 .chart .latest {
   fill: var(--ink);
-  stroke: var(--bg);
+  stroke: var(--bg-raised);
 }
 
 .stage-icon .leaf {
@@ -1188,28 +1210,8 @@ sup.fn {
   font-variant-numeric: tabular-nums lining-nums;
 }
 
-.ring-stage {
-  max-width: 150px;
-  margin-top: var(--s2);
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 20px;
-  line-height: 1.15;
-  color: var(--text-label);
-}
-
 .ring-wrap.compact .ring-time {
   font-size: 28px;
-}
-
-.ring-wrap.compact .ring-stage {
-  max-width: 120px;
-  font-size: 17px;
-}
-
-.ring-hero .quiet {
-  text-align: center;
-  max-width: none;
 }
 
 .stage-icon {
@@ -1222,29 +1224,6 @@ sup.fn {
 
 .stage-icon.now {
   stroke: var(--bg-raised);
-}
-
-.stage-title {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s2);
-}
-
-.stage-row-icon {
-  width: 22px;
-  height: 22px;
-  flex: none;
-}
-
-.stage-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: var(--s3);
-}
-
-.stage-row .label {
-  flex: none;
 }
 
 .chart .chart-end {
@@ -1491,21 +1470,26 @@ html.locked body {
   cursor: pointer;
 }
 
+/* A legend you can tap is a row of pills. */
+.legend:has(.legend-pick) {
+  column-gap: var(--s2);
+  row-gap: var(--s2);
+}
+
 .legend-pick {
-  min-height: 36px;
-  padding: 0 var(--s1);
-  margin-left: calc(-1 * var(--s1));
+  min-height: 34px;
+  padding: 0 12px;
   font: inherit;
   color: inherit;
-  text-decoration: underline;
-  text-decoration-color: var(--rule-quiet);
-  text-underline-offset: 4px;
+  border: 1px solid var(--rule-quiet);
+  border-radius: var(--r-pill);
+  transition: color 250ms ease-out, background-color 250ms ease-out;
 }
 
 .legend-pick[aria-pressed='true'] {
   color: var(--bg-raised);
   background: var(--ink);
-  text-decoration: none;
+  border-color: var(--ink);
 }
 
 /* A choice that spans two columns, such as Other after the four meals. */
@@ -1619,4 +1603,378 @@ html.locked body {
   width: 14px;
   height: 10px;
   border: 1px dashed var(--ink);
+}
+
+/* ---------- Panels ---------- */
+
+/* Each section of a screen sits on its own panel; a section inside a panel
+   is part of it, set off by a hairline. Sheets keep plain sections. */
+.screen .section,
+.screen .section.strong {
+  margin-top: var(--s3);
+  padding: var(--s5) var(--panel-x);
+  background: var(--bg-raised);
+  border-top: 0;
+  border-radius: var(--r-panel);
+}
+
+.screen .section .section {
+  margin-top: var(--s4);
+  padding: var(--s4) 0 0;
+  background: none;
+  border-top: 1px solid var(--rule-quiet);
+  border-radius: 0;
+}
+
+/* A switch between views of a screen sits on the page, above its panels. */
+.page-switch {
+  margin-top: var(--s2);
+}
+
+/* Dunes along the foot of a panel run to its edges. */
+.screen .section:has(> .dunes) {
+  overflow: hidden;
+}
+
+.screen .section > .dunes {
+  width: calc(100% + 2 * var(--panel-x));
+  margin: var(--s5) calc(-1 * var(--panel-x)) calc(-1 * var(--s5));
+}
+
+/* ---------- The fast: dial, times and the main button together ---------- */
+
+.ring-legend .legend {
+  justify-content: center;
+  column-gap: var(--s3);
+}
+
+/* The stage under the time is a button that opens the stages. */
+.ring-centre .stage-chip {
+  pointer-events: auto;
+}
+
+.stage-chip {
+  display: inline-flex;
+  align-items: center;
+  column-gap: 6px;
+  min-height: 34px;
+  max-width: 100%;
+  margin-top: var(--s2);
+  padding: 0 14px 0 10px;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+  background: var(--bg-raised-2);
+  border: 1px solid var(--rule-quiet);
+  border-radius: var(--r-pill);
+  transition: background-color 250ms ease-out;
+}
+
+.stage-chip svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+.stage-chip .stage-icon {
+  stroke: var(--ink);
+}
+
+.stage-chip:active {
+  background: var(--shade);
+}
+
+/* When the fast began and when it reaches its goal, side by side. */
+.time-pills {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: var(--s2);
+  margin-top: var(--s4);
+}
+
+.time-pill {
+  display: flex;
+  flex-direction: column;
+  row-gap: 4px;
+  text-align: center;
+}
+
+.time-pill .label {
+  font-size: 12px;
+}
+
+.time-pill button {
+  min-height: 44px;
+  padding: 6px 10px;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 15px;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+  background: var(--bg-raised-2);
+  border: 1px solid var(--rule-quiet);
+  border-radius: var(--r-pill);
+  font-variant-numeric: tabular-nums lining-nums;
+  transition: background-color 250ms ease-out;
+}
+
+.time-pill button:active {
+  background: var(--shade);
+}
+
+/* The fasting goal, reached: gold leaf, the mark of what you did. */
+.time-pill button.reached {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* A round button with a drawn cross, to put a note away. */
+.close-x {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: var(--r-pill);
+  transition: background-color 250ms ease-out;
+}
+
+.close-x svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.close-x:active {
+  background: var(--shade);
+}
+
+/* The fast just ended, at the top of Today. */
+.fast-done .row-x {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  column-gap: var(--s3);
+  margin: calc(-1 * var(--s2)) calc(-1 * var(--s2)) 0 0;
+}
+
+.fast-done .row-x .label {
+  padding-top: var(--s2);
+}
+
+/* ---------- The week on Today ---------- */
+
+.week-row {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  margin-top: var(--s2);
+  padding: 0 calc(var(--panel-x) - 8px);
+}
+
+.week-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  row-gap: 5px;
+  min-height: 50px;
+  padding: 4px 0 6px;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 11px;
+  line-height: 1.3;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-quiet);
+  border-radius: var(--r-control);
+  transition: background-color 250ms ease-out;
+}
+
+.week-day .cell {
+  width: 22px;
+  height: 22px;
+}
+
+/* Every day name keeps room for the line under today's, so the marks stay level. */
+.week-day .wd {
+  border-bottom: 2px solid transparent;
+}
+
+.week-day[aria-current='date'] {
+  color: var(--ink);
+}
+
+.week-day[aria-current='date'] .wd {
+  border-bottom-color: var(--ink);
+}
+
+.week-day:active {
+  background: var(--shade);
+}
+
+.week-legend {
+  padding: 0 var(--panel-x);
+}
+
+.week-legend .legend {
+  margin-top: 0;
+  column-gap: var(--s3);
+}
+
+/* ---------- Fasting stages, one at a time ---------- */
+
+.stage-line {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: var(--s4);
+}
+
+/* The line that joins the stages, behind their discs. */
+.stage-line::before {
+  content: '';
+  position: absolute;
+  left: 12.5%;
+  right: 12.5%;
+  top: 22px;
+  border-top: 1px solid var(--rule-quiet);
+}
+
+.stage-stop {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  row-gap: 4px;
+  padding: 0 2px 6px;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 12px;
+  line-height: 1.25;
+  text-align: center;
+  color: var(--text-quiet);
+  border-radius: var(--r-control);
+}
+
+.stage-stop .disc {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--rule-quiet);
+  border-radius: var(--r-pill);
+}
+
+.stage-stop .disc svg {
+  width: 24px;
+  height: 24px;
+}
+
+.stage-stop .disc .stage-icon {
+  stroke: var(--ink);
+}
+
+/* The sun's own gold rings the stage the fast is in now. */
+.stage-stop.now .disc {
+  border: 3px solid var(--accent);
+}
+
+.stage-stop[aria-current='true'] {
+  color: var(--ink);
+}
+
+.stage-stop[aria-current='true'] .name {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+.stage-cards {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 100%;
+  column-gap: var(--s3);
+  margin: var(--s4) 0 0;
+  padding: 0;
+  list-style: none;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.stage-cards::-webkit-scrollbar {
+  display: none;
+}
+
+.stage-card {
+  scroll-snap-align: start;
+  padding: var(--s4) var(--panel-x) var(--s5);
+  color: var(--ink);
+  border-radius: var(--r-panel);
+}
+
+.stage-card .label {
+  color: var(--ink);
+}
+
+.stage-card .h2 {
+  margin-top: var(--s1);
+  color: inherit;
+}
+
+.stage-card p {
+  max-width: none;
+}
+
+/* Each stage a shade deeper, from pale sand to dark rock. */
+.s-digesting {
+  background: var(--sand-300);
+}
+
+.s-settling {
+  background: var(--sand-400);
+}
+
+.s-switch {
+  background: var(--rock-400);
+}
+
+.s-ketones {
+  background: var(--rock-700);
+  color: var(--bg-raised);
+}
+
+.stage-card.s-ketones .label {
+  color: var(--sand-300);
+}
+
+.stage-stop .disc.s-ketones .stage-icon {
+  stroke: var(--bg-raised);
+}
+
+.stage-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  column-gap: var(--s3);
+}
+
+.now-badge {
+  padding: 2px 10px;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 12px;
+  line-height: 1.5;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: var(--accent);
+  border-radius: var(--r-pill);
 }

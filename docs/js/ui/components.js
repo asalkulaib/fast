@@ -7,7 +7,7 @@ let uid = 0;
 const nextId = (p) => `${p}-${++uid}`;
 
 /**
- * Row of square tap targets. Selected value in gold.
+ * Row of rounded tap targets. Selected value in ink.
  * opts: { n, value, onChange, label, low, high, start = 1 }
  */
 export function scale({ n, value, onChange, label, low, high, start = 1, name }) {
@@ -47,7 +47,8 @@ export function scale({ n, value, onChange, label, low, high, start = 1, name })
  */
 export function choice({ options, value, onChange, label, cols = 3, name }) {
   const labelId = nextId('choice');
-  const grid = h('div', { class: 'choice', role: 'radiogroup', 'aria-labelledby': label ? labelId : null });
+  // Five or more across: smaller pills, so each word keeps clear of the rounded ends.
+  const grid = h('div', { class: cols >= 5 ? 'choice many' : 'choice', role: 'radiogroup', 'aria-labelledby': label ? labelId : null });
   grid.style.setProperty('--cols', String(cols));
   const buttons = options.map((o) => {
     const b = h('button', {
@@ -369,12 +370,18 @@ export function button(label, onClick, { kind = 'primary', block = false, big = 
   return b;
 }
 
+/** A round button with a drawn cross, to put a note away. */
+export function closeButton(onClick, { name, label = 'Close' } = {}) {
+  return h('button', { type: 'button', class: 'close-x', 'aria-label': label, dataset: { action: name || '' }, onclick: onClick },
+    s('svg', { viewBox: '0 0 14 14', 'aria-hidden': 'true', focusable: 'false' }, s('path', { d: 'M2 2 L12 12 M12 2 L2 12' })));
+}
+
 // ---------- Marks drawn in SVG ----------
 
 const INK = '#1E140C'; // --ink
 const CLAY = '#9E3B23'; // --clay
 const GOLD = '#F0B25C'; // --accent
-const SAND = '#E6D0A8'; // --bg
+const SAND = '#F1E3C7'; // --bg-raised, the panel the marks sit on
 
 let hatches = 0;
 
@@ -392,7 +399,7 @@ export function hatch() {
   };
 }
 
-/** A legend key CSS cannot draw here (no rounded corners, no gradients): a miss, the sun, eating outside, the 16:00 line. */
+/** A legend key drawn in SVG, like the mark it names: a miss, the sun, eating outside, the 16:00 line, the current stage. */
 export function key(kind) {
   const box = (...kids) => s('svg', { class: 'key', viewBox: '0 0 14 14', 'aria-hidden': 'true', focusable: 'false' }, ...kids);
   if (kind === 'miss') {

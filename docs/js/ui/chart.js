@@ -12,7 +12,7 @@ const PAD = { top: 18, right: 46, bottom: 30, left: 38 };
 const LINE = '#9C6832'; // --rock-500: recessive series
 const LATEST = '#1E140C'; // --ink: the latest week (gold is kept for what you achieved)
 const INK = '#1E140C'; // --ink
-const SURFACE = '#E6D0A8'; // --bg: ring around markers
+const SURFACE = '#F1E3C7'; // --bg-raised, the panel: ring around markers
 const GRID = 'rgba(42, 28, 16, 0.14)';
 
 function niceStep(range) {

@@ -29,13 +29,21 @@ const PATHS = {
   ],
 };
 
-/** An icon group centred on (x, y), drawn at size px. */
-export function stageIcon(key, { x = 12, y = 12, size = 24, current = false } = {}) {
+/**
+ * An icon group centred on (x, y), drawn at size px. mark: false leaves out
+ * the data-stage-icon tag, for a copy of an icon beside its stage's name.
+ */
+export function stageIcon(key, { x = 12, y = 12, size = 24, current = false, mark = true } = {}) {
   const k = size / 24;
   return s('g', {
     class: current ? 'stage-icon now' : 'stage-icon',
     transform: `translate(${(x - size / 2).toFixed(1)} ${(y - size / 2).toFixed(1)}) scale(${k.toFixed(3)})`,
-    'data-stage-icon': key,
+    'data-stage-icon': mark ? key : null,
     'aria-hidden': 'true',
   }, current ? s('circle', { class: 'leaf', cx: 12, cy: 12, r: 14 }) : null, ...PATHS[key].map((d) => s('path', { d })));
+}
+
+/** A stage icon as its own small picture, for buttons and lists. */
+export function stageGlyph(key, { mark = true } = {}) {
+  return s('svg', { viewBox: '0 0 24 24', 'aria-hidden': 'true', focusable: 'false' }, stageIcon(key, { mark }));
 }

@@ -1,7 +1,7 @@
 // Today: the eating window.
 
 import { h, s, live } from './dom.js';
-import { button, choice, hatch, key, legend, scale, timeField, TRAINING_OPTIONS, STOP_TEXT } from './components.js';
+import { button, choice, closeButton, hatch, key, legend, scale, timeField, TRAINING_OPTIONS, STOP_TEXT } from './components.js';
 import * as store from '../store.js';
 import {
   HOUR, MIN, addDays, fmtCountdown, fmtDayLong, fmtDayShort, fmtDuration, fmtMinutes, fmtTime, fmtWhen, isWorkweekday, minutesOfDay, now,
@@ -9,7 +9,9 @@ import {
 import {
   CUTOFF_MIN, GRACE_MS, canReopen, cutoffApplies, goalLabel, isFlexible, isWorkday, lastEatingSource, lastEatingTs, lateNightDay, plannedStartMin, timeOnOrAfter, windowPhase,
 } from '../core/rules.js';
+import { dailySeries } from '../core/history.js';
 import { dunes } from './art.js';
+import { weekRow } from './week.js';
 import { forgotCloseDefault, showDoneEatingSheet, showFinishMealSheet, showMealEditSheet, showStartMealSheet } from './meal.js';
 import { showOutsideSheet } from './outside.js';
 import { showBiteTimeSheet, showOpeningSheet, showOutsideTimeSheet, showWindowTimesSheet } from './window-times.js';
@@ -18,7 +20,7 @@ import { currentPause, endPause, pauseToday, showPauseSheet } from './pause.js';
 import { showBeginFastSheet } from './begin-fast.js';
 import { showGoalSheet } from './goal.js';
 import { climbSection } from './climb.js';
-import { dayTypeText, header, mealInProgress, nextWindowLine, note, notices, runningFullness, tapNote } from './shared.js';
+import { dayTypeText, header, mealInProgress, nextWindowLine, note, notices, runningFullness, tapNote, timePill } from './shared.js';
 
 const days = (n) => `${n} ${n === 1 ? 'day' : 'days'}`;
 const hoursWord = (ms) => { const n = Math.round(ms / HOUR); return `${n} ${n === 1 ? 'hour' : 'hours'}`; };
@@ -31,10 +33,14 @@ export function signature(ctx) {
   if (mode === 'closed') parts.push(canReopen(rec, ctx.nowTs, ctx.windowMsFor(rec.day)));
   parts.push(runningFullness(ctx).length);
   // While fasting, redraw the ring every 5 minutes; each stage starts on a 5-minute mark.
+  // The goal turns gold on the minute it is reached.
   const last = fasting(mode) ? lastEatingTs(ctx) : null;
-  if (last) parts.push(Math.floor((ctx.nowTs - last) / (5 * MIN)));
+  if (last) parts.push(Math.floor((ctx.nowTs - last) / (5 * MIN)), ctx.nowTs >= last + goalHoursOf(ctx) * HOUR);
   return parts.join('|');
 }
+
+/** The fasting goal in hours: the day less today's eating window. */
+const goalHoursOf = (ctx, key = ctx.todayKey) => 24 - Math.round(ctx.windowMsFor(key) / HOUR);
 
 const fasting = (mode) => mode === 'before' || mode === 'closed' || mode === 'noEating';
 
@@ -49,14 +55,18 @@ export function renderToday(ctx, app) {
   else if (mode === 'paused') main = pausedBlock(ctx, app);
   else main = beforeBlock(ctx, app);
 
+  // While fasting, the stage panel below; after the window it carries the dial too.
+  const src = fasting(mode) ? lastEatingSource(ctx) : null;
   // Meals, fullness checks and how the day ended live on the Satiety tab;
   // Today points there while a fullness check is running.
   return h('div', { class: 'today', 'data-mode': mode },
     header(ctx, app, { title: fmtDayLong(ctx.todayKey), sub: dayTypeText(ctx.todayKey, todayRec) }),
+    weekRow(ctx, app),
     notices(ctx, app),
+    mode === 'open' ? fastDone(ctx, rec) : null,
     main,
     satietyPointer(ctx, app),
-    fasting(mode) ? stagesSection(ctx, app, lastEatingTs(ctx), { withRing: mode !== 'before' }) : null,
+    src ? stagesSection(ctx, app, src.ts, { withRing: mode !== 'before', times: mode !== 'before' ? fastTimes(ctx, app, src) : null }) : null,
     // The climb up Uhud takes the streak's place; with both climbers off, the streak returns.
     climbSection(ctx) || streakSection(ctx),
     // A paused day tracks nothing.
@@ -76,41 +86,36 @@ function beforeBlock(ctx, app) {
   const last = lastSrc ? lastSrc.ts : null;
   const late = lateNightDay(ctx);
   // On feasting hours there is no planned time: the window opens when you choose.
-  const plannedLine = isFlexible(key, ctx.settings)
-    ? h('p', { class: 'gap', 'data-testid': 'flexible-line' }, `Your ${Math.round(ctx.windowMsFor(key) / HOUR)}-hour window opens when you choose.`)
-    : h('p', { class: 'gap' }, `Window planned for ${fmtMinutes(planned)}.`);
-  const goalNote = tapNote('Goal', goalLabel(ctx.windowMsFor(key)), () => showGoalSheet(app), 'edit-goal');
-  // From Begin fast, a start before the last bite on record leads to that bite.
-  const beginFast = () => showBeginFastSheet(app, {
-    onBite: () => {
-      const src = lastEatingSource(app.ctx(), { fastStarts: false });
-      if (src) editLastBite(app, src);
-    },
-  });
-  return h('section', { class: 'section strong', 'data-block': 'before' },
-    h('div', { class: 'row' },
-      h('div', { class: 'main' },
-        h('div', { class: 'label' }, 'Before the window'),
-        // With a last bite on record the ring leads; before any, a plain title.
-        last ? null : h('h1', { class: 'display gap-s' }, 'Fasting'),
-        last ? null : plannedLine),
-      h('div', { class: 'margin' },
-        lastSrc && lastSrc.kind === 'fast'
-          ? tapNote('Fast began', fmtWhen(last, key), beginFast, 'edit-fast-start')
-          : last ? tapNote('Last bite', fmtWhen(last, key), () => editLastBite(app, lastSrc), 'edit-last-bite') : goalNote)),
-    last ? ringHero(ctx, last) : null,
-    // Under the ring, the goal sits in the margin beside the planned time.
-    last ? h('div', { class: 'row gap' }, h('div', { class: 'main' }, plannedLine), h('div', { class: 'margin' }, goalNote)) : null,
+  const plannedLine = (cls) => (isFlexible(key, ctx.settings)
+    ? h('p', { class: cls, 'data-testid': 'flexible-line' }, `Your ${Math.round(ctx.windowMsFor(key) / HOUR)}-hour window opens when you choose.`)
+    : h('p', { class: cls }, `Window planned for ${fmtMinutes(planned)}.`));
+  const startMeal = button('Start a meal', () => showStartMealSheet(app), { big: true, block: true, name: 'start-meal' });
+  // The fast in one card: the dial, when the fast began and when it reaches
+  // its goal, then the way in, with the 16:00 warning just above it. The
+  // rest of the plan follows on its own panel.
+  const card = h('section', { class: 'section strong', 'data-block': 'before' },
+    last
+      ? h('div', { class: 'label' }, 'Before the window')
+      // Before any bite on record: a plain title, and Begin fast beside Start a meal.
+      : h('div', { class: 'row' },
+        h('div', { class: 'main' },
+          h('div', { class: 'label' }, 'Before the window'),
+          h('h1', { class: 'display gap-s' }, 'Fasting'),
+          plannedLine('gap')),
+        h('div', { class: 'margin' }, tapNote('Goal', goalLabel(ctx.windowMsFor(key)), () => showGoalSheet(app), 'edit-goal'))),
+    last ? ringHero(ctx, last, fastTimes(ctx, app, lastSrc)) : null,
     last ? null : h('p', { class: 'quiet small gap-s', 'data-testid': 'begin-fast-hint' }, 'Already fasting? Tap Begin fast and set when it began, so none of it is lost.'),
-    workdayEarly ? h('p', { class: 'statement gap', 'data-testid': 'firm-reminder' }, 'Opening before 16:00 makes today a miss.') : null,
+    workdayEarly ? h('p', { class: 'statement gap-l', 'data-testid': 'firm-reminder' }, 'Opening before 16:00 makes today a miss.') : null,
     // With a fast already known (a last bite or a fast start), a meal is the only way in;
     // Begin fast is offered only when Fast has nothing to time from.
     last
-      ? h('div', { class: 'gap-l' }, button('Start a meal', () => showStartMealSheet(app), { big: true, block: true, name: 'start-meal' }))
-      : h('div', { class: 'btn-pair start-actions gap-l' },
-        button('Start a meal', () => showStartMealSheet(app), { big: true, block: true, name: 'start-meal' }),
-        button('Begin fast', beginFast, { kind: 'outline', big: true, block: true, name: 'begin-fast' })),
-    h('p', { class: 'quiet small gap' }, 'Until then: water, sparkling water, black coffee, espresso, plain tea.'),
+      ? h('div', { class: workdayEarly ? 'gap' : 'gap-l' }, startMeal)
+      : h('div', { class: `btn-pair start-actions ${workdayEarly ? 'gap' : 'gap-l'}` },
+        startMeal,
+        button('Begin fast', beginFastFor(app), { kind: 'outline', big: true, block: true, name: 'begin-fast' })));
+  const plan = h('section', { class: 'section', 'data-block': 'plan' },
+    last ? plannedLine(null) : null,
+    h('p', { class: last ? 'quiet small gap' : 'quiet small' }, 'Until then: water, sparkling water, black coffee, espresso, plain tea.'),
     late
       ? h('div', { class: 'gap' }, button('Eating late? Count it against last night', () => showOutsideSheet(app, { day: late }), { kind: 'secondary', name: 'late-night' }))
       : null,
@@ -118,6 +123,53 @@ function beforeBlock(ctx, app) {
     isWorkweekday(key) && !isFlexible(key, ctx.settings) ? dayOffToggle(ctx, key) : null,
     h('div', { class: 'gap-s' }, button('Pause today', () => pauseToday(app), { kind: 'secondary', name: 'pause-today' })),
   );
+  return [card, plan];
+}
+
+/** Begin fast, or change when it began; a start before the last bite on record leads to that bite. */
+function beginFastFor(app) {
+  return () => showBeginFastSheet(app, {
+    onBite: () => {
+      const src = lastEatingSource(app.ctx(), { fastStarts: false });
+      if (src) editLastBite(app, src);
+    },
+  });
+}
+
+/**
+ * Under the dial: when the fast began and the clock time it reaches its goal,
+ * each a pill you tap to change. Once reached, the goal is gold.
+ */
+function fastTimes(ctx, app, src) {
+  const key = ctx.todayKey;
+  const goalHours = goalHoursOf(ctx);
+  const goalAt = src.ts + goalHours * HOUR;
+  const reached = ctx.nowTs >= goalAt;
+  return h('div', { class: 'time-pills', 'data-testid': 'fast-times' },
+    src.kind === 'fast'
+      ? timePill('Fast began', fmtWhen(src.ts, key), beginFastFor(app), 'edit-fast-start')
+      : timePill('Last bite', fmtWhen(src.ts, key), () => editLastBite(app, src), 'edit-last-bite'),
+    timePill(`${goalHours} h goal`, reached ? `Reached ${fmtTime(goalAt)}` : fmtWhen(goalAt, key), () => showGoalSheet(app), 'edit-goal', { reached }));
+}
+
+/**
+ * The fast the window just ended, at the top of Today while the window is
+ * open: how long it was, in gold with a word when it reached the goal. Close
+ * puts it away for this window (kept by its first bite, so a window removed
+ * and opened again gets its own note).
+ */
+function fastDone(ctx, rec) {
+  if (!rec || rec.fastNoteClosed === rec.firstBite) return null;
+  const fastMs = dailySeries(ctx, rec.day, rec.day)[0].fastMs;
+  if (fastMs == null) return null;
+  const goalHours = goalHoursOf(ctx, rec.day);
+  const reached = fastMs >= goalHours * HOUR;
+  return h('section', { class: 'section fast-done', 'data-block': 'fast-done', 'data-reached': String(reached) },
+    h('div', { class: 'row-x' },
+      h('div', { class: 'label' }, 'Fast complete'),
+      closeButton(() => store.updateDay(rec.day, { fastNoteClosed: rec.firstBite }), { name: 'close-fast-done' })),
+    h('div', { class: `display gap-s${reached ? ' hl' : ''}`, 'data-testid': 'fast-length' }, fmtDuration(fastMs)),
+    reached ? h('p', { class: 'gap-s', 'data-testid': 'fast-goal' }, `Fasting goal of ${goalHours} h reached.`) : null);
 }
 
 // ---------- Paused ----------

@@ -6,7 +6,7 @@ Live app: https://asalkulaib.github.io/fast/
 
 ## The look
 
-Nafud at midday: sand is the page and umber ink the text. Gold leaf means one thing, that you did it: a successful day, a fasting goal reached, a day left wanting, the fast climber on Uhud; and it is the sun. A miss is always clay stripes, so it never rests on its red alone. Each screen has one solid button for its main action; others are outlined or plain. Cormorant Garamond sets the words and the few big figures, EB Garamond the text, and Jost every other number. Square corners and hairline rules.
+Nafud at midday: sand is the page and umber ink the text. Gold leaf means one thing, that you did it: a successful day, a fasting goal reached, a day left wanting, the fast climber on Uhud; and it is the sun. A miss is always clay stripes, so it never rests on its red alone. Each screen has one solid button for its main action; others are outlined or plain. Cormorant Garamond sets the words and the few big figures, EB Garamond the text, and Jost every other number. Each section sits on its own panel of lighter sand with soft corners, and what you tap is rounded: buttons and choices are pills. The dial, the chart marks and the legend keys keep their drawn shapes.
 
 ## Use it on your iPhone
 
@@ -19,7 +19,7 @@ Nafud at midday: sand is the page and umber ink the text. Gold leaf means one th
 ## The rules Fast follows
 
 - Times follow your phone's time zone: Kuwait time at home, local time when you travel (see Travel). Workdays are Sunday to Thursday, weekends Friday and Saturday, wherever you are.
-- Your goal is an eating window: 16:8, 18:6, 20:4 (the default), 23:1, or any whole number of hours from 1 to 12. The fasting goal is the rest of the 24 hours. Change it in More, Goal, or by tapping Goal on Today. A change applies from that day on; past days keep the goal they had.
+- Your goal is an eating window: 16:8, 18:6, 20:4 (the default), 23:1, or any whole number of hours from 1 to 12. The fasting goal is the rest of the 24 hours. Change it in More, Goal, or by tapping the goal under the dial on Today. A change applies from that day on; past days keep the goal they had.
 - Starting your first meal opens the window: its start is the first bite, and the countdown of your eating window begins. A window belongs to the day of its first bite, even when it runs past midnight.
 - A day succeeds when all eating falls within the window goal, with 15 minutes of grace. Beyond that it is a miss, shown as the time over the goal.
 - What makes a day a success is set in More. With Planned start (the default), a workday window that opens before 16:00 is a miss, and a day marked as a day off follows weekend rules. With Feasting hours, the window opens at any hour of any day, and only its length and eating outside it count. Today then shows no planned time, and the calendar file drops the window alerts. Like the goal, a change applies from that day on, and past days keep the rule they had.
@@ -27,6 +27,12 @@ Nafud at midday: sand is the page and umber ink the text. Gold leaf means one th
 - Between midnight and 04:00, late eating can be counted against the night before.
 - The streak counts consecutive successful days, shown in Week. A day with nothing logged breaks it, so Fast asks you to fill in any gap.
 - A paused day is not tracked for fasting: it is never a miss, and it neither counts towards the streak nor breaks it. Fullness still counts.
+
+## Today
+
+- Across the top, the week: Sunday to Saturday, each day in the marks of the Week schedule (ink for a success, clay stripes for a miss, sand for a paused day, a gold dot when left wanting), today underlined. Tap a day to open it. A legend names the marks in the row.
+- Before your window, one card holds the fast: the sun dial with the time fasted and the stage, then two times side by side, when the fast began (your last bite) and the clock time it reaches your fasting goal, then Start a meal. On a workday before 16:00 the warning sits just above the button. Tap either time to change it; once the goal is reached it turns gold. The planned time, what you can drink until then, a day off and Pause today follow on their own panel.
+- Starting your first meal ends the fast. A note at the top of Today says how long it was, with the length in gold and "Fasting goal of 20 h reached." when it reached your goal; a shorter fast just gets its length. Close puts the note away; it also goes when the window closes.
 
 ## Starting: a meal or Begin fast
 
@@ -62,7 +68,7 @@ Today keeps the meal buttons, the check-in and Uhud. While a fullness check is r
 
 On Satiety and History, tap a legend item to show only that one; the rest fade out. On Satiety you can also tap a mark, line or bar, and the choice applies to every chart and the meal list at once. Tap the item again, or Show all, to see everything; leaving the tab also resets it. (On the History chart, tapping a day still reads that day.)
 
-Every colour-coded visual has a legend that names each colour in words: the sun dial and the window band on Today, the Week schedule, Uhud, the History chart, the weight chart and the Satiety charts. Clay stripes always mean a miss. Sand means a paused day on the schedule and the chart, time still ahead on the dial and the band, and the comfortable zone on Satiety. On Satiety each way of finishing also has its own shape: a triangle for left wanting, a square for satisfied and a diamond for overfull.
+Every colour-coded visual has a legend that names each colour in words: the week row, the sun dial and the window band on Today, the Week schedule, Uhud, the History chart, the weight chart and the Satiety charts. Clay stripes always mean a miss. Sand means a paused day on the schedule and the chart, time still ahead on the dial and the band, and the comfortable zone on Satiety. On Satiety each way of finishing also has its own shape: a triangle for left wanting, a square for satisfied and a diamond for overfull.
 
 ## Fullness (شبع)
 
@@ -79,7 +85,9 @@ Thirty steps reach the summit. A climber who arrives stays there, and a new one 
 
 ## Fasting stages
 
-While you fast, Today shows the fast as the sun crossing the Nafud: it rises from the dunes on the left at your last bite (or when you began your fast), passes overhead at 12 hours and sets on the right at 24. The hours already fasted are laid in dark rock behind it, with the time fasted and the stage under the arc. A dark tick marks your fasting goal, and the line below says how far it is; once you reach it, "reached" turns gold. An icon marks each stage: a plate while digesting, a drop as blood sugar settles, a flame for the metabolic switch and a bolt for ketones; the current one is set in a dark circle. Before your window the dial leads Today; after it, a smaller one sits below the result. The hours are typical, not exact, and never a target. Past 24 hours the sun rests on the far horizon.
+While you fast, Today shows the fast as the sun crossing the Nafud: it rises from the dunes on the left at your last bite (or when you began your fast), passes overhead at 12 hours and sets on the right at 24. The hours already fasted are laid in dark rock behind it, with the time fasted under the arc and, below it, the stage as a small button. A dark tick marks your fasting goal; the stage panel further down says how far it is and when the next stage begins. An icon marks each stage: a plate while digesting, a drop as blood sugar settles, a flame for the metabolic switch and a bolt for ketones; the current one is set in a dark circle. Before your window the dial leads Today; after it, a smaller one sits below the result, with the same two times under it. The hours are typical, not exact, and never a target. Past 24 hours the sun rests on the far horizon.
+
+Tap the stage under the time, or About the stages, to see the stages one at a time: the four along a line across the top, the one the fast is in ringed in the sun's gold, and a card for each below, marked Now on the current one. Each card is a shade deeper than the last, from pale sand to dark rock. Swipe the cards or tap a stage.
 
 While the window is open, a band under the countdown fills as the hours pass: time used in dark rock, time left in sand, then the dashed 15 minutes of grace. Past the grace it turns to clay stripes.
 
@@ -94,7 +102,7 @@ Autophagy is described as uncertain instead of being given an hour: the evidence
 
 ## History
 
-History has three views: Fast, Feast and Weight. Weight opens the weight averages and import (see below). Fast and Feast chart, day by day, either your fasts or your eating windows, as bars or a line, over 7, 30 or 90 days. A day's fast runs from your last bite before it to that day's first bite. Missed days show in clay stripes; the selected day is solid ink. A solid line shows the 7-day trend and a dashed line the average. A legend names every mark: hours, miss, selected day, trend, average and paused. Paused days are shaded and left out. Tap a day to read its value and trend, then Open this day to edit it. Show as a table lists every value. Fast remembers your choices.
+History has three views: Fast, Feast and Weight. Weight opens the weight averages and import (see below). Fast and Feast chart, day by day, either your fasts or your eating windows, as bars or a line, over 7, 30 or 90 days; those switches sit at the top of the chart's panel. A day's fast runs from your last bite before it to that day's first bite. Missed days show in clay stripes; the selected day is solid ink. A solid line shows the 7-day trend and a dashed line the average. A legend names every mark: hours, miss, selected day, trend, average and paused. Paused days are shaded and left out. Tap a day to read its value and trend, then Open this day to edit it. Show as a table lists every value. Fast remembers your choices.
 
 ## Pauses
 

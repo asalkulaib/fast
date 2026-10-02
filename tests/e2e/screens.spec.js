@@ -409,6 +409,32 @@ test('today before the window: ring legend, Start a meal alone, feasting hours',
   await shot(page, '78-today-before-flexible', { full: true });
 });
 
+test('the week on Today, with all seven days of the seeded week', async ({ page }) => {
+  await openAt(page, '2026-09-26T23:00');
+  await seed(page, { ...WEEK, settings: install });
+  await shot(page, '82-today-week-row');
+});
+
+test('the goal reached, then the fast marked complete', async ({ page }) => {
+  // Sunday 18:10: 20 h 10 min after Saturday's window, so the goal is reached.
+  await openAt(page, '2026-09-27T18:10');
+  await seed(page, { ...WEEK, settings: install });
+  await shot(page, '83-today-goal-reached');
+  await tap(page, 'start-meal');
+  await tap(page, 'start-eating');
+  await shot(page, '84-today-fast-complete');
+});
+
+test('the stages one at a time, opened from the stage under the time', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await openAt(page, '2026-09-27T13:10');
+  await seed(page, { ...WEEK, settings: install });
+  await tap(page, 'open-stages');
+  await shot(page, '85-stages-from-the-chip');
+  await tap(page, 'stage-ketones');
+  await shot(page, '86-stages-ketones');
+});
+
 test.describe('travel', () => {
   test.use({ timezoneId: 'Asia/Dubai' });
 

@@ -81,7 +81,7 @@ test('legends name every colour: week strip, ring, Uhud and weight', async ({ pa
   await seed(page, WEEK);
   await expect(items(page, 'strip-legend')).toHaveText(['Success', 'Miss', 'Paused', 'Open or not logged', 'Still ahead', 'Left wanting', '16:00 on workdays', 'Ate outside the window']);
   await tab(page, 'today').click();
-  await expect(items(page, 'ring-legend')).toHaveText(['Hours fasted', 'Still ahead', 'Now', 'Fasting goal', 'Current stage icon']);
+  await expect(items(page, 'ring-legend')).toHaveText(['Fasted', 'Ahead', 'Now', 'Goal', 'Stage']);
   await expect(items(page, 'uhud-legend')).toHaveText(['Fast trail walked', 'Fullness trail walked', 'Trail still ahead', 'Faded figures: past summits']);
   await tab(page, 'history').click();
   await choose(page, 'history-metric', 'weight');
