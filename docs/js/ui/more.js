@@ -177,7 +177,7 @@ export function renderMore(ctx, app) {
       h('p', { class: 'small quiet gap-s' }, 'In the share sheet choose Calendar. If it is not listed, choose Save to Files, then open the file in Files and tap Add All.')),
     h('section', { class: 'section', 'data-block': 'export' },
       h('div', { class: 'label' }, 'Export'),
-      h('p', { class: 'gap-s' }, 'CSV files for Excel: windows, meals, weight, check-ins and temptations. The weight file holds your raw entries.'),
+      h('p', { class: 'gap-s' }, 'CSV files for Excel: every day with its window and the fast before it, meals, weight, check-ins and temptations. The weight file holds your raw entries.'),
       h('div', { class: 'gap' }, button('Export CSV files', () => app.exportCsv(), { kind: 'outline', block: true, name: 'export-csv' }))),
     h('section', { class: 'section', 'data-block': 'backup' },
       h('div', { class: 'label' }, 'Backup'),

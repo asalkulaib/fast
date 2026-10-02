@@ -18,10 +18,13 @@ test('CSV export: five files for Excel', async ({ page }) => {
   }
   const windows = files[0].text.trim().split('\r\n');
   expect(windows).toHaveLength(8);
-  expect(windows[2]).toBe('2026-09-21,Monday,workday,15:00,18:00,2026-09-21,180,miss,opened before 16:00,,yes,0,,240');
+  // Monday opened before 16:00, after an 18-hour fast from Sunday's last bite.
+  expect(windows[2]).toBe(['2026-09-21', 'Monday', 'workday', 'planned start', 'Kuwait', '17:30', '15:00', '18:00', '2026-09-21', '180', '240',
+    'miss', 'opened before 16:00', '', 'yes', '0', '2026-09-20 21:00', '1080', '1200', 'no', ''].join(','));
   const weight = files[2].text.trim().split('\r\n');
   expect(weight).toEqual(['date,kg', '2026-09-14,106', '2026-09-16,105.5', '2026-09-18,105', '2026-09-21,104.9', '2026-09-23,104.7', '2026-09-25,104.5']);
-  expect(files[1].text).toContain('2026-09-24,outside the window,,22:00,,,,,,boredom,little');
+  expect(files[1].text).toContain(['2026-09-24', 'outside the window', '', '', '22:00', '', '', '', '', '', '', '', '', 'boredom', 'a little'].join(','));
+  expect(files[4].text).toContain('date,time,when,trigger,outcome,urge_0min,urge_3min,urge_6min,urge_9min,minutes');
 });
 
 test('JSON backup, wipe, restore: everything comes back', async ({ page }) => {

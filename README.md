@@ -163,7 +163,13 @@ More, Add to Calendar creates four repeating alerts: hold the line at 13:00 and 
 
 ## Backups
 
-Everything lives only on the phone. More, Back up now saves a JSON file; keep it in Files or iCloud Drive. Fast reminds you after 7 days without a backup. More, Restore from a backup brings everything back. Export CSV files gives windows, meals, weight (the only place raw weights appear), check-ins and temptations for Excel.
+Everything lives only on the phone. More, Back up now saves a JSON file; keep it in Files or iCloud Drive. Fast reminds you after 7 days without a backup. More, Restore from a backup brings everything back. Export CSV files gives five files for Excel, one fact per column:
+
+- `fast-windows.csv`: every day from the start of tracking to today, gaps marked not logged. Weekday, workday or weekend, planned start or feasting hours, the time zone, the planned time, first and last bite, the window's length and goal, the result with its reasons, the fast before it (when it began, how long, its goal and whether it was reached) and how full the day ended.
+- `fast-meals.csv`: each meal, its type (Snack, Breakfast, Lunch, Dinner or Other) and name, start, finish and minutes, hunger before, how you stopped, fullness right after and at 20 minutes, the rise, and a skipped 20-minute check. Eating logged outside the window is listed too, with its trigger and amount.
+- `fast-weight.csv`: every weigh-in in kg, the only place raw weights appear.
+- `fast-checkins.csv`: energy at 4 PM and training.
+- `fast-temptations.csv`: when, where the day stood, the trigger, the outcome, the urge at 0, 3, 6 and 9 minutes, and how long it took.
 
 ## Start again
 

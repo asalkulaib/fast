@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { buildIcs, foldLine, escapeText, icsTimes } from '../../docs/js/core/ics.js';
 import { buildCsvFiles, csvCell, toCsv } from '../../docs/js/core/csv.js';
 import { buildBackup, parseBackup, describeBackup } from '../../docs/js/core/backup.js';
+import { setZones } from '../../docs/js/core/time.js';
 
 const T = (s) => Date.parse(`${s}:00+03:00`);
 const SETTINGS = { workdayStart: '17:30', weekendStart: '14:00', holdTime: '13:00', trainingTime: '16:30' };
@@ -73,7 +74,7 @@ function sample() {
     ]),
     meals: [{ id: 1, day: '2026-09-20', name: 'Dinner, with rice', startedAt: T('2026-09-20T17:30'), finishedAt: T('2026-09-20T18:00'), hungerBefore: 7, stop: 'before_full', fullnessNow: 6, fullness20: 7 }],
     outside: [{ id: 1, day: '2026-09-20', at: T('2026-09-20T22:30'), trigger: 'boredom', amount: 'little' }],
-    temptations: [{ id: 1, day: '2026-09-20', startedAt: T('2026-09-20T13:00'), endedAt: T('2026-09-20T13:10'), trigger: 'social', outcome: 'held', urges: [{ min: 0, value: 7 }, { min: 3, value: 4 }] }],
+    temptations: [{ id: 1, day: '2026-09-20', startedAt: T('2026-09-20T13:00'), endedAt: T('2026-09-20T13:10'), trigger: 'social', outcome: 'held', context: 'before', urges: [{ min: 0, value: 7 }, { min: 3, value: 4 }] }],
     weights: new Map([['2026-09-20', 104.6], ['2026-09-21', 104.3]]),
     settings: { ...SETTINGS, installedAt: T('2026-09-20T08:00') },
   };
@@ -83,16 +84,66 @@ test('csv: five files with the expected rows', () => {
   const files = buildCsvFiles(sample(), { nowTs: T('2026-09-26T12:00'), todayKey: '2026-09-26', startKey: '2026-09-20' });
   assert.deepEqual(files.map((f) => f.name), ['fast-windows.csv', 'fast-meals.csv', 'fast-weight.csv', 'fast-checkins.csv', 'fast-temptations.csv']);
   const rows = (name) => files.find((f) => f.name === name).text.replace('﻿', '').trim().split('\r\n');
+  const line = (...cells) => cells.join(',');
   const windows = rows('fast-windows.csv');
-  assert.equal(windows[0], 'date,weekday,day_type,first_bite,last_bite,last_bite_date,length_min,result,reasons,over_by_min,opened_before_16,outside_eating,fullness,window_goal_min');
-  assert.equal(windows[1], '2026-09-20,Sunday,workday,17:30,21:50,2026-09-20,260,miss,over 4 h 15 min; ate outside the window,20,no,1,left wanting,240');
-  assert.equal(windows[2], '2026-09-25,Friday,weekend,23:00,01:30,2026-09-26,150,success,,,no,0,,240');
+  assert.equal(windows[0], line('date', 'weekday', 'day_type', 'timing', 'time_zone', 'planned_start', 'first_bite', 'last_bite', 'last_bite_date', 'length_min', 'window_goal_min',
+    'result', 'reasons', 'over_by_min', 'opened_before_16', 'outside_eating', 'fast_from', 'fast_min', 'fast_goal_min', 'fast_goal_reached', 'fullness'));
+  // Every day from the start of tracking to today, gaps included.
+  assert.equal(windows.length, 8);
+  const day = (key) => windows.find((r) => r.startsWith(`${key},`));
+  // The first day has no eating before it on record, so no fast is known.
+  assert.equal(day('2026-09-20'), line('2026-09-20', 'Sunday', 'workday', 'planned start', 'Kuwait', '17:30', '17:30', '21:50', '2026-09-20', '260', '240',
+    'miss', 'over 4 h 15 min; ate outside the window', '20', 'no', '1', '', '', '1200', '', 'left wanting'));
+  // A day with nothing logged, and today with nothing yet.
+  assert.equal(day('2026-09-21'), line('2026-09-21', 'Monday', 'workday', 'planned start', 'Kuwait', '17:30', '', '', '', '', '240',
+    'not logged', '', '', '', '0', '', '', '1200', '', ''));
+  assert.equal(day('2026-09-26'), line('2026-09-26', 'Saturday', 'weekend', 'planned start', 'Kuwait', '14:00', '', '', '', '', '240',
+    'nothing yet', '', '', '', '0', '', '', '1200', '', ''));
+  // Friday's fast ran from the snack outside the window on the 20th: 5 days and 30 minutes.
+  assert.equal(day('2026-09-25'), line('2026-09-25', 'Friday', 'weekend', 'planned start', 'Kuwait', '14:00', '23:00', '01:30', '2026-09-26', '150', '240',
+    'success', '', '', 'no', '0', '2026-09-20 22:30', '7230', '1200', 'yes', ''));
   const meals = rows('fast-meals.csv');
-  assert.equal(meals[1], '2026-09-20,meal,"Dinner, with rice",17:30,18:00,7,left wanting,6,7,,');
-  assert.equal(meals[2], '2026-09-20,outside the window,,22:30,,,,,,boredom,little');
+  assert.equal(meals[0], line('date', 'kind', 'type', 'name', 'start', 'finish', 'minutes', 'hunger_before', 'stopped', 'fullness_after', 'fullness_20min', 'rise_20min', 'check_20min_skipped', 'trigger', 'amount'));
+  assert.equal(meals[1], line('2026-09-20', 'meal', 'Other', '"Dinner, with rice"', '17:30', '18:00', '30', '7', 'left wanting', '6', '7', '1', '', '', ''));
+  assert.equal(meals[2], line('2026-09-20', 'outside the window', '', '', '22:30', '', '', '', '', '', '', '', '', 'boredom', 'a little'));
   assert.deepEqual(rows('fast-weight.csv'), ['date,kg', '2026-09-20,104.6', '2026-09-21,104.3']);
   assert.deepEqual(rows('fast-checkins.csv'), ['date,weekday,day_type,energy_4pm,trained,training_type', '2026-09-20,Sunday,workday,4,yes,weights']);
-  assert.deepEqual(rows('fast-temptations.csv'), ['date,time,trigger,outcome,urge_ratings,minutes', '2026-09-20,13:00,social,held,7 4,10']);
+  assert.deepEqual(rows('fast-temptations.csv'), [
+    line('date', 'time', 'when', 'trigger', 'outcome', 'urge_0min', 'urge_3min', 'urge_6min', 'urge_9min', 'minutes'),
+    line('2026-09-20', '13:00', 'before the window', 'social', 'held', '7', '4', '', '', '10'),
+  ]);
+});
+
+test('csv: feasting hours, a pause, a day away, meal types and a skipped check', () => {
+  setZones([{ from: null, zone: 'Asia/Kuwait' }, { from: T('2026-10-01T10:00'), zone: 'Asia/Dubai' }]);
+  try {
+    const data = {
+      days: new Map([
+        ['2026-09-28', { day: '2026-09-28', paused: 'travel' }],
+        ['2026-10-02', { day: '2026-10-02', firstBite: T('2026-10-02T17:00'), lastBite: T('2026-10-02T20:00') }],
+      ]),
+      meals: [{ id: 1, day: '2026-10-02', name: 'Dinner', startedAt: T('2026-10-02T17:00'), finishedAt: T('2026-10-02T17:40'), hungerBefore: 6, stop: 'full', fullnessNow: 7, fullness20Skipped: true }],
+      outside: [],
+      temptations: [],
+      weights: new Map(),
+      settings: { ...SETTINGS, installedAt: T('2026-09-27T08:00'), flexChanges: [{ from: '2026-10-01', on: true }] },
+    };
+    const files = buildCsvFiles(data, { nowTs: T('2026-10-03T12:00'), todayKey: '2026-10-03', startKey: '2026-09-27' });
+    const rows = (name) => files.find((f) => f.name === name).text.replace('﻿', '').trim().split('\r\n');
+    const line = (...cells) => cells.join(',');
+    const windows = rows('fast-windows.csv');
+    const day = (key) => windows.find((r) => r.startsWith(`${key},`));
+    // A paused day: its reason in the result, no planned start.
+    assert.equal(day('2026-09-28'), line('2026-09-28', 'Monday', 'workday', 'planned start', 'Kuwait', '', '', '', '', '', '240',
+      'paused (travel)', '', '', '', '0', '', '', '1200', '', ''));
+    // Feasting hours from 1 October, and the times on Dubai's clock while there.
+    assert.equal(day('2026-10-02'), line('2026-10-02', 'Friday', 'weekend', 'feasting hours', 'Dubai', '', '18:00', '21:00', '2026-10-02', '180', '240',
+      'success', '', '', 'no', '0', '', '', '1200', '', 'satisfied'));
+    const meals = rows('fast-meals.csv');
+    assert.equal(meals[1], line('2026-10-02', 'meal', 'Dinner', 'Dinner', '18:00', '18:40', '40', '6', 'satisfied', '7', '', '', 'yes', '', ''));
+  } finally {
+    setZones([{ from: null, zone: 'Asia/Kuwait' }]);
+  }
 });
 
 test('backup: round trip and validation messages', () => {

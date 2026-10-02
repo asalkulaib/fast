@@ -113,6 +113,6 @@ test('the windows CSV lists paused days with their reason', () => {
   const [windows] = buildCsvFiles({ days: d, meals: [], outside: [], temptations: [], weights: new Map() },
     { nowTs: T('2026-09-26T12:00'), todayKey: '2026-09-26', startKey: '2026-09-20' });
   const rows = windows.text.split('\r\n');
-  assert.match(rows[2], /^2026-09-21,Monday,workday,,,,,paused \(travel\),/);
-  assert.match(rows[3], /^2026-09-22,Tuesday,workday,,,,,paused,/);
+  assert.match(rows[2], /^2026-09-21,Monday,workday,planned start,Kuwait,,,,,,240,paused \(travel\),/);
+  assert.match(rows[3], /^2026-09-22,Tuesday,workday,planned start,Kuwait,,,,,,240,paused,/);
 });
