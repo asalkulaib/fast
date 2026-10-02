@@ -704,54 +704,86 @@ sup.fn {
   color: var(--text-quiet);
 }
 
-/* ---------- Scales and choices ---------- */
+/* ---------- Scales and choices: sliding tracks ---------- */
 
-/* Rating scales: rows of rounded tap targets. Five-point scales hang from the
-   left at 52px; ten-point scales use the full column so each one stays tappable. */
-.scale {
-  --scale-gap: 5px;
+/* Every choice and rating is one track. An ink pill sits under the chosen
+   option and glides to the next; on a single line it can be dragged too. */
+.scale,
+.choice {
+  position: relative;
   display: grid;
+  padding: 4px;
+  background: var(--shade);
+  border-radius: var(--r-pill);
+}
+
+.scale {
   grid-template-columns: repeat(var(--n, 10), minmax(0, 1fr));
-  gap: var(--scale-gap);
-  container-type: inline-size;
 }
 
+/* Five-point scales hang from the left; ten-point scales use the full column. */
 .scale.short {
-  grid-template-columns: repeat(var(--n, 5), 52px);
+  grid-template-columns: repeat(var(--n, 5), 48px);
+  width: max-content;
 }
 
-.scale button {
-  height: calc((100cqw - (var(--n, 10) - 1) * var(--scale-gap)) / var(--n, 10));
+.choice {
+  grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr));
 }
 
-.scale.short button {
-  height: 52px;
+/* Over more than one line, softer corners; the pill glides across lines. */
+.choice.grid {
+  border-radius: var(--r-panel);
 }
 
-.scale-wrap.short .scale-ends {
-  width: calc(var(--n, 5) * 52px + (var(--n, 5) - 1) * 5px);
+/* A single line can be dragged sideways; up and down still scroll the page. */
+.scale.line,
+.choice.line {
+  touch-action: pan-y;
 }
 
 .scale button,
 .choice button {
   position: relative;
-  min-height: 34px;
+  z-index: 1;
+  min-height: 40px;
   font-family: var(--font-ui);
   font-weight: 500;
   font-size: 15px;
   letter-spacing: 0.02em;
   color: var(--text-quiet);
-  border: 1px solid var(--rule-quiet);
-  border-radius: var(--r-control);
-  transition: color 250ms ease-out, border-color 250ms ease-out, background-color 250ms ease-out;
+  border-radius: var(--r-pill);
+  transition: color 250ms ease-out;
 }
 
 .scale button[aria-checked='true'],
 .choice button[aria-checked='true'] {
-  z-index: 1;
   color: var(--bg-raised);
+}
+
+/* The pill: ink, under the chosen option, gliding when the choice changes. */
+.pill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  width: var(--w, 0);
+  height: var(--h, 0);
+  transform: translate(var(--x, 0), var(--y, 0));
   background: var(--ink);
-  border-color: var(--ink);
+  border-radius: var(--r-pill);
+  pointer-events: none;
+}
+
+.pill.glide {
+  transition:
+    transform 300ms cubic-bezier(0.25, 0.9, 0.3, 1),
+    width 300ms cubic-bezier(0.25, 0.9, 0.3, 1),
+    height 300ms cubic-bezier(0.25, 0.9, 0.3, 1);
+}
+
+.scale-wrap.short .scale-ends {
+  width: calc(var(--n, 5) * 48px + 8px);
 }
 
 .scale-ends {
@@ -763,25 +795,19 @@ sup.fn {
   color: var(--text-quiet);
 }
 
-/* Choices: a pill for each option, the chosen one in ink. */
-.choice {
-  display: grid;
-  grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr));
-  gap: var(--s2);
-}
-
 .choice button {
-  min-height: 44px;
   padding: 8px 10px;
   line-height: 1.25;
-  border-radius: var(--r-pill);
 }
 
-.choice.many {
-  gap: 6px;
+/* Five or more across: smaller words, clear of the rounded ends. */
+.choice.many button {
+  padding: 8px 2px;
+  font-size: 14px;
+  letter-spacing: 0;
 }
 
-/* A chart's own switches: slim segments on one line, the chosen one in ink. */
+/* A chart's own switches: slim tracks on one line. */
 .chart-switches {
   display: flex;
   flex-wrap: wrap;
@@ -791,10 +817,7 @@ sup.fn {
 
 .choice.slim {
   display: inline-flex;
-  gap: 0;
   padding: 3px;
-  background: var(--shade);
-  border-radius: var(--r-pill);
 }
 
 .choice.slim button {
@@ -803,14 +826,6 @@ sup.fn {
   font-size: 13px;
   letter-spacing: 0.01em;
   white-space: nowrap;
-  border: 0;
-  border-radius: var(--r-pill);
-}
-
-.choice.many button {
-  padding: 8px 2px;
-  font-size: 14px;
-  letter-spacing: 0;
 }
 
 /* ---------- Countdown ---------- */

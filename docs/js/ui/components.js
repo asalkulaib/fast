@@ -6,8 +6,112 @@ import { addDays, durationParts, fmtDayShort, minutesOfDay, now } from '../core/
 let uid = 0;
 const nextId = (p) => `${p}-${++uid}`;
 
+// ---------- Sliding selection ----------
+
+// A tap that is about to redraw its selector: where the pill stood, so the
+// selector drawn in its place starts there and glides to the new choice.
+const moves = new Map();
+const GLIDE_MS = 600;
+
 /**
- * Row of rounded tap targets. Selected value in ink.
+ * Makes a track of option buttons slide: an ink pill sits under the chosen
+ * option and glides to the next one. Tap an option; on a single line, the
+ * pill can also be dragged along. Returns choose(button, { tap }), which
+ * marks a button chosen, moves the pill and calls pick(button).
+ */
+function sliding(track, buttons, { key, line, pick }) {
+  const pill = h('span', { class: 'pill', 'aria-hidden': 'true', hidden: true });
+  track.prepend(pill);
+  let committed = buttons.find((b) => b.getAttribute('aria-checked') === 'true') || null;
+  let shown = null; // the pill's place: { x, y, w, h }
+  let placed = false;
+  const rectOf = (b) => ({ x: b.offsetLeft, y: b.offsetTop, w: b.offsetWidth, h: b.offsetHeight });
+  const put = (r) => {
+    pill.style.setProperty('--x', `${r.x}px`);
+    pill.style.setProperty('--y', `${r.y}px`);
+    pill.style.setProperty('--w', `${r.w}px`);
+    pill.style.setProperty('--h', `${r.h}px`);
+    shown = r;
+  };
+  const mark = (b) => { for (const x of buttons) x.setAttribute('aria-checked', String(x === b)); };
+  const show = (b) => {
+    pill.hidden = !b;
+    if (b && track.clientWidth) put(rectOf(b));
+  };
+  // First drawn, or drawn again after a tap redrew the screen: glide from
+  // where the pill stood, if the tap was just now on a track this wide.
+  const first = () => {
+    if (!track.clientWidth) return;
+    placed = true;
+    if (!committed) return;
+    pill.hidden = false;
+    const move = key && moves.get(key);
+    if (key) moves.delete(key);
+    if (move && Date.now() - move.at < GLIDE_MS && move.width === track.clientWidth) {
+      put(move.from);
+      void pill.offsetWidth; // settle the start before the glide begins
+      pill.classList.add('glide');
+      put(rectOf(committed));
+    } else {
+      put(rectOf(committed));
+      requestAnimationFrame(() => pill.classList.add('glide'));
+    }
+  };
+  new ResizeObserver(() => { if (!placed) first(); else if (committed) show(committed); }).observe(track);
+
+  const choose = (b, { tap = false } = {}) => {
+    const changed = b !== committed;
+    if (key && shown && changed) moves.set(key, { from: shown, at: Date.now(), width: track.clientWidth });
+    committed = b;
+    mark(b);
+    if (!pill.classList.contains('glide') && shown) pill.classList.add('glide');
+    show(b);
+    // A tap always counts, as it always has; a drag only when it lands elsewhere.
+    if (tap || changed) pick(b);
+  };
+
+  if (line) {
+    track.classList.add('line');
+    let drag = null;
+    let swallow = false;
+    const under = (clientX) => {
+      const x = clientX - track.getBoundingClientRect().left;
+      return buttons.find((b) => x < b.offsetLeft + b.offsetWidth) || buttons[buttons.length - 1];
+    };
+    track.addEventListener('pointerdown', (e) => {
+      if (e.button === 0) drag = { id: e.pointerId, x: e.clientX, moved: false };
+    });
+    track.addEventListener('pointermove', (e) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      if (!drag.moved) {
+        if (Math.abs(e.clientX - drag.x) < 8) return;
+        drag.moved = true;
+        try { track.setPointerCapture(e.pointerId); } catch { /* a finished pointer */ }
+      }
+      const b = under(e.clientX);
+      mark(b);
+      show(b);
+    });
+    const end = (e, keep) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      const moved = drag.moved;
+      drag = null;
+      if (!moved) return; // a tap: the button's own click chooses
+      swallow = true;
+      setTimeout(() => { swallow = false; }, 0);
+      if (keep) choose(under(e.clientX));
+      else { mark(committed); show(committed); } // the page scrolled instead
+    };
+    track.addEventListener('pointerup', (e) => end(e, true));
+    track.addEventListener('pointercancel', (e) => end(e, false));
+    track.addEventListener('click', (e) => { if (swallow) e.stopPropagation(); }, true);
+  }
+  return choose;
+}
+
+/**
+ * A rating: the numbers on one track, an ink pill under the one chosen.
+ * Tap a number or drag the pill along.
  * opts: { n, value, onChange, label, low, high, start = 1 }
  */
 export function scale({ n, value, onChange, label, low, high, start = 1, name }) {
@@ -16,6 +120,7 @@ export function scale({ n, value, onChange, label, low, high, start = 1, name })
   const row = h('div', { class: short ? 'scale short' : 'scale', role: 'radiogroup', 'aria-labelledby': labelId });
   row.style.setProperty('--n', String(n));
   const buttons = [];
+  let choose = null;
   for (let i = 0; i < n; i++) {
     const v = start + i;
     const b = h('button', {
@@ -24,14 +129,12 @@ export function scale({ n, value, onChange, label, low, high, start = 1, name })
       'aria-checked': String(v === value),
       'aria-label': `${v}`,
       dataset: { value: String(v), scale: name || '' },
-      onclick: () => {
-        for (const x of buttons) x.setAttribute('aria-checked', String(x === b));
-        onChange(v);
-      },
+      onclick: () => choose(b, { tap: true }),
     }, String(v));
     buttons.push(b);
     row.append(b);
   }
+  choose = sliding(row, buttons, { key: name ? `scale:${name}` : null, line: true, pick: (b) => onChange(Number(b.dataset.value)) });
   const wrap = h('div', { class: short ? 'scale-wrap short' : 'scale-wrap' },
     label ? h('div', { class: 'label field-label', id: labelId }, label) : null,
     row,
@@ -40,6 +143,8 @@ export function scale({ n, value, onChange, label, low, high, start = 1, name })
   wrap.style.setProperty('--n', String(n));
   return wrap;
 }
+
+const ZERO_WIDTH_SPACE = String.fromCharCode(0x200b);
 
 /**
  * A figure: large digits with small units, as in 15h 10m, 5 of 7 or 104.7 kg.
@@ -52,7 +157,7 @@ export function figureParts(parts) {
     // form, so Cormorant's old-style 3 would drop below the line. Each number
     // keeps a second character: its leading space, or a zero-width space.
     const n = String(num);
-    out.push(i ? ` ${n}` : n.length === 1 ? `${n}​` : n);
+    out.push(i ? ` ${n}` : n.length === 1 ? n + ZERO_WIDTH_SPACE : n);
     if (unit) out.push(h('span', { class: 'unit' }, unit));
   });
   return h('span', { class: 'fig' }, out);
@@ -62,16 +167,19 @@ export function figureParts(parts) {
 export const durationFigure = (ms) => figureParts(durationParts(ms));
 
 /**
- * Grid of text options (one choice). options: [{ value, label, wide }];
- * a wide option spans two columns. slim: a small segmented switch that
- * sizes to its words, for a chart's own controls.
+ * Text options on one sliding track (one choice). options: [{ value, label,
+ * wide }]; a wide option spans two columns. On more than one line the pill
+ * glides across lines too. slim: a small switch that sizes to its words,
+ * for a chart's own controls.
  */
 export function choice({ options, value, onChange, label, cols = 3, name, slim = false, ariaLabel = null }) {
   const labelId = nextId('choice');
-  // Five or more across: smaller pills, so each word keeps clear of the rounded ends.
-  const cls = slim ? 'choice slim' : cols >= 5 ? 'choice many' : 'choice';
+  const line = slim || (options.length <= cols && !options.some((o) => o.wide));
+  // Five or more across: smaller words, so each keeps clear of the rounded ends.
+  const cls = ['choice', slim ? 'slim' : cols >= 5 ? 'many' : '', line ? '' : 'grid'].filter(Boolean).join(' ');
   const grid = h('div', { class: cls, role: 'radiogroup', 'aria-labelledby': label ? labelId : null, 'aria-label': label ? null : ariaLabel });
   grid.style.setProperty('--cols', String(cols));
+  let choose = null;
   const buttons = options.map((o) => {
     const b = h('button', {
       type: 'button',
@@ -79,14 +187,12 @@ export function choice({ options, value, onChange, label, cols = 3, name, slim =
       role: 'radio',
       'aria-checked': String(o.value === value),
       dataset: { value: String(o.value), choice: name || '' },
-      onclick: () => {
-        for (const x of buttons) x.setAttribute('aria-checked', String(x === b));
-        onChange(o.value);
-      },
+      onclick: () => choose(b, { tap: true }),
     }, o.label);
     return b;
   });
   grid.append(...buttons);
+  choose = sliding(grid, buttons, { key: name ? `choice:${name}` : null, line, pick: (b) => onChange(options[buttons.indexOf(b)].value) });
   return h('div', { class: 'choice-wrap' }, label ? h('div', { class: 'label field-label', id: labelId }, label) : null, grid);
 }
 
