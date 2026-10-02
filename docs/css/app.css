@@ -1009,22 +1009,38 @@ sup.fn {
 
 /* Messages sit in a bar just above the tabs, so they show wherever the
    screen is scrolled; Undo sits at its right. */
+/* Messages float just above the tabs, in the same rounded, shaded material,
+   with no strip or line across the screen. */
 .flash {
   position: fixed;
-  left: 0;
-  right: 0;
-  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
+  left: var(--gutter-l);
+  right: var(--gutter-r);
+  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + var(--s1));
   z-index: 9;
   display: flex;
   align-items: center;
   justify-content: space-between;
   column-gap: var(--s4);
   min-height: 52px;
-  padding: var(--s2) calc(var(--gutter-r) + var(--panel-x)) var(--s2) calc(var(--gutter-l) + var(--panel-x));
+  padding: var(--s2) var(--panel-x) var(--s2) calc(var(--panel-x) + 4px);
   background: var(--bg-raised);
-  border-top: 1px solid var(--rule);
+  border-radius: var(--r-pill);
   color: var(--text-display);
   line-height: 1.4;
+}
+
+.flash::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--shade);
+  border-radius: var(--r-pill);
+  pointer-events: none;
+}
+
+.flash > * {
+  position: relative;
+  z-index: 1;
 }
 
 .flash .btn-2 {

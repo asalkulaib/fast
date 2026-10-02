@@ -15,10 +15,12 @@ test('Undo reverses a time change, from a bar above the tabs', async ({ page }) 
   await setTime(page, 'edit-last-bite', '22:30');
   await tap(page, 'save-last-bite');
   await expect(page.getByTestId('flash')).toHaveText('Last bite saved: 22:30.');
-  // The message sits just above the tab bar, wherever the screen is scrolled.
+  // The message floats just above the tabs, wherever the screen is scrolled.
   const bar = await page.locator('[data-flash]').boundingBox();
-  const tabs = await page.locator('#tabbar').boundingBox();
-  expect(Math.abs(bar.y + bar.height - tabs.y)).toBeLessThan(2);
+  const tabs = await page.locator('#tabbar .tabs').boundingBox();
+  const gap = tabs.y - (bar.y + bar.height);
+  expect(gap).toBeGreaterThanOrEqual(0);
+  expect(gap).toBeLessThan(16);
   expect((await readDb(page)).days[0].lastBite).toBe(ms('2026-09-26T22:30'));
   await tap(page, 'undo');
   await expect(page.getByTestId('flash')).toHaveText('Undone.');
