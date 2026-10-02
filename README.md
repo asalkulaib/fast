@@ -115,16 +115,17 @@ Your scale syncs each weigh-in to Apple Health. This Shortcut reads the last 14 
 Build it once in the Shortcuts app:
 
 1. Tap + to start a new shortcut. Tap its name at the top, choose Rename, and call it `Fast Weight`.
-2. Add the action Find Health Samples. Set Type to Weight. Tap Add Filter and set Start Date is in the last 14 days. Set Sort by to Start Date and Order to Oldest First. Leave Limit off.
-3. Add Repeat with Each. It repeats over the Health Samples.
-4. Inside the repeat, add Format Date. For the date, choose Repeat Item, tap it and pick Start Date. Set Date Format to Custom and type `yyyy-MM-dd`.
-5. Still inside the repeat, add a Text action with Formatted Date, a colon, then Repeat Item with its Value property (tap Repeat Item and choose Value). It reads `Formatted Date:Repeat Item`.
+2. Add the action Find Health Samples. Tap Add Filter and set Type is Weight; tap Add Filter again and set Start Date is in the last 14 days. Set Unit to kg, Sort by to Start Date and Order to Oldest First. Leave Limit off.
+3. Add Repeat with Each. It repeats over the Health Samples, down to End Repeat.
+4. Add Format Date and drag it inside the repeat, between Repeat with each item and End Repeat. For the date, choose Repeat Item, tap it and pick Start Date. Tap the arrow, set Date Format to Custom and type `yyyy-MM-dd`.
+5. Add a Text action and drag it inside the repeat too, just under Format Date. Insert Formatted Date, type a colon, then insert Repeat Item and tap it to choose Value. Repeat Item is in the row of bubbles above the keyboard (swipe the row, or tap Select Variable); it is offered only inside the repeat.
 6. After End Repeat, add Combine Text: combine Repeat Results with Custom and type a comma.
-7. Add a Text action: type `w=` and then insert Combined Text.
-8. Add Base64 Encode for that Text, with Line Breaks set to None.
-9. Add Copy to Clipboard. Tap its arrow and turn on Local Only.
-10. Add Show Notification with the text `Weight ready. Open Fast and tap Import weight.` Do not add Show Result or Quick Look: they would display the data.
-11. Tap Done and run it once. Allow Health access to Weight when asked.
+7. Add Base64 Encode right after Combine Text, so it takes the Combined Text. Tap the arrow and set Line Breaks to None.
+8. Add Copy to Clipboard. Tap its arrow and turn on Local Only.
+9. Add Show Notification with the text `Weight ready. Open Fast and tap Import weight.` Do not add Show Result, Quick Look or Show: they would display the data.
+10. Tap Done and run it once. Allow Health access to Weight when asked.
+
+The finished shortcut, top to bottom: Find Health Samples; Repeat with each item in Health Samples, holding Format Date and Text; End Repeat; Combine Text; Base64 Encode; Copy to Clipboard; Show Notification. Fast also accepts the older version with a `w=` Text step before Base64 Encode.
 
 To import: open Fast, go to History, choose Weight, tap Import weight, then tap Paste in the small bubble. Fast saves the entries and reports only how many it imported. Duplicate dates keep the latest value.
 
