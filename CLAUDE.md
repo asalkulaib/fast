@@ -1,0 +1,64 @@
+# Fast: guide for Claude
+
+How to work on Fast, and what the owner has decided. README.md covers what the app does, the weight Shortcut and redeploying.
+
+## Working with the owner
+
+- The owner doesn't write code. Do all the technical work yourself (code, tests, deploys) and explain only what they must do, such as steps on the iPhone or a login, one step at a time in plain words. No code walkthroughs.
+- Before a big change, say what you will build and ask anything unclear first. When the owner asks whether you understood, confirm before acting.
+- Check every visual change in screenshots at 390×844 before it goes live. `tests/e2e/screens.spec.js` shoots every screen into `test-results/screens/` and audits text contrast.
+- The repository is public. Never commit personal data or the owner's email address; commits use the GitHub no-reply address set in this repo's git config.
+
+## Where things live
+
+- Live app: https://asalkulaib.github.io/fast/ (GitHub Pages serves `docs/` from `main`).
+- Code: https://github.com/asalkulaib/fast, with a working copy in `Desktop\My Apps\Fast` on the owner's PC (synced by OneDrive).
+- The owner's data (fasts, meals, weights) lives only in IndexedDB on their iPhone, never in this repo. More, Back up now protects it.
+- Plain HTML, CSS and JavaScript modules: no framework, no build step. `docs/js/core/` holds the pure rules, `docs/js/ui/` the screens.
+
+## Every change
+
+1. When behaviour changes, update README.md and the Help screen (`docs/js/ui/help.js`) to match, and keep this file current.
+2. `npm test` (unit) and `npm run e2e` (stamps a release, then runs the browser tests in WebKit and Chromium). Commit only when both pass in full: unit ends with `fail 0`, and e2e shows nothing failed or flaky. A filtered run is not enough.
+3. Stamp after the last edit (`npm run release`, or the stamp inside `npm run e2e`); without it phones keep the old version.
+4. Commit with `git commit -F <message file>`: PowerShell 5.1 splits quotes inside arguments.
+5. Push, wait for the Pages build, then check that https://asalkulaib.github.io/fast/js/version.js shows the new release.
+
+## Rules the tests hold you to
+
+- Colours only from the palette in `tests/unit/design.test.js`. Corners only `0` or `var(--r-pill)`, `var(--r-control)`, `var(--r-panel)`, `var(--r-sheet)`. No shadows, gradients, blur or glass.
+- Copy in the app and README: short and direct, with no em dashes, emojis, checkmarks or "it's not X, it's Y".
+- The Content Security Policy blocks inline `style` attributes and `<style>`: set dynamic values with `element.style.setProperty`.
+- Nothing loads from another origin; the fonts are bundled.
+
+## Decisions the owner made (keep them)
+
+- Look: "Nafud at midday", sand page and umber ink. Gold only for achievement (a successful day, a fasting goal reached, a day left wanting, the Uhud fast climber) and the sun on the dial. Selections in ink. A miss is clay stripes and always has words. Every colour-coded visual has a labelled legend.
+- Shapes are rounded by the owner's choice: pill buttons, rounded controls, soft panels and sheets. The dial, chart marks and legend keys keep their drawn shapes.
+- Every choice, every rating and the bottom tabs are sliding tracks with an ink pill (no liquid glass). The tab bar and the message bar float with nothing behind them.
+- Big figures: large digits with small units (15h 10m).
+- Anything tappable must look tappable (a pill or an outline), never plain text.
+- Day fullness is the worst meal rating, and the gold dot in the week rows means left wanting only. The owner confirmed this twice: don't propose alternatives or extra marks.
+- Just now on Last bite always moves the last bite to this minute, even when that makes the day a miss.
+- Weights arrive by clipboard paste from an iOS Shortcut (10 steps in Help and README), because iOS keeps a Home Screen app's storage apart from Safari. No single weigh-in is ever shown; the CSV export is the only place raw weights appear.
+- If weights stop arriving: Health must let Shortcuts read Weight, and the scale's own app must be allowed to write Weight to Health (some scale apps sync only when opened).
+
+## Gotchas
+
+- WebKit ignores `lnum` on a digit alone in its own text node, so Cormorant draws an old-style figure. `figureParts` appends U+200B to a lone first digit; Playwright's `toHaveText` strips U+200B.
+- The app redraws once just after starting (it saves the `persisted` setting). `openAt` and `seed` in `tests/e2e/helpers.js` wait for that redraw; anything that reloads the page must wait too.
+- WebKit can run `locator.evaluate` on an element a redraw just removed, so `setTime` and the slider drag helper retry.
+- OneDrive can lock a file for a moment; screenshot writes retry.
+- When cutting CSS, remove exact brace-matched rule blocks, never "from here to the next heading".
+
+## This PC
+
+- GitHub CLI: `%LOCALAPPDATA%\Programs\GitHubCLI\bin\gh.exe` (not on PATH), logged in as asalkulaib.
+- `npx playwright install` times out here; the browsers were downloaded with curl into `%LOCALAPPDATA%\ms-playwright\`.
+- Shell heredocs and long one-liners mangle quotes and escapes: write a script to a file and run it with node.
+
+## Offered, not built
+
+- A Ramadan rhythm: offline dawn and sunset times for Kuwait, suhoor and iftar as meals. Ramadan is only a pause reason today.
+- A Satiety chart by meal type.
+- A weekly Shortcuts automation for the weight import (set up on the phone).
