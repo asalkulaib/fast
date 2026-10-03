@@ -4,7 +4,8 @@
 // (24 hours); the hours already fasted are laid in dark rock behind the sun,
 // a dark tick marks the fasting goal (the day less the eating window), and a
 // line icon marks each stage, the current one set in ink. Past 24 hours the
-// sun rests on the far horizon. The stages are never a target.
+// sun rests on the far horizon, and the one icon there shows the stage the
+// fast is in, or the next one. The stages are never a target.
 
 import { h, s, live } from './dom.js';
 import { button, durationFigure, key, legend } from './components.js';
@@ -27,9 +28,10 @@ const SURFACE = '#F1E3C7'; // --bg-raised, the panel: halo around the marks
 const SUN = '#F0B25C'; // --accent: the sun, gold leaf
 const INK = '#1E140C'; // --ink: edges, ticks and the fasting goal
 
-// Where each icon sits: beside its stage's stretch of the path; the
-// open-ended last stage near the far horizon, above the dunes.
-const ICON_AT = { digesting: 2, settling: 8, switch: 18, ketones: 22.5 };
+// Where each icon sits: beside its stage's stretch of the path; the stages
+// past a day share one place near the far horizon, above the dunes.
+const ICON_AT = { digesting: 2, settling: 8, switch: 18 };
+const BEYOND_AT = 22.5;
 
 /** A point on the path: 0 hours on the left horizon, 12 overhead, 24 on the right. */
 function point(hours, radius) {
@@ -92,8 +94,10 @@ function dialSvg(state, goalHours) {
       'data-testid': 'stage-marker', 'data-hours': (state.elapsedMs / HOUR).toFixed(1),
     }),
   ];
-  const icons = STAGES.map((st) => {
-    const [x, y] = point(ICON_AT[st.key], ICON_R);
+  // Past a day, the stage the fast is in; before it, the first stage past a day.
+  const beyond = state.stage.from >= SCALE_HOURS ? state.stage : STAGES.find((st) => st.from >= SCALE_HOURS);
+  const icons = [...STAGES.filter((st) => st.key in ICON_AT), beyond].map((st) => {
+    const [x, y] = point(ICON_AT[st.key] ?? BEYOND_AT, ICON_R);
     return stageIcon(st.key, { x, y, size: 22, current: st.key === state.stage.key });
   });
   return s('svg', {
@@ -192,10 +196,10 @@ export function stagesSection(ctx, app, lastBiteTs, { withRing, times = null }) 
 }
 
 // The hours of each stage, short enough for the line across the sheet.
-const SHORT_HOURS = { digesting: '0–4 h', settling: '4–12 h', switch: '12 h+', ketones: '24 h+' };
+const SHORT_HOURS = { digesting: '0–4 h', settling: '4–12 h', switch: '12–24 h', ketones: '24–48 h', brain: '48–72 h', sparing: '72 h+' };
 
 /**
- * The stages one at a time: the four along a line across the top, the one
+ * The stages one at a time: all six along a line across the top, the one
  * the fast is in now ringed in the sun's gold, and a card for each below,
  * each a shade deeper, from pale sand to dark rock. Swipe the cards or tap
  * a stage; the sheet opens on the stage the fast is in now.

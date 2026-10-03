@@ -2024,16 +2024,17 @@ html.locked body {
 .stage-line {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
   margin-top: var(--s4);
 }
 
-/* The line that joins the stages, behind their discs. */
+/* The line that joins the stages, behind their discs: from the middle of the first column to the middle of the sixth. */
 .stage-line::before {
   content: '';
   position: absolute;
-  left: 12.5%;
-  right: 12.5%;
+  left: calc(100% / 12);
+  right: calc(100% / 12);
   top: 22px;
   border-top: 1px solid var(--rule-quiet);
 }
@@ -2138,16 +2139,34 @@ html.locked body {
   background: var(--rock-400);
 }
 
+/* The stages past a day are dark, with light words. */
 .s-ketones {
+  background: var(--sand-600);
+}
+
+.s-brain {
   background: var(--rock-700);
+}
+
+.s-sparing {
+  background: var(--rule);
+}
+
+.s-ketones,
+.s-brain,
+.s-sparing {
   color: var(--bg-raised);
 }
 
-.stage-card.s-ketones .label {
+.stage-card.s-ketones .label,
+.stage-card.s-brain .label,
+.stage-card.s-sparing .label {
   color: var(--sand-300);
 }
 
-.stage-stop .disc.s-ketones .stage-icon {
+.stage-stop .disc.s-ketones .stage-icon,
+.stage-stop .disc.s-brain .stage-icon,
+.stage-stop .disc.s-sparing .stage-icon {
   stroke: var(--bg-raised);
 }
 

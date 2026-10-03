@@ -11,7 +11,7 @@ test('stages cover the whole clock without gaps', () => {
   assert.equal(STAGES.at(-1).to, Infinity);
 });
 
-test('stage boundaries at 4, 12 and 24 hours', () => {
+test('stage boundaries at 4, 12, 24, 48 and 72 hours', () => {
   assert.equal(stageIndex(0), 0);
   assert.equal(stageIndex(4 * H - M), 0);
   assert.equal(stageIndex(4 * H), 1);
@@ -19,7 +19,11 @@ test('stage boundaries at 4, 12 and 24 hours', () => {
   assert.equal(stageIndex(12 * H), 2);
   assert.equal(stageIndex(24 * H - M), 2);
   assert.equal(stageIndex(24 * H), 3);
-  assert.equal(stageIndex(72 * H), 3);
+  assert.equal(stageIndex(48 * H - M), 3);
+  assert.equal(stageIndex(48 * H), 4);
+  assert.equal(stageIndex(72 * H - M), 4);
+  assert.equal(stageIndex(72 * H), 5);
+  assert.equal(stageIndex(30 * 24 * H), 5);
 });
 
 test('fasting state: stage, next stage and position on the 24-hour scale', () => {
@@ -29,10 +33,19 @@ test('fasting state: stage, next stage and position on the 24-hour scale', () =>
   assert.equal(s.next.name, 'Ketones climbing');
   assert.equal(s.untilNextMs, 7 * H + 50 * M);
   assert.ok(Math.abs(s.position - (16 + 10 / 60) / 24) < 1e-9);
-  const long = fastingState(last, last + 30 * H);
-  assert.equal(long.stage.name, 'Ketones climbing');
+  // Past a day the sun rests at the end of the scale, and the stages go on.
+  const day2 = fastingState(last, last + 30 * H);
+  assert.equal(day2.stage.name, 'Ketones climbing');
+  assert.equal(day2.next.name, 'Brain on ketones');
+  assert.equal(day2.untilNextMs, 18 * H);
+  assert.equal(day2.position, 1);
+  const day3 = fastingState(last, last + 50 * H);
+  assert.equal(day3.stage.name, 'Brain on ketones');
+  assert.equal(day3.next.name, 'Protein sparing');
+  const long = fastingState(last, last + 80 * H);
+  assert.equal(long.stage.name, 'Protein sparing');
   assert.equal(long.next, null);
-  assert.equal(long.position, 1);
+  assert.equal(long.untilNextMs, null);
 });
 
 test('the copy stays within the evidence', () => {
@@ -41,5 +54,7 @@ test('the copy stays within the evidence', () => {
   assert.doesNotMatch(STAGES.map((s) => `${s.name} ${s.text}`).join(' '), /autophagy/i);
   assert.doesNotMatch(all, /you are in ketosis/i);
   assert.match(AUTOPHAGY_NOTE, /not known/);
-  assert.equal(SOURCES.length, 8);
+  assert.equal(SOURCES.length, 10);
+  // The longest fast carries the advice to fast that long only with a doctor.
+  assert.match(STAGES.at(-1).text, /doctor's guidance/);
 });

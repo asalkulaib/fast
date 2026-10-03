@@ -75,6 +75,10 @@ test('the stage under the time opens the stages at the one the fast is in', asyn
   await expect.poll(inView).toBe(3);
   await expect(s.locator('[data-action="stage-ketones"]')).toHaveAttribute('aria-current', 'true');
   await expect(s.locator('[data-action="stage-switch"]')).toHaveAttribute('aria-current', 'false');
+  // The last stage, past three days, is in reach too.
+  await tap(page, 'stage-sparing');
+  await expect.poll(inView).toBe(5);
+  await expect(s.locator('[data-action="stage-sparing"]')).toHaveAttribute('aria-current', 'true');
 });
 
 test('starting the first meal ends the fast: its length, gold when it reached the goal; Close puts it away', async ({ page }) => {

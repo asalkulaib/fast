@@ -61,13 +61,33 @@ test('hidden while the window is open, then below the main block from the last b
   await expect(page.getByTestId('fasting-for')).toHaveText('0m');
 });
 
-test('past 24 hours the ring is full and the last stage shows', async ({ page }) => {
+test('past 24 hours the ring is full and the stages go on', async ({ page }) => {
   await openAt(page, '2026-09-27T23:30'); // 26 h 30 min, no window today
   await seed(page, LAST_NIGHT);
   await expect(page.getByTestId('stage-name')).toHaveText('Ketones climbing');
-  await expect(page.getByTestId('stage-next')).toHaveCount(0);
+  await expect(page.getByTestId('stage-next')).toHaveText('Next: brain on ketones, in about 21 h 30 min.');
   await expect(page.getByTestId('fasting-for')).toHaveText('26h 30m');
+  await expect(ring(page).locator('[data-stage-icon]')).toHaveCount(4);
   await expect(ring(page).locator('.stage-icon.now')).toHaveAttribute('data-stage-icon', 'ketones');
+});
+
+test('on the third day, the brain on ketones; the icon by the far horizon follows the stage', async ({ page }) => {
+  await openAt(page, '2026-09-28T23:30'); // 50 h 30 min
+  await seed(page, LAST_NIGHT);
+  await expect(page.getByTestId('stage-name')).toHaveText('Brain on ketones');
+  await expect(page.getByTestId('stage-next')).toHaveText('Next: protein sparing, in about 21 h 30 min.');
+  await expect(ring(page).locator('[data-stage-icon]')).toHaveCount(4);
+  await expect(ring(page).locator('.stage-icon.now')).toHaveAttribute('data-stage-icon', 'brain');
+  await expect(page.locator('[data-block="stages"]')).toContainText('a quarter of its energy needs');
+});
+
+test('from 72 hours, protein sparing: the last stage, with the advice to see a doctor', async ({ page }) => {
+  await openAt(page, '2026-09-30T09:00'); // 84 h
+  await seed(page, LAST_NIGHT);
+  await expect(page.getByTestId('stage-name')).toHaveText('Protein sparing');
+  await expect(page.getByTestId('stage-next')).toHaveCount(0);
+  await expect(ring(page).locator('.stage-icon.now')).toHaveAttribute('data-stage-icon', 'sparing');
+  await expect(page.locator('[data-block="stages"]')).toContainText("best done with a doctor's guidance");
 });
 
 test('about the stages: every stage with its icon, the autophagy note and the sources', async ({ page }) => {
@@ -75,11 +95,13 @@ test('about the stages: every stage with its icon, the autophagy note and the so
   await seed(page, LAST_NIGHT);
   await tap(page, 'about-stages');
   const s = sheet(page, 'stages');
-  await expect(s.getByTestId('stage-list').locator('> li')).toHaveCount(4);
-  await expect(s.locator('[data-stage-icon]')).toHaveCount(4);
+  await expect(s.getByTestId('stage-list').locator('> li')).toHaveCount(6);
+  await expect(s.locator('[data-stage-icon]')).toHaveCount(6);
   await expect(s).toContainText('from about 12 h');
+  await expect(s).toContainText('72 h and beyond');
   await expect(s.getByTestId('autophagy-note')).toContainText('when it starts in people is not known');
   await expect(s).toContainText('Flipping the metabolic switch');
+  await expect(s).toContainText('Brain metabolism during short-term starvation in humans');
 });
 
 test('no bite logged yet: no ring', async ({ page }) => {

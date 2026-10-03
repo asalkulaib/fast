@@ -42,6 +42,7 @@ How to work on Fast, and what the owner has decided. README.md covers what the a
 - Just now on Last bite always moves the last bite to this minute, even when that makes the day a miss.
 - Weights arrive by clipboard paste from an iOS Shortcut (10 steps in Help and README), because iOS keeps a Home Screen app's storage apart from Safari. No single weigh-in is ever shown; the CSV export is the only place raw weights appear.
 - If weights stop arriving: Health must let Shortcuts read Weight, and the scale's own app must be allowed to write Weight to Health (some scale apps sync only when opened).
+- Fasting stages run to 72 h and beyond: six stages, each worded within the human studies cited in `docs/js/core/stages.js`, with no hour given for autophagy. The dial stays a 24-hour scale; past a day one icon by the far horizon shows the stage the fast is in. The last stage says a fast that long is best done with a doctor's guidance.
 
 ## Gotchas
 
@@ -50,6 +51,7 @@ How to work on Fast, and what the owner has decided. README.md covers what the a
 - WebKit can run `locator.evaluate` on an element a redraw just removed, so `setTime` and the slider drag helper retry.
 - OneDrive can lock a file for a moment; screenshot writes retry.
 - When cutting CSS, remove exact brace-matched rule blocks, never "from here to the next heading".
+- `--rock-500` cannot carry body text: it misses 4.5:1 with both ink and light words. The stage cards skip it (sand-300, sand-400, rock-400, then sand-600, rock-700 and rule with light words).
 
 ## This PC
 

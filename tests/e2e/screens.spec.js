@@ -435,6 +435,20 @@ test('the stages one at a time, opened from the stage under the time', async ({ 
   await shot(page, '85-stages-from-the-chip');
   await tap(page, 'stage-ketones');
   await shot(page, '86-stages-ketones');
+  await tap(page, 'stage-brain');
+  await shot(page, '87-stages-brain');
+  await tap(page, 'stage-sparing');
+  await shot(page, '88-stages-sparing');
+});
+
+test('today on the third day of a fast: the sun on the far horizon, the stage beyond a day', async ({ page }) => {
+  await openAt(page, '2026-09-28T23:30');
+  await seed(page, { days: [{ day: '2026-09-26', firstBite: ms('2026-09-26T17:00'), lastBite: ms('2026-09-26T21:00') }], settings: install });
+  await shot(page, '89-today-third-day');
+  await page.locator('[data-block="stages"]').scrollIntoViewIfNeeded();
+  await shot(page, '89b-today-third-day-stage');
+  await tap(page, 'open-stages');
+  await shot(page, '89c-stages-third-day');
 });
 
 test.describe('travel', () => {

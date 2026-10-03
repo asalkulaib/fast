@@ -85,9 +85,9 @@ Thirty steps reach the summit. A climber who arrives stays there, and a new one 
 
 ## Fasting stages
 
-While you fast, Today shows the fast as the sun crossing the Nafud: it rises from the dunes on the left at your last bite (or when you began your fast), passes overhead at 12 hours and sets on the right at 24. The hours already fasted are laid in dark rock behind it, with the time fasted under the arc and, below it, the stage as a small button. A dark tick marks your fasting goal; the stage panel further down says how far it is and when the next stage begins. An icon marks each stage: a plate while digesting, a drop as blood sugar settles, a flame for the metabolic switch and a bolt for ketones; the current one is set in a dark circle. Before your window the dial leads Today; after it, a smaller one sits below the result, with the same two times under it. The hours are typical, not exact, and never a target. Past 24 hours the sun rests on the far horizon.
+While you fast, Today shows the fast as the sun crossing the Nafud: it rises from the dunes on the left at your last bite (or when you began your fast), passes overhead at 12 hours and sets on the right at 24. The hours already fasted are laid in dark rock behind it, with the time fasted under the arc and, below it, the stage as a small button. A dark tick marks your fasting goal; the stage panel further down says how far it is and when the next stage begins. An icon marks each stage: a plate while digesting, a drop as blood sugar settles, a flame for the metabolic switch, a bolt as ketones climb, a brain for the brain on ketones and a shield for protein sparing; the current one is set in a dark circle. Before your window the dial leads Today; after it, a smaller one sits below the result, with the same two times under it. The hours are typical, not exact, and never a target. Past 24 hours the sun rests on the far horizon while the stages go on, to 72 hours and beyond; the one icon by the far horizon shows the stage past a day the fast is in, or the next one.
 
-Tap the stage under the time, or About the stages, to see the stages one at a time: the four along a line across the top, the one the fast is in ringed in the sun's gold, and a card for each below, marked Now on the current one. Each card is a shade deeper than the last, from pale sand to dark rock. Swipe the cards or tap a stage.
+Tap the stage under the time, or About the stages, to see the stages one at a time: all six along a line across the top, the one the fast is in ringed in the sun's gold, and a card for each below, marked Now on the current one. Each card is a shade deeper than the last, from pale sand to dark rock. Swipe the cards or tap a stage.
 
 While the window is open, a band under the countdown fills as the hours pass: time used in dark rock, time left in sand, then the dashed 15 minutes of grace. Past the grace it turns to clay stripes.
 
@@ -96,7 +96,11 @@ While the window is open, a band under the countdown fills as the hours pass: ti
 | Digesting | 0 to about 4 h | [Dimitriadis et al., Nutrients 2021](https://pmc.ncbi.nlm.nih.gov/articles/PMC7825450/) |
 | Blood sugar settles | about 4 to 12 h | [Dimitriadis et al., Nutrients 2021](https://pmc.ncbi.nlm.nih.gov/articles/PMC7825450/); [Rothman et al., Science 1991](https://pubmed.ncbi.nlm.nih.gov/1948033/) |
 | Metabolic switch | from about 12 h, up to 36 h | [Anton et al., Obesity 2018](https://pubmed.ncbi.nlm.nih.gov/29086496/) |
-| Ketones climbing | 24 h and beyond | [Pan et al., 2000](https://journals.sagepub.com/doi/10.1097/00004647-200010000-00012); [Ho et al., J Clin Invest 1988](https://pmc.ncbi.nlm.nih.gov/articles/PMC329619/); [Hartman et al., JCEM 1992](https://pubmed.ncbi.nlm.nih.gov/1548337/) |
+| Ketones climbing | about 24 to 48 h | [Rothman et al., Science 1991](https://pubmed.ncbi.nlm.nih.gov/1948033/); [Hartman et al., JCEM 1992](https://pubmed.ncbi.nlm.nih.gov/1548337/) |
+| Brain on ketones | about 48 to 72 h | [Pan et al., 2000](https://pubmed.ncbi.nlm.nih.gov/11043913/); [Hasselbalch et al., 1994](https://pubmed.ncbi.nlm.nih.gov/8263048/) |
+| Protein sparing | 72 h and beyond | [Göschke et al., 1975](https://pubmed.ncbi.nlm.nih.gov/1177405/); [Ho et al., J Clin Invest 1988](https://pmc.ncbi.nlm.nih.gov/articles/PMC329619/) |
+
+Protein sparing also says that a fast this long is best done with a doctor's guidance, more so with medicine or a health condition.
 
 Autophagy is described as uncertain instead of being given an hour: the evidence comes mostly from cell and animal studies ([Bagherniya et al., 2018](https://pubmed.ncbi.nlm.nih.gov/30172870/); [Bensalem et al., 2025](https://pubmed.ncbi.nlm.nih.gov/40345145)).
 
