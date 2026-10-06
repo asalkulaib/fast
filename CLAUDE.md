@@ -40,6 +40,7 @@ How to work on Fast, and what the owner has decided. README.md covers what the a
 - Anything tappable must look tappable (a pill or an outline), never plain text.
 - Day fullness is the worst meal rating, and the gold dot in the week rows means left wanting only. The owner confirmed this twice: don't propose alternatives or extra marks.
 - Just now on Last bite always moves the last bite to this minute, even when that makes the day a miss.
+- Add a meal adds a meal already eaten, whole, with no timer: today or yesterday from Today and Satiety, any day from a day in Week. It follows the same window rules as any meal (`placeAddedMeal` in `docs/js/core/added-meal.js`) and says before saving what it does to the day, misses in words. Start a meal, Finished this meal and the automatic 20-minute check stay exactly as they are; the owner asked for that.
 - Weights arrive by clipboard paste from an iOS Shortcut (10 steps in Help and README), because iOS keeps a Home Screen app's storage apart from Safari. No single weigh-in is ever shown; the CSV export is the only place raw weights appear.
 - If weights stop arriving: Health must let Shortcuts read Weight, and the scale's own app must be allowed to write Weight to Health (some scale apps sync only when opened).
 - Fasting stages run to 72 h and beyond: six stages, each worded within the human studies cited in `docs/js/core/stages.js`, with no hour given for autophagy. The dial stays a 24-hour scale; past a day one icon by the far horizon shows the stage the fast is in. The last stage says a fast that long is best done with a doctor's guidance.
@@ -58,6 +59,10 @@ How to work on Fast, and what the owner has decided. README.md covers what the a
 - GitHub CLI: `%LOCALAPPDATA%\Programs\GitHubCLI\bin\gh.exe` (not on PATH), logged in as asalkulaib.
 - `npx playwright install` times out here; the browsers were downloaded with curl into `%LOCALAPPDATA%\ms-playwright\`.
 - Shell heredocs and long one-liners mangle quotes and escapes: write a script to a file and run it with node.
+
+## Cloud sessions
+
+- Playwright's own browser downloads (`cdn.playwright.dev`) may be blocked by the environment's network policy. Chromium is at `/opt/pw-browsers/chromium`: run e2e through an untracked config that sets `launchOptions.executablePath` to it. WebKit then cannot run, and `screens.spec.js` skips outside WebKit, so shoot screens with an untracked copy that drops the skip. Say plainly that WebKit did not run.
 
 ## Offered, not built
 

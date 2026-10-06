@@ -82,20 +82,12 @@ test('after the goal: a meal counts as eating outside the window, with its satie
   await expect(page.locator('[data-block="satiety-meals"]')).toContainText('Satisfied, outside the window');
 });
 
-test('a meal already eaten can be logged whole; the window opens at its start', async ({ page }) => {
+test('Already finished? in Start a meal opens Add a meal', async ({ page }) => {
   await openAt(page, '2026-09-27T19:00');
   await tap(page, 'start-meal');
-  await setTime(page, 'meal-start', '18:00');
   await tap(page, 'already-finished');
-  await choose(page, 'stop', 'before_full');
-  await pick(page, 'fullness-now', 5);
-  await setTime(page, 'meal-finish', '18:30');
-  await tap(page, 'save-meal');
-  await expect(page.getByTestId('flash')).toHaveText('Window open from 18:00.');
-  await expect(page.locator('[data-block="open"]')).toBeVisible();
-  await expect(page.locator('[data-block="eating"]')).toHaveCount(0);
-  const [meal] = (await readDb(page)).meals;
-  expect(meal).toMatchObject({ startedAt: ms('2026-09-27T18:00'), finishedAt: ms('2026-09-27T18:30'), stop: 'before_full', fullnessNow: 5 });
+  await expect(sheet(page, 'start-meal')).toHaveCount(0);
+  await expect(sheet(page, 'add-meal')).toBeVisible();
 });
 
 test('the meal is picked from its start time until you tap one', async ({ page }) => {

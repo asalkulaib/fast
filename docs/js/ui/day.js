@@ -7,7 +7,7 @@ import { openSheet, sheetHead } from './sheet.js';
 import * as store from '../store.js';
 import { at, fmtDayLong, fmtDuration, fmtOnDay, fmtTime, isWorkweekday, minutesOfDay, nearestTime, now, weekStart } from '../core/time.js';
 import { GRACE_MS, isOpen, isPaused, isWorkday, plannedStartMin, timeOnOrAfter } from '../core/rules.js';
-import { showLogMealSheet, showMealEditSheet } from './meal.js';
+import { showAddMealSheet, showMealEditSheet } from './meal.js';
 import { AMOUNT_OPTIONS, showOutsideSheet } from './outside.js';
 import { mealMeta } from './today.js';
 import { pauseWord } from './pause.js';
@@ -55,7 +55,7 @@ export function renderDay(ctx, app, key) {
       button(rec.dayOff ? 'Make it a workday again' : 'Mark as a day off', () => store.updateDay(key, { dayOff: !rec.dayOff }), { kind: 'secondary', name: 'toggle-day-off' })) : null,
     // Fullness counts on every day, paused ones included.
     past && (paused || rec.firstBite || mealsOfDay(ctx, key).length) ? fullnessCard(ctx, key, { question: 'How did the day\'s eating end?' }) : null,
-    tracked ? mealsSection(ctx, app, key, rec) : null,
+    tracked ? mealsSection(ctx, app, key) : null,
     tracked ? outsideSection(ctx, app, key) : null,
     tracked ? checkinSection(ctx, key, rec) : null,
     tracked ? temptationSection(ctx, app, key) : null,
@@ -167,7 +167,7 @@ function windowSection(ctx, app, key, rec) {
   return section;
 }
 
-function mealsSection(ctx, app, key, rec) {
+function mealsSection(ctx, app, key) {
   const meals = mealsOfDay(ctx, key);
   return h('section', { class: 'section', 'data-block': 'day-meals' },
     h('div', { class: 'label' }, 'Meals'),
@@ -177,7 +177,7 @@ function mealsSection(ctx, app, key, rec) {
           h('span', {}, h('span', { class: 'item-title' }, m.name || 'Meal'), h('br'), h('span', { class: 'item-meta' }, mealMeta(m))),
           h('span', { class: 'item-side' }, m.finishedAt ? `${fmtTime(m.startedAt)} to ${fmtTime(m.finishedAt)}` : fmtTime(m.startedAt))))))
       : h('p', { class: 'quiet small gap-s' }, 'No meals logged.'),
-    rec.firstBite ? button('Add a meal', () => showLogMealSheet(app, key), { kind: 'secondary', name: 'add-meal' }) : null);
+    h('div', { class: 'gap' }, button('Add a meal', () => showAddMealSheet(app, { day: key }), { kind: 'outline', block: true, name: 'add-meal' })));
 }
 
 function outsideSection(ctx, app, key) {

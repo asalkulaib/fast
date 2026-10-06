@@ -12,7 +12,7 @@ import {
 import { dailySeries } from '../core/history.js';
 import { dunes } from './art.js';
 import { weekRow } from './week.js';
-import { forgotCloseDefault, showDoneEatingSheet, showFinishMealSheet, showMealEditSheet, showStartMealSheet } from './meal.js';
+import { forgotCloseDefault, showAddMealSheet, showDoneEatingSheet, showFinishMealSheet, showMealEditSheet, showStartMealSheet } from './meal.js';
 import { showOutsideSheet } from './outside.js';
 import { showBiteTimeSheet, showOpeningSheet, showOutsideTimeSheet, showWindowTimesSheet } from './window-times.js';
 import { ringHero, stagesSection } from './stages.js';
@@ -112,7 +112,8 @@ function beforeBlock(ctx, app) {
       ? h('div', { class: workdayEarly ? 'gap' : 'gap-l' }, startMeal)
       : h('div', { class: `btn-pair start-actions ${workdayEarly ? 'gap' : 'gap-l'}` },
         startMeal,
-        button('Begin fast', beginFastFor(app), { kind: 'outline', big: true, block: true, name: 'begin-fast' })));
+        button('Begin fast', beginFastFor(app), { kind: 'outline', big: true, block: true, name: 'begin-fast' })),
+    addMealButton(app));
   const plan = h('section', { class: 'section', 'data-block': 'plan' },
     last ? plannedLine(null) : null,
     h('p', { class: last ? 'quiet small gap' : 'quiet small' }, 'Until then: water, sparkling water, black coffee, espresso, plain tea.'),
@@ -125,6 +126,9 @@ function beforeBlock(ctx, app) {
   );
   return [card, plan];
 }
+
+/** A meal already eaten, added whole with no timer. */
+const addMealButton = (app) => h('div', { class: 'gap-s' }, button('Add a meal', () => showAddMealSheet(app), { kind: 'outline', block: true, name: 'add-meal' }));
 
 /** Begin fast, or change when it began; a start before the last bite on record leads to that bite. */
 function beginFastFor(app) {
@@ -189,6 +193,8 @@ function pausedBlock(ctx, app) {
     h('div', { class: 'btn-row gap' },
       button('End the pause', () => endPause(app, run), { kind: 'secondary', name: 'end-pause' }),
       button('Change', () => showPauseSheet(app, { run }), { kind: 'secondary', name: 'change-pause' })),
+    // Meals still count for Satiety on a paused day.
+    addMealButton(app),
   );
 }
 
@@ -243,6 +249,7 @@ function openBlock(ctx, app, rec) {
     eating
       ? eatingNow(app, eating, { another: true })
       : h('div', { class: 'gap-l' }, button('Start a meal', () => showStartMealSheet(app), { kind: 'outline', block: true, name: 'start-meal' })),
+    addMealButton(app),
     // One main action: finishing the meal while eating, closing the window between meals.
     h('div', { class: 'gap' }, button("I'm done eating", () => showDoneEatingSheet(app, rec.day), { kind: eating ? 'outline' : 'primary', block: true, name: 'done-eating' })),
     h('div', { class: 'gap-s' }, button('Change opening time', () => showOpeningSheet(app, rec.day), { kind: 'secondary', name: 'change-opening' })),
@@ -363,6 +370,7 @@ function closedBlock(ctx, app, rec) {
         h('span', { class: 'small quiet' }, 'Still inside your window.'),
         button('Reopen window', () => store.reopenWindow(rec.day), { kind: 'secondary', name: 'reopen' }))
       : null,
+    eating ? null : addMealButton(app),
     h('div', { class: 'btn-row gap' },
       eating ? null : button('Start a meal', () => showStartMealSheet(app), { kind: 'secondary', name: 'start-meal' }),
       button('I ate something', () => showOutsideSheet(app, { day: rec.day }), { kind: 'secondary', name: 'ate-something' }),

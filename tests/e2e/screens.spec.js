@@ -197,6 +197,34 @@ test('today: correcting a window', async ({ page }) => {
   await shot(page, '19-window-times-sheet');
 });
 
+test('add a meal: the form, what it does to the window, a miss in words', async ({ page }) => {
+  await openAt(page, '2026-09-27T14:20'); // a Sunday, a workday
+  await seed(page, { ...WEEK, settings: install });
+  await tap(page, 'add-meal');
+  await choose(page, 'meal-type', 'Lunch');
+  await pick(page, 'hunger', 6);
+  await sheet(page, 'add-meal').evaluate((el) => { el.scrollTop = 0; });
+  await shot(page, '19b-add-meal-sheet');
+  await choose(page, 'stop', 'before_full');
+  await pick(page, 'fullness-now', 6);
+  await pick(page, 'fullness-20', 7);
+  await choose(page, 'last-meal', 'true');
+  await sheet(page, 'add-meal').evaluate((el) => { el.scrollTop = el.scrollHeight; });
+  await shot(page, '19c-add-meal-sheet-end');
+  await tap(page, 'save-added-meal');
+  await shot(page, '19d-today-after-added-meal');
+  // After the window and its goal: eating outside it, a miss in words.
+  const days = WEEK.days.map((d) => (d.day === '2026-09-26' ? { ...d, firstBite: ms('2026-09-26T13:00'), lastBite: ms('2026-09-26T15:00') } : d));
+  await seed(page, { ...WEEK, days, settings: install });
+  await page.locator('.tab[data-tab="satiety"]').click();
+  await shot(page, '19e-satiety-add-meal');
+  await tap(page, 'add-meal');
+  await choose(page, 'added-day', '2026-09-26');
+  await setTime(page, 'added-start', '20:00');
+  await sheet(page, 'add-meal').evaluate((el) => { el.scrollTop = el.scrollHeight; });
+  await shot(page, '19f-add-meal-outside');
+});
+
 test('today: notices', async ({ page }) => {
   await openAt(page, '2026-09-27T09:00');
   await seed(page, { days: [WEEK.days[0]], settings: settings({ installedAt: ms('2026-09-18T08:00') }) });

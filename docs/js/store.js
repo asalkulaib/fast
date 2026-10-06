@@ -478,6 +478,41 @@ export function startMeal({ day, name, startedAt, hungerBefore }) {
 }
 
 /**
+ * Saves a finished meal added after it was eaten, together with what it
+ * does to its day (place, from placeAddedMeal: the window's new times, or
+ * eating outside it), in one transaction. Without a fullness at 20 minutes,
+ * a meal that has only just ended still gets its check. Resolves with { meal, undo }.
+ */
+export async function addFinishedMeal(place, { name, startedAt, finishedAt, hungerBefore, stop, fullnessNow, fullness20 }) {
+  const key = place.day;
+  const snap = snapshot({ days: [key] });
+  const end = stamp(finishedAt);
+  const meal = {
+    day: key,
+    name: name || '',
+    startedAt: stamp(startedAt),
+    finishedAt: end,
+    hungerBefore: hungerBefore ?? null,
+    stop: stop ?? null,
+    fullnessNow: fullnessNow ?? null,
+    fullness20DueAt: fullness20 == null ? fullnessDueAt(end) : null,
+    fullness20: fullness20 ?? null,
+    fullness20Skipped: false,
+    ...(fullness20 != null ? { fullness20At: end + FULLNESS_DELAY } : {}),
+    ...(place.outside ? { outside: true } : {}),
+  };
+  const rec = place.rec ? { ...place.rec, day: key, updatedAt: now() } : null;
+  const ops = [...(rec ? [{ store: 'days', put: rec }] : []), { store: 'meals', put: meal }];
+  const keys = await db.batch(ops);
+  const saved = { ...meal, id: keys[keys.length - 1] };
+  if (rec) state.days.set(key, rec);
+  state.meals.set(saved.id, saved);
+  changed();
+  snap.meals.push([saved.id, null]); // undo removes the meal
+  return { meal: saved, undo: () => putBack(snap) };
+}
+
+/**
  * When to ask for fullness 20 minutes after a meal. A meal logged long
  * after the fact gets no prompt (its 20-minute moment is past); its
  * fullness at 20 minutes can still be entered by editing the meal.

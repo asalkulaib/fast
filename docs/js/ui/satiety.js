@@ -12,7 +12,7 @@ import { addDays, fmtDayShort, fmtDuration, fmtTime } from '../core/time.js';
 import { STOPS, ZONE, completed, satietyStats } from '../core/satiety.js';
 import { satietyInsights } from '../core/insights.js';
 import { fullnessCard } from './fullness.js';
-import { showFinishMealSheet, showFullnessSheet, showMealEditSheet } from './meal.js';
+import { showAddMealSheet, showFinishMealSheet, showFullnessSheet, showMealEditSheet } from './meal.js';
 import { dueFullness, header, mealInProgress, runningFullness } from './shared.js';
 
 const INK = '#1E140C'; // --ink
@@ -268,7 +268,7 @@ function mealsView(ctx, app) {
   const from = addDays(ctx.todayKey, -29);
   const recent = ctx.meals.filter((m) => m.day >= from && (!F.focus || m.stop === F.focus)).sort((a, b) => b.startedAt - a.startedAt);
   if (!recent.length && F.focus) return h('section', { class: 'section', 'data-block': 'satiety-meals' }, stopLegend([], 'meals-legend'), h('p', { class: 'quiet gap' }, `No ${STOP_STYLE[F.focus].word.toLowerCase()} meals in the last 30 days.`));
-  if (!recent.length) return h('section', { class: 'section', 'data-block': 'satiety-meals' }, h('p', { class: 'quiet' }, 'No meals in the last 30 days. Start a meal from Today and it collects here, newest first.'));
+  if (!recent.length) return h('section', { class: 'section', 'data-block': 'satiety-meals' }, h('p', { class: 'quiet' }, 'No meals in the last 30 days. Start a meal from Today, or add one you already ate, and it collects here, newest first.'));
   const days = [...new Set(recent.map((m) => m.day))];
   return h('div', { 'data-block': 'satiety-meals' },
     stopLegend([[stopIcon(null), 'Not rated yet']], 'meals-legend'),
@@ -304,7 +304,9 @@ export function renderSatiety(ctx, app) {
       h('h1', { class: 'display' }, 'Satiety'),
       h('p', { class: 'gap' }, st.rated ? `${st.rated} rated ${st.rated === 1 ? 'meal' : 'meals'}; ${st.done} with the 20-minute check.` : 'How your meals end, and what 20 minutes changes.'),
       h('div', { class: 'gap' }, choice({ options: VIEWS, value: view, cols: 3, name: 'satiety-view', onChange: (v) => store.setSettings({ satietyView: v }) })),
-      filtered),
+      filtered,
+      // A meal already eaten, added whole with no timer.
+      h('div', { class: 'gap' }, button('Add a meal', () => showAddMealSheet(app), { kind: 'outline', block: true, name: 'add-meal' }))),
     view === 'insights' ? insightsView(ctx, app, st) : view === 'now' ? nowView(ctx, app) : mealsView(ctx, app));
 }
 

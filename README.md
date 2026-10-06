@@ -31,19 +31,36 @@ Nafud at midday: sand is the page and umber ink the text. Gold leaf means one th
 ## Today
 
 - Across the top, the week: Sunday to Saturday, each day in the marks of the Week schedule (ink for a success, clay stripes for a miss, sand for a paused day, a gold dot when left wanting), today underlined. Tap a day to open it. A legend names the marks in the row.
-- Before your window, one card holds the fast: the sun dial with the time fasted and the stage, then two times side by side, when the fast began (your last bite) and the clock time it reaches your fasting goal, then Start a meal. On a workday before 16:00 the warning sits just above the button. Tap either time to change it; once the goal is reached it turns gold. The planned time, what you can drink until then, a day off and Pause today follow on their own panel.
+- Before your window, one card holds the fast: the sun dial with the time fasted and the stage, then two times side by side, when the fast began (your last bite) and the clock time it reaches your fasting goal, then Start a meal, with Add a meal under it for a meal you already ate. On a workday before 16:00 the warning sits just above the button. Tap either time to change it; once the goal is reached it turns gold. The planned time, what you can drink until then, a day off and Pause today follow on their own panel.
 - Starting your first meal ends the fast. A note at the top of Today says how long it was, with the length in gold and "Fasting goal of 20 h reached." when it reached your goal; a shorter fast just gets its length. Close puts the note away; it also goes when the window closes.
 
 ## Starting: a meal or Begin fast
 
 Before your window, Today offers Start a meal. Begin fast appears beside it only when Fast has nothing to time a fast from: on your first day, after a reset, or when no last bite is on record.
 
-- Start a meal: your first meal opens the window. The sheet has the eating reminders; what the meal is: Snack, Breakfast, Lunch or Dinner, or Other to type a name (names you typed before come back as one-tap shortcuts); hunger before; and its start time, with quick times (30 min, 1 h, 2 h ago) and the wheel. Already eaten? Log it whole with how you finished. On a workday before 16:00, the sheet says the day will count as a miss.
+- Start a meal: your first meal opens the window. The sheet has the eating reminders; what the meal is: Snack, Breakfast, Lunch or Dinner, or Other to type a name (names you typed before come back as one-tap shortcuts); hunger before; and its start time, with quick times (30 min, 1 h, 2 h ago) and the wheel. Already eaten? Already finished? opens Add a meal (see below). On a workday before 16:00, the sheet says the day will count as a miss.
 - Begin fast: for a fast already under way, for example on your first day with Fast or after a pause. Pick Now, 1 or 2 hours ago, last night, or any time on the wheel, so none of the fast is lost. Tap Fast began on Today to adjust it later. A fast start never changes the result of the day it falls on, and it cannot be earlier than the last bite on record.
 
 Until you tap a meal, Fast picks one from the start time: breakfast from 05:00, lunch from 11:00, dinner from 16:00 and a snack from 22:00. A snack follows the same rules as any meal. The choice is saved as the meal's name, so it shows in the Meals list and the export, and older meals typed as, say, "dinner" open as Dinner when you edit them.
 
 Each meal is tracked on its own: its start, its finish, hunger before, how you finished and the 20-minute check. One meal at a time: Start another meal first asks how the open one finished. I'm done eating closes the window. After closing, a meal within your goal's hours reopens the window; later, it counts as eating outside the window, so the day is a miss, and its satiety is still tracked.
+
+## Add a meal you already ate
+
+Forgot to start a meal? Add it afterwards, whole, with no timer. Add a meal sits on Today (before, during and after your window, and on a paused day), at the top of Satiety, and under Meals on a day in Week. Already finished? in Start a meal opens it too. Start a meal, Finished this meal and the 20-minute check that follows work as before.
+
+- One sheet asks for everything: today or yesterday (a day opened from Week keeps its own date), when it started (quick times 30 min, 1 h or 2 h ago, or the wheel), how long it took (15, 30 or 45 min or 1 h, or the finish time on its wheel, never later than now), what the meal was, hunger before, how you finished, fullness right after and fullness at 20 minutes.
+- Before you save, the sheet says what the meal does to the day. It follows the same rules as any meal:
+  - The first meal of the day opens the window at its start. Last meal of the day? Yes closes the window when the meal ends; otherwise it stays open until I'm done eating.
+  - A meal before the first bite opens the window earlier.
+  - Inside the window, the meal is simply added.
+  - After the window closed, still within your goal's hours, the window runs on to the end of the meal.
+  - Later than that, it counts as eating outside the window, and the day is a miss.
+  - On a paused day, it counts for Satiety only.
+- A rule the meal would break (opening before 16:00 on a workday, a window longer than the goal, eating outside it) is spelled out in clay before you save.
+- A meal that overlaps one already logged is refused. So is any meal while an earlier day's window is still open: close it on Today first.
+- Leave fullness at 20 minutes blank and a meal that has only just ended still gets its 20-minute check. For an older one, tap the meal in Satiety, Meals later to add it.
+- Saving shows Meal saved, with Undo for 10 seconds.
 
 ## Changing a time
 
@@ -62,7 +79,7 @@ Satiety has its own tab, laid out after your earlier satiety page. It has three 
 - Now shows the fullness check waiting, with its countdown and Score my fullness now; any meal in progress, with Finished this meal; and how the day's eating ended.
 - Meals lists the last 30 days by day, newest first. Each meal reads hunger before → fullness right after → fullness at 20 minutes, followed by the drift. Tap one to edit it.
 
-Today keeps the meal buttons, the check-in and Uhud. While a fullness check is running, Today shows a short line with a button to Satiety.
+Add a meal, at the top of every view, adds a meal you already ate (see Add a meal you already ate). Today keeps the meal buttons, the check-in and Uhud. While a fullness check is running, Today shows a short line with a button to Satiety.
 
 ## Legends
 
@@ -149,7 +166,7 @@ If an import fails:
 
 ## Alarms
 
-Fast cannot ring while it is closed. In More, Alarms, switch it on and build a shortcut once: in Shortcuts, tap +, name it Fast Timer, add the action Start Timer, set its duration to Shortcut Input in minutes, and tap Done. Fast then starts an iPhone timer when your first meal opens the window (for when it closes) and when you finish a meal (for the 20-minute fullness check). The Shortcuts app opens for a moment each time.
+Fast cannot ring while it is closed. In More, Alarms, switch it on and build a shortcut once: in Shortcuts, tap +, name it Fast Timer, add the action Start Timer, set its duration to Shortcut Input in minutes, and tap Done. Fast then starts an iPhone timer when your first meal opens the window (for when it closes) and when you finish a meal (for the 20-minute fullness check). Add a meal starts one when the meal opens today's window and leaves it open, or else when its fullness check is still ahead. The Shortcuts app opens for a moment each time.
 
 ## Week
 
