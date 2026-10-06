@@ -62,7 +62,9 @@ How to work on Fast, and what the owner has decided. README.md covers what the a
 
 ## Cloud sessions
 
-- Playwright's own browser downloads (`cdn.playwright.dev`) may be blocked by the environment's network policy. Chromium is at `/opt/pw-browsers/chromium`: run e2e through an untracked config that sets `launchOptions.executablePath` to it. WebKit then cannot run, and `screens.spec.js` skips outside WebKit, so shoot screens with an untracked copy that drops the skip. Say plainly that WebKit did not run.
+- Chromium is at `/opt/pw-browsers/chromium`: run e2e through an untracked config that sets `launchOptions.executablePath` to it.
+- WebKit needs `cdn.playwright.dev` allowed in the environment's network settings (the owner added it). Its usual address redirects to a blocked Microsoft host, so curl `https://cdn.playwright.dev/builds/webkit/<revision>/webkit-ubuntu-24.04.zip` (the revision is in `node_modules/playwright-core/browsers.json`) into a folder of the scratchpad, unzip it into `webkit-<revision>/`, run with `PLAYWRIGHT_BROWSERS_PATH` set to that folder, and `apt-get install` the libraries the launch error names (libevent-2.1-7t64, libsoup-3.0-0, libavif16, libmanette-0.2-0, libenchant-2-2, libwoff1, libgstreamer-gl1.0-0, libgstreamer-plugins-bad1.0-0 and the like).
+- In this Linux WebKit, two Tempted tests fail on `main` as well (the urge timer's minute 3, and a slip just after midnight), so a change did not cause them. Without WebKit, `screens.spec.js` skips, so shoot screens with an untracked copy that drops the skip, and say plainly which browser did not run.
 
 ## Offered, not built
 
