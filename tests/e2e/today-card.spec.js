@@ -81,6 +81,36 @@ test('the stage under the time opens the stages at the one the fast is in', asyn
   await expect(s.locator('[data-action="stage-sparing"]')).toHaveAttribute('aria-current', 'true');
 });
 
+test('the stages show three at a time; the line swipes on its own and follows the card in view', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await openAt(page, '2026-09-27T13:10'); // 16 h 10 min: the metabolic switch
+  await seed(page, LAST_NIGHT);
+  await tap(page, 'open-stages');
+  const s = sheet(page, 'stages');
+  const line = s.getByTestId('stage-line');
+  // Whether a stage sits wholly inside the line's view.
+  const inLine = (key) => line.evaluate((el, k) => {
+    const view = el.getBoundingClientRect();
+    const r = el.querySelector(`[data-action="stage-${k}"]`).getBoundingClientRect();
+    return r.left >= view.left - 1 && r.right <= view.right + 1;
+  }, key);
+  const perView = await line.evaluate((el) => el.clientWidth / el.querySelector('.stage-stop').getBoundingClientRect().width);
+  expect(perView).toBeGreaterThan(3);
+  expect(perView).toBeLessThan(4);
+  // It opens with the stage the fast is in, in view.
+  await expect.poll(() => inLine('switch')).toBe(true);
+  expect(await inLine('sparing')).toBe(false);
+  // Swiping the line alone leaves the card where it is.
+  await line.evaluate((el) => el.scrollTo({ left: el.scrollWidth }));
+  await expect.poll(() => inLine('sparing')).toBe(true);
+  expect(await s.locator('.stage-cards').evaluate((el) => Math.round(el.scrollLeft / el.clientWidth))).toBe(2);
+  // Swiping the cards brings the line back to the card in view.
+  await s.locator('.stage-cards').evaluate((el) => el.scrollTo({ left: el.children[0].offsetLeft }));
+  await expect(s.locator('[data-action="stage-digesting"]')).toHaveAttribute('aria-current', 'true');
+  await expect.poll(() => inLine('digesting')).toBe(true);
+  expect(await inLine('sparing')).toBe(false);
+});
+
 test('starting the first meal ends the fast: its length, gold when it reached the goal; Close puts it away', async ({ page }) => {
   await openAt(page, '2026-09-27T17:30'); // 20 h 30 min after the last bite
   await seed(page, LAST_NIGHT);

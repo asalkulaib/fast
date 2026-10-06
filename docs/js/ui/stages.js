@@ -199,9 +199,9 @@ export function stagesSection(ctx, app, lastBiteTs, { withRing, times = null }) 
 const SHORT_HOURS = { digesting: '0–4 h', settling: '4–12 h', switch: '12–24 h', ketones: '24–48 h', brain: '48–72 h', sparing: '72 h+' };
 
 /**
- * The stages one at a time: all six along a line across the top, the one
- * the fast is in now ringed in the sun's gold, and a card for each below,
- * each a shade deeper, from pale sand to dark rock. Swipe the cards or tap
+ * The stages one at a time: all six along a line across the top, three to
+ * a view, the one the fast is in now ringed in the sun's gold, and a card for each below,
+ * each a shade deeper, from pale sand to dark rock. Swipe the line, the cards, or tap
  * a stage; the sheet opens on the stage the fast is in now.
  */
 export function showStagesSheet(currentKey = null) {
@@ -225,27 +225,48 @@ export function showStagesSheet(currentKey = null) {
       h('span', { class: `disc s-${st.key}` }, stageGlyph(st.key)),
       h('span', { class: 'name' }, st.name),
       h('span', { class: 'hrs' }, SHORT_HOURS[st.key])));
-    const mark = (i) => stops.forEach((b, j) => b.setAttribute('aria-current', String(j === i)));
+    // Three stages show at a time; the line swipes on its own, and follows the card shown.
+    const line = h('div', { class: 'stage-line', role: 'group', 'aria-label': 'Stages', 'data-testid': 'stage-line' }, h('div', { class: 'stage-track' }, stops));
+    const motion = (smooth) => (smooth && !matchMedia('(prefers-reduced-motion: reduce)').matches ? 'smooth' : 'auto');
+    let marked = -1;
+    const mark = (i, smooth = true) => {
+      stops.forEach((b, j) => b.setAttribute('aria-current', String(j === i)));
+      if (i === marked) return;
+      marked = i;
+      const b = stops[i];
+      line.scrollTo({ left: b.offsetLeft - (line.clientWidth - b.offsetWidth) / 2, behavior: motion(smooth) });
+    };
     const step = () => (cards.children[1] ? cards.children[1].offsetLeft - cards.children[0].offsetLeft : cards.clientWidth);
+    const shownCard = () => Math.max(0, Math.min(STAGES.length - 1, Math.round(cards.scrollLeft / step())));
+    // While the cards glide to a tapped stage, the line waits for them rather than following each card passed.
+    let target = null;
+    let settle = 0;
     function show(i, smooth) {
-      const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-      cards.scrollTo({ left: i * step(), behavior: smooth && !reduce ? 'smooth' : 'auto' });
-      mark(i);
+      target = i;
+      clearTimeout(settle);
+      settle = setTimeout(() => { target = null; mark(shownCard()); }, 800);
+      cards.scrollTo({ left: i * step(), behavior: motion(smooth) });
+      mark(i, smooth);
     }
     // Swiping moves the mark along the line.
     let frame = 0;
     cards.addEventListener('scroll', () => {
       cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => mark(Math.max(0, Math.min(STAGES.length - 1, Math.round(cards.scrollLeft / step())))));
+      frame = requestAnimationFrame(() => {
+        const i = shownCard();
+        if (target !== null && i !== target) return;
+        target = null;
+        mark(i);
+      });
     }, { passive: true });
     const start = Math.max(0, STAGES.findIndex((st) => st.key === currentKey));
-    mark(start);
-    // Open on the stage the fast is in, once the cards have their width.
+    stops.forEach((b, j) => b.setAttribute('aria-current', String(j === start)));
+    // Open on the stage the fast is in, once the cards and the line have their width.
     requestAnimationFrame(() => show(start, false));
     return h('div', {},
       sheetHead(api, 'Fasting stages'),
-      h('p', {}, 'Typical changes after your last bite, from human studies. Swipe the cards or tap a stage.'),
-      h('div', { class: 'stage-line', role: 'group', 'aria-label': 'Stages' }, stops),
+      h('p', {}, 'Typical changes after your last bite, from human studies. Swipe the stages or the cards, or tap a stage.'),
+      line,
       cards,
       h('p', { class: 'small quiet gap' }, VARIATION_NOTE),
       h('section', { class: 'section gap' },

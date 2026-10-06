@@ -2022,20 +2022,32 @@ html.locked body {
 /* ---------- Fasting stages, one at a time ---------- */
 
 .stage-line {
+  margin-top: var(--s4);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.stage-line::-webkit-scrollbar {
+  display: none;
+}
+
+/* Three stages to a view, with the next one showing at the edge: swipe the line for the rest. */
+.stage-track {
   position: relative;
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(0, 1fr);
-  margin-top: var(--s4);
+  grid-auto-columns: 1fr;
+  width: 167%;
 }
 
 /* The line that joins the stages, behind their discs: from the middle of the first column to the middle of the sixth. */
-.stage-line::before {
+.stage-track::before {
   content: '';
   position: absolute;
   left: calc(100% / 12);
   right: calc(100% / 12);
-  top: 22px;
+  top: 29px;
   border-top: 1px solid var(--rule-quiet);
 }
 
@@ -2044,29 +2056,37 @@ html.locked body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  row-gap: 4px;
-  padding: 0 2px 6px;
+  row-gap: 6px;
+  padding: 0 4px 8px;
   font-family: var(--font-ui);
   font-weight: 500;
-  font-size: 12px;
+  font-size: 15px;
   line-height: 1.25;
   text-align: center;
   color: var(--text-quiet);
   border-radius: var(--r-control);
 }
 
+.stage-stop .name {
+  min-height: 2.5em;
+}
+
+.stage-stop .hrs {
+  font-size: 14px;
+}
+
 .stage-stop .disc {
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
+  width: 58px;
+  height: 58px;
   border: 1px solid var(--rule-quiet);
   border-radius: var(--r-pill);
 }
 
 .stage-stop .disc svg {
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 30px;
 }
 
 .stage-stop .disc .stage-icon {
