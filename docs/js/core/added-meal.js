@@ -15,8 +15,10 @@ function homeDay(days, settings, start) {
   }
   // Last night's window, closed after midnight with this meal inside it.
   if (prev && prev.firstBite && prev.lastBite && start >= prev.firstBite && start <= prev.lastBite) return prevKey;
-  // Just after midnight, a meal still inside last night's goal joins its window, as Start a meal does.
-  if (minutesOfDay(start) < LATE_NIGHT_END_MIN && !hasWindow(days.get(key))
+  // Just after midnight, a meal still inside last night's goal joins its window, as Start a meal does
+  // (unless the day has a window of its own that it falls in or after).
+  const own = days.get(key);
+  if (minutesOfDay(start) < LATE_NIGHT_END_MIN && (!hasWindow(own) || own.firstBite > start)
     && prev && prev.firstBite && prev.lastBite && start - prev.firstBite < windowMsFor(prevKey, settings)) return prevKey;
   return key;
 }

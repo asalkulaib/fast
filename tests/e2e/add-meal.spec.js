@@ -162,12 +162,104 @@ test('from a day in Week: Add a meal adds to that day, even one with no window y
   const s = sheet(page, 'add-meal');
   await expect(s.getByTestId('add-meal-day')).toHaveText('Thursday 24 September');
   await expect(s.locator('button[data-choice="added-day"]')).toHaveCount(0);
-  // With no window, the wheel starts at the day's planned time (17:30 on a workday).
+  // With no window, the wheel starts at the day's planned time (17:30 on a workday). The day is over,
+  // so Last meal of the day? reads Yes until changed, and the window closes with the meal.
+  await expect(s.locator('button[data-choice="last-meal"][aria-checked="true"]')).toHaveText('Yes');
+  await expect(effect(page)).toHaveText('The window on Thu 24 Sep: 17:30 to 18:00, 30 min.');
+  await choose(page, 'last-meal', 'false');
   await expect(effect(page)).toHaveText('This meal opens the window on Thu 24 Sep at 17:30.');
   await choose(page, 'last-meal', 'true');
-  await expect(effect(page)).toHaveText('The window on Thu 24 Sep: 17:30 to 18:00, 30 min.');
   await tap(page, 'save-added-meal');
   await expect(page.locator('[data-block="day-meals"]')).toContainText('17:30 to 18:00');
   const db = await readDb(page);
   expect(db.days).toMatchObject([{ day: '2026-09-24', firstBite: ms('2026-09-24T17:30'), lastBite: ms('2026-09-24T18:00') }]);
+});
+
+test('from a day in Week with meals: the sheet starts after its last meal, and a time after midnight stays in a window that crosses it', async ({ page }) => {
+  await openAt(page, '2026-09-27T10:00', '#day/2026-09-24');
+  await seed(page, {
+    days: [{ day: '2026-09-24', firstBite: ms('2026-09-24T21:00'), lastBite: ms('2026-09-25T01:00') }],
+    meals: [{ id: 1, day: '2026-09-24', name: 'Dinner', startedAt: ms('2026-09-24T21:00'), finishedAt: ms('2026-09-24T21:40') }],
+    settings: install,
+  });
+  await tap(page, 'add-meal');
+  const s = sheet(page, 'add-meal');
+  await expect(s.locator('[data-time="added-start"] [data-part="hour"]')).toHaveAttribute('aria-valuenow', '21');
+  await expect(s.locator('[data-time="added-start"] [data-part="minute"]')).toHaveAttribute('aria-valuenow', '40');
+  await expect(effect(page)).toHaveText('This meal goes in the window on Thu 24 Sep.');
+  // 00:10 is inside the window that runs to 01:00 the next day, not the morning before it.
+  await setTime(page, 'added-start', '00:10');
+  await tap(page, 'added-length-15');
+  await expect(effect(page)).toHaveText('This meal goes in the window on Thu 24 Sep.');
+  await expect(s.getByTestId('add-meal-miss')).toHaveText('');
+  await tap(page, 'save-added-meal');
+  await expect.poll(async () => (await readDb(page)).meals.length).toBe(2);
+  const db = await readDb(page);
+  expect(db.meals.find((m) => m.id !== 1)).toMatchObject({ day: '2026-09-24', startedAt: ms('2026-09-25T00:10'), finishedAt: ms('2026-09-25T00:25') });
+  expect(db.days[0]).toMatchObject({ firstBite: ms('2026-09-24T21:00'), lastBite: ms('2026-09-25T01:00') });
+});
+
+test('the Finished at wheel takes the hour, then the minute; a time still ahead or before the start is refused', async ({ page }) => {
+  await openAt(page, '2026-09-26T15:00');
+  await seed(page, { settings: install });
+  await tap(page, 'add-meal');
+  const s = sheet(page, 'add-meal');
+  const note = s.getByTestId('add-meal-finish-note');
+  await tap(page, 'added-start-30'); // 14:30, ending now
+  await setTime(page, 'added-finish', '14:50');
+  await expect(note).toHaveText('');
+  await expect(s.locator('[data-time="added-finish"] [data-part="hour"]')).toHaveAttribute('aria-valuenow', '14');
+  await expect(s.locator('[data-time="added-finish"] [data-part="minute"]')).toHaveAttribute('aria-valuenow', '50');
+  await setTime(page, 'added-finish', '15:30');
+  await expect(note).toHaveText('That time is still ahead.');
+  await tap(page, 'save-added-meal');
+  await expect(s.getByTestId('add-meal-hint')).toHaveText('That time is still ahead.');
+  // Yesterday, a finish rolled before the start is not read as a meal of nearly a day.
+  await choose(page, 'added-day', '2026-09-25');
+  await setTime(page, 'added-start', '19:00');
+  await setTime(page, 'added-finish', '18:45');
+  await expect(note).toHaveText('That is before the meal started.');
+  await tap(page, 'save-added-meal');
+  await expect(s.getByTestId('add-meal-hint')).toHaveText('That is before the meal started.');
+  expect((await readDb(page)).meals).toEqual([]);
+  await setTime(page, 'added-finish', '19:20');
+  await tap(page, 'save-added-meal');
+  await expect.poll(async () => (await readDb(page)).meals.length).toBe(1);
+  expect((await readDb(page)).meals[0]).toMatchObject({ day: '2026-09-25', startedAt: ms('2026-09-25T19:00'), finishedAt: ms('2026-09-25T19:20') });
+});
+
+test('Already finished? hands Add a meal the time, meal and hunger picked in Start a meal', async ({ page }) => {
+  await openAt(page, '2026-09-26T19:00');
+  await seed(page, { settings: install });
+  await tap(page, 'start-meal');
+  await tap(page, 'meal-start-30'); // 18:30
+  await choose(page, 'meal-type', 'Snack');
+  await pick(page, 'hunger', 7);
+  await tap(page, 'already-finished');
+  const s = sheet(page, 'add-meal');
+  await expect(s.locator('[data-time="added-start"] [data-part="hour"]')).toHaveAttribute('aria-valuenow', '18');
+  await expect(s.locator('[data-time="added-start"] [data-part="minute"]')).toHaveAttribute('aria-valuenow', '30');
+  await expect(s.locator('button[data-choice="meal-type"][aria-checked="true"]')).toHaveText('Snack');
+  await expect(s.locator('button[data-scale="hunger"][aria-checked="true"]')).toHaveText('7');
+  await tap(page, 'save-added-meal');
+  await expect.poll(async () => (await readDb(page)).meals.length).toBe(1);
+  expect((await readDb(page)).meals[0]).toMatchObject({ name: 'Snack', hungerBefore: 7, startedAt: ms('2026-09-26T18:30'), finishedAt: ms('2026-09-26T19:00') });
+});
+
+test('Alarms: a window it leaves open today gets its timer, otherwise a fullness check still ahead does', async ({ page }) => {
+  await page.addInitScript(() => { window.__fastOpened = []; });
+  await openAt(page, '2026-09-26T15:00');
+  await seed(page, { settings: [...install, ...settings({ alarms: true })] });
+  const opened = () => page.evaluate(() => window.__fastOpened);
+  await tap(page, 'add-meal'); // 14:00 to 14:30, the first meal: the window closes at 18:00
+  await tap(page, 'save-added-meal');
+  await expect.poll(opened).toEqual(['shortcuts://run-shortcut?name=Fast%20Timer&input=text&text=180']);
+  await tap(page, 'add-meal');
+  await setTime(page, 'added-start', '14:40');
+  await tap(page, 'added-length-15'); // ends 14:55: its check is at 15:15
+  await tap(page, 'save-added-meal');
+  await expect.poll(opened).toEqual([
+    'shortcuts://run-shortcut?name=Fast%20Timer&input=text&text=180',
+    'shortcuts://run-shortcut?name=Fast%20Timer&input=text&text=15',
+  ]);
 });

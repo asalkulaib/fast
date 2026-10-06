@@ -6,7 +6,7 @@ import { button, choice, scale, textField, timeField, STOP_OPTIONS } from './com
 import { openSheet, sheetHead } from './sheet.js';
 import * as store from '../store.js';
 import { MIN, HOUR, addDays, at, dayKey, floorToMinute, fmtDayLong, fmtDayShort, fmtDuration, fmtOnDay, fmtTime, fmtWhen, minutesOfDay, nearestTime, now } from '../core/time.js';
-import { CUTOFF_MIN, LATE_NIGHT_END_MIN, canReopen, cutoffApplies, evaluateDay, isFlexible, plannedStartMin, timeOnOrAfter } from '../core/rules.js';
+import { CUTOFF_MIN, LATE_NIGHT_END_MIN, canReopen, cutoffApplies, evaluateDay, isFlexible, plannedStartMin, timeOnOrAfter, windowMsFor } from '../core/rules.js';
 import { placeAddedMeal } from '../core/added-meal.js';
 import { MEAL_TYPES, guessMealType, typeOfName } from '../core/meal-types.js';
 import { mealInProgress } from './shared.js';
@@ -196,7 +196,11 @@ export function showStartMealSheet(app) {
       h('section', { class: 'section' }, hungerScale(draft)),
       hint ? h('p', { class: 'small', 'data-testid': 'meal-hint' }, hint) : null,
       h('div', { class: 'gap' }, button('Start eating', save, { block: true, name: 'start-eating' })),
-      h('div', { class: 'gap-s' }, button('Already finished? Add a meal', () => showAddMealSheet(app), { kind: 'outline', block: true, name: 'already-finished' })),
+      h('div', { class: 'gap-s' }, button('Already finished? Add a meal', () => showAddMealSheet(app, { from: {
+        pick: draft.pick, other: draft.other, hungerBefore: draft.hungerBefore,
+        // A start left at now would make a meal of no length: Add a meal then starts an hour ago.
+        ts: draft.ts != null && draft.ts < floorToMinute(now()) - MIN ? draft.ts : null,
+      } }), { kind: 'outline', block: true, name: 'already-finished' })),
     );
   }, { name: 'start-meal', label: 'Start a meal' });
 }
@@ -260,39 +264,77 @@ function missLines(ctx, place) {
 }
 
 /**
+ * Where Add a meal starts: a start Start a meal already holds; for an
+ * earlier day, the end of its last meal, else its first bite or planned
+ * time; otherwise an hour ago. A start of its own steps past meals already logged.
+ */
+function defaultStart(ctx, day, ts) {
+  if (ts != null) return ts;
+  let t;
+  if (day && day !== ctx.todayKey) {
+    const rec = ctx.days.get(day);
+    const ends = ctx.meals.filter((m) => m.day === day && m.finishedAt).map((m) => m.finishedAt);
+    t = ends.length ? Math.max(...ends) : rec && rec.firstBite ? rec.firstBite : at(day, plannedStartMin(day, rec, ctx.settings));
+  } else {
+    t = floorToMinute(now() - HOUR);
+  }
+  for (let i = 0; i < ctx.meals.length; i++) {
+    const clash = ctx.meals.find((m) => m.finishedAt && m.startedAt <= t && t < m.finishedAt);
+    if (!clash) break;
+    t = clash.finishedAt;
+  }
+  return t;
+}
+
+/**
  * Add a meal already eaten, whole and in one go: when it started, how long
  * it took, what it was, hunger before, how it ended and both fullness
  * readings. No timer. day: the day to add it to (from the Day screen);
- * otherwise today or yesterday. Before saving, the sheet says what the meal
- * does to that day's window (see placeAddedMeal).
+ * otherwise today or yesterday. from: what Start a meal already holds
+ * ({ pick, other, hungerBefore, ts }, ts only once its start was moved).
+ * Before saving, the sheet says what the meal does to that day's window
+ * (see placeAddedMeal).
  */
-export function showAddMealSheet(app, { day = null } = {}) {
+export function showAddMealSheet(app, { day = null, from = null } = {}) {
   const ctx0 = app.ctx();
   const today = ctx0.todayKey;
   const yesterday = addDays(today, -1);
   const fixed = day && day !== today && day !== yesterday ? day : null;
-  // From now: an hour ago. For an earlier day: its first bite, or its planned start.
-  const hourAgo = floorToMinute(now() - HOUR);
-  const rec0 = day && day !== today ? ctx0.days.get(day) : null;
+  const start0 = defaultStart(ctx0, day, from ? from.ts : null);
   const draft = {
-    day: day && day !== today ? day : dayKey(hourAgo),
-    minutes: day && day !== today
-      ? (rec0 && rec0.firstBite ? minutesOfDay(rec0.firstBite) : plannedStartMin(day, rec0, ctx0.settings))
-      : minutesOfDay(hourAgo),
-    length: 30,
-    name: '', pick: null, other: '',
-    hungerBefore: null, stop: null, fullnessNow: null, fullness20: null,
-    last: null,
+    day: day || dayKey(start0),
+    minutes: minutesOfDay(start0),
+    length: 30, // minutes, as wanted; the meal never ends after `until`
+    until: floorToMinute(now()),
+    finishAhead: false, // the Finished at wheel was rolled past now
+    name: '', pick: from ? from.pick ?? null : null, other: from ? from.other || '' : '',
+    hungerBefore: from ? from.hungerBefore ?? null : null, stop: null, fullnessNow: null, fullness20: null,
+    last: null, // unanswered: yes for a day already over, no for today
   };
-  const startTs = () => at(draft.day, draft.minutes);
-  // The meal ends after its length, and never later than now.
-  const finishTs = () => Math.min(startTs() + draft.length * MIN, Math.max(startTs(), floorToMinute(now())));
-  const placeNow = () => placeAddedMeal(store.data(), { start: startTs(), finish: finishTs(), last: draft.last === true, nowTs: now() });
+  const MAX_LENGTH = 12 * 60;
+  // A time just after midnight, on a day whose window reaches past midnight, is that night's.
+  const startTs = () => {
+    const ts = at(draft.day, draft.minutes);
+    const r = store.state.days.get(draft.day);
+    if (r && r.firstBite && ts < r.firstBite && draft.minutes < LATE_NIGHT_END_MIN) {
+      const next = at(addDays(draft.day, 1), draft.minutes);
+      if (next <= now() + MIN && ((r.lastBite && next <= r.lastBite) || next - r.firstBite < windowMsFor(draft.day, store.state.settings))) return next;
+    }
+    return ts;
+  };
+  const finishTs = () => Math.min(startTs() + draft.length * MIN, Math.max(startTs(), draft.until));
+  const lastAnswer = () => draft.last ?? draft.day < today;
+  const placeNow = () => placeAddedMeal(store.data(), { start: startTs(), finish: finishTs(), last: lastAnswer(), nowTs: now() });
+  const finishProblem = () => {
+    if (draft.length > MAX_LENGTH) return 'That is before the meal started.';
+    return draft.finishAhead ? 'That time is still ahead.' : '';
+  };
 
   openSheet((api) => {
     const ctx = app.ctx();
     const typeBox = mealTypeSection(ctx, draft, () => draft.minutes);
     const aheadEl = h('p', { class: 'small', 'data-testid': 'add-meal-ahead' });
+    const finishNoteEl = h('p', { class: 'small', 'data-testid': 'add-meal-finish-note' });
     const effectEl = h('p', { class: 'gap', 'data-testid': 'add-meal-effect' });
     const missEl = h('div', { 'data-testid': 'add-meal-miss' });
     const hintEl = h('p', { class: 'small', 'data-testid': 'add-meal-hint' });
@@ -305,8 +347,9 @@ export function showAddMealSheet(app, { day = null } = {}) {
       const start = startTs();
       const ahead = start > now() + MIN;
       aheadEl.textContent = ahead ? 'That time is still ahead.' : '';
+      finishNoteEl.textContent = finishProblem();
       hintEl.textContent = '';
-      const place = ahead ? null : placeNow();
+      const place = ahead || finishProblem() ? null : placeNow();
       const ok = place && !place.error;
       effectEl.textContent = !place ? '' : place.error ? placeError(c, place) : placeText(c, place, start);
       missEl.replaceChildren(...(ok ? missLines(c, place) : []).map((t) => h('p', { class: 'statement clay gap-s' }, t)));
@@ -315,57 +358,61 @@ export function showAddMealSheet(app, { day = null } = {}) {
         lastShown = showLast;
         lastBox.replaceChildren(...(showLast
           ? [h('section', { class: 'section' }, choice({
-            label: 'Last meal of the day?', options: [{ value: true, label: 'Yes' }, { value: false, label: 'No' }], value: draft.last, cols: 2, name: 'last-meal',
+            label: 'Last meal of the day?', options: [{ value: true, label: 'Yes' }, { value: false, label: 'No' }], value: lastAnswer(), cols: 2, name: 'last-meal',
             onChange: (v) => { draft.last = v; refresh(); },
           }))]
           : []));
       }
     };
 
+    // The Finished at wheel takes what is rolled as it is (hour, then minute); only a start or a length moves it.
     const finishField = timeField({
       label: 'Finished at',
       minutes: minutesOfDay(finishTs()),
       name: 'added-finish',
       onChange: (m) => {
+        draft.until = floorToMinute(now());
         draft.length = Math.round((timeOnOrAfter(startTs(), m) - startTs()) / MIN);
-        // A time still ahead ends the meal now.
-        if (minutesOfDay(finishTs()) !== m) finishField.set(minutesOfDay(finishTs()));
+        draft.finishAhead = startTs() + draft.length * MIN > draft.until + MIN;
         refresh();
       },
     });
-    const moveStart = (ts) => {
-      const key = dayKey(ts);
-      draft.minutes = minutesOfDay(ts);
-      if (key !== draft.day) { draft.day = key; api.rerender(); return; }
-      startField.set(draft.minutes);
+    const followStart = () => {
+      draft.until = floorToMinute(now());
+      draft.finishAhead = false;
       finishField.set(minutesOfDay(finishTs()));
-      typeBox.refresh();
       refresh();
     };
     const startField = timeField({
       label: 'Started at',
       minutes: draft.minutes,
       name: 'added-start',
-      onChange: (m) => {
-        draft.minutes = m;
-        finishField.set(minutesOfDay(finishTs()));
-        typeBox.refresh();
-        refresh();
-      },
+      onChange: (m) => { draft.minutes = m; typeBox.refresh(); followStart(); },
     });
+    const moveStart = (ts) => {
+      const key = dayKey(ts);
+      draft.minutes = minutesOfDay(ts);
+      if (key !== draft.day) {
+        draft.day = key;
+        draft.until = floorToMinute(now());
+        draft.finishAhead = false;
+        api.rerender();
+        return;
+      }
+      startField.set(draft.minutes);
+      typeBox.refresh();
+      followStart();
+    };
     const ago = h('div', { class: 'presets gap-s', role: 'group', 'aria-label': 'Quick times' },
       AGO.map(([mins, label]) => button(label, () => moveStart(floorToMinute(now() - mins * MIN)), { kind: 'secondary', name: `added-start-${mins}` })));
     const lengths = h('div', { class: 'presets gap-s', role: 'group', 'aria-label': 'How long it took' },
-      LENGTHS.map(([mins, label]) => button(label, () => {
-        draft.length = mins;
-        finishField.set(minutesOfDay(finishTs()));
-        refresh();
-      }, { kind: 'secondary', name: `added-length-${mins}` })));
+      LENGTHS.map(([mins, label]) => button(label, () => { draft.length = mins; followStart(); }, { kind: 'secondary', name: `added-length-${mins}` })));
 
     const save = async () => {
       const start = startTs();
       const finish = finishTs();
       if (start > now() + MIN) { hintEl.textContent = 'That time is still ahead.'; return null; }
+      if (finishProblem()) { hintEl.textContent = finishProblem(); return null; }
       const place = placeNow();
       if (place.error) { hintEl.textContent = placeError(app.ctx(), place); return null; }
       const res = await store.addFinishedMeal(place, {
@@ -391,10 +438,10 @@ export function showAddMealSheet(app, { day = null } = {}) {
         ? h('p', { class: 'statement gap', 'data-testid': 'add-meal-day' }, fmtDayLong(fixed))
         : h('section', { class: 'section gap' }, choice({
           label: 'Day', options: [{ value: today, label: 'Today' }, { value: yesterday, label: 'Yesterday' }], value: draft.day, cols: 2, name: 'added-day',
-          onChange: (v) => { draft.day = v; api.rerender(); },
+          onChange: (v) => { draft.day = v; draft.until = floorToMinute(now()); draft.finishAhead = false; api.rerender(); },
         })),
       h('section', { class: 'section' }, draft.day === today ? ago : null, startField, aheadEl),
-      h('section', { class: 'section' }, h('div', { class: 'label field-label' }, 'How long it took'), lengths, finishField),
+      h('section', { class: 'section' }, h('div', { class: 'label field-label' }, 'How long it took'), lengths, finishField, finishNoteEl),
       typeBox,
       h('section', { class: 'section' }, hungerScale(draft)),
       h('section', { class: 'section' }, stopChoice(draft)),

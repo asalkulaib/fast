@@ -38,7 +38,7 @@ Nafud at midday: sand is the page and umber ink the text. Gold leaf means one th
 
 Before your window, Today offers Start a meal. Begin fast appears beside it only when Fast has nothing to time a fast from: on your first day, after a reset, or when no last bite is on record.
 
-- Start a meal: your first meal opens the window. The sheet has the eating reminders; what the meal is: Snack, Breakfast, Lunch or Dinner, or Other to type a name (names you typed before come back as one-tap shortcuts); hunger before; and its start time, with quick times (30 min, 1 h, 2 h ago) and the wheel. Already eaten? Already finished? opens Add a meal (see below). On a workday before 16:00, the sheet says the day will count as a miss.
+- Start a meal: your first meal opens the window. The sheet has the eating reminders; what the meal is: Snack, Breakfast, Lunch or Dinner, or Other to type a name (names you typed before come back as one-tap shortcuts); hunger before; and its start time, with quick times (30 min, 1 h, 2 h ago) and the wheel. Already finished? Add a meal opens Add a meal (see below), with the time, meal and hunger you picked. On a workday before 16:00, the sheet says the day will count as a miss.
 - Begin fast: for a fast already under way, for example on your first day with Fast or after a pause. Pick Now, 1 or 2 hours ago, last night, or any time on the wheel, so none of the fast is lost. Tap Fast began on Today to adjust it later. A fast start never changes the result of the day it falls on, and it cannot be earlier than the last bite on record.
 
 Until you tap a meal, Fast picks one from the start time: breakfast from 05:00, lunch from 11:00, dinner from 16:00 and a snack from 22:00. A snack follows the same rules as any meal. The choice is saved as the meal's name, so it shows in the Meals list and the export, and older meals typed as, say, "dinner" open as Dinner when you edit them.
@@ -49,11 +49,11 @@ Each meal is tracked on its own: its start, its finish, hunger before, how you f
 
 Forgot to start a meal? Add it afterwards, whole, with no timer. Add a meal sits on Today (before, during and after your window, and on a paused day), at the top of Satiety, and under Meals on a day in Week. Already finished? in Start a meal opens it too. Start a meal, Finished this meal and the 20-minute check that follows work as before.
 
-- One sheet asks for everything: today or yesterday (a day opened from Week keeps its own date), when it started (quick times 30 min, 1 h or 2 h ago, or the wheel), how long it took (15, 30 or 45 min or 1 h, or the finish time on its wheel, never later than now), what the meal was, hunger before, how you finished, fullness right after and fullness at 20 minutes.
+- One sheet asks for everything: today or yesterday (a day opened from Week keeps its own date), when it started (quick times 30 min, 1 h or 2 h ago, or the wheel; it starts an hour ago, or after that day's last meal, and past any meal already logged), how long it took (15, 30 or 45 min or 1 h, or the finish time on its wheel, which cannot be still ahead or before the start), what the meal was, hunger before, how you finished, fullness right after and fullness at 20 minutes.
 - Before you save, the sheet says what the meal does to the day. It follows the same rules as any meal:
-  - The first meal of the day opens the window at its start. Last meal of the day? Yes closes the window when the meal ends; otherwise it stays open until I'm done eating.
+  - The first meal of the day opens the window at its start. Last meal of the day? Yes closes the window when the meal ends; No leaves it open until I'm done eating. For a day already over, Yes is picked unless you change it.
   - A meal before the first bite opens the window earlier.
-  - Inside the window, the meal is simply added.
+  - Inside the window, the meal is added; one that ends after the last bite moves the last bite to its end. While the window is open, Last meal of the day? Yes closes it after the latest meal.
   - After the window closed, still within your goal's hours, the window runs on to the end of the meal.
   - Later than that, it counts as eating outside the window, and the day is a miss.
   - On a paused day, it counts for Satiety only.

@@ -84,6 +84,30 @@ test("added meal: last night's window keeps what falls inside it and, just after
   const next = place([late], '2026-09-27T01:30', '2026-09-27T01:45');
   assert.equal(next.day, '2026-09-27');
   assert.equal(next.kind, 'first');
+  // The new day's own window later on does not take a snack from last night.
+  const both = place([late, win('2026-09-27', '17:00', '20:00')], '2026-09-27T00:45', '2026-09-27T01:00');
+  assert.equal(both.day, '2026-09-26');
+  assert.equal(both.kind, 'extend');
+  assert.equal(both.rec.lastBite, T('2026-09-27T01:00'));
+});
+
+test('added meal: an earlier day takes its own meal while a later window is still open', () => {
+  const recs = [win('2026-09-24', '18:00', '20:00'), win('2026-09-26', '13:00', '15:00'), win('2026-09-27', '17:00', null)];
+  const meals = [{ id: 1, day: '2026-09-27', startedAt: T('2026-09-27T17:00'), finishedAt: T('2026-09-27T17:30') }];
+  for (const [start, finish, day] of [['2026-09-26T14:00', '2026-09-26T14:20', '2026-09-26'], ['2026-09-24T18:40', '2026-09-24T19:00', '2026-09-24']]) {
+    const p = place(recs, start, finish, { meals, now: '2026-09-27T19:00' });
+    assert.equal(p.error, undefined);
+    assert.equal(p.day, day);
+    assert.equal(p.kind, 'inside');
+  }
+});
+
+test('added meal: closing an open window waits for its latest meal', () => {
+  const meals = [{ id: 1, day: '2026-09-27', startedAt: T('2026-09-27T18:00'), finishedAt: T('2026-09-27T18:40') }];
+  const p = place([win('2026-09-27', '17:00', null)], '2026-09-27T17:05', '2026-09-27T17:20', { meals, last: true, now: '2026-09-27T19:00' });
+  assert.equal(p.kind, 'inside');
+  assert.equal(p.canClose, true);
+  assert.equal(p.rec.lastBite, T('2026-09-27T18:40'));
 });
 
 test('added meal: a paused day takes it for satiety only', () => {
