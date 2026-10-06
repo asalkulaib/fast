@@ -263,3 +263,55 @@ test('Alarms: a window it leaves open today gets its timer, otherwise a fullness
     'shortcuts://run-shortcut?name=Fast%20Timer&input=text&text=15',
   ]);
 });
+
+test('from Today: the sheet starts clear of a meal just logged, and just after midnight a live window stays open', async ({ page }) => {
+  await openAt(page, '2026-09-26T15:00');
+  await seed(page, {
+    days: [{ day: '2026-09-26', firstBite: ms('2026-09-26T14:20'), lastBite: null }],
+    meals: [{ id: 1, day: '2026-09-26', name: 'Lunch', startedAt: ms('2026-09-26T14:20'), finishedAt: ms('2026-09-26T14:50') }],
+    settings: install,
+  });
+  await tap(page, 'add-meal');
+  const s = sheet(page, 'add-meal');
+  await expect(s.locator('[data-time="added-start"] [data-part="minute"]')).toHaveAttribute('aria-valuenow', '50');
+  await expect(effect(page)).toHaveText('This meal goes in your window.');
+  await tap(page, 'close-sheet');
+
+  // 00:30, last night's window still inside its goal: Last meal reads No until changed.
+  await page.clock.setFixedTime(new Date('2026-09-27T00:30:00+03:00'));
+  await seed(page, {
+    days: [{ day: '2026-09-26', firstBite: ms('2026-09-26T21:00'), lastBite: null }],
+    meals: [{ id: 1, day: '2026-09-26', name: 'Dinner', startedAt: ms('2026-09-26T21:00'), finishedAt: ms('2026-09-26T21:40') }],
+    settings: install,
+  });
+  await tap(page, 'add-meal');
+  await expect(s.locator('button[data-choice="added-day"][aria-checked="true"]')).toHaveText('Yesterday');
+  await expect(s.locator('button[data-choice="last-meal"][aria-checked="true"]')).toHaveText('No');
+  await expect(effect(page)).toHaveText("This meal goes in yesterday's window.");
+  await tap(page, 'save-added-meal');
+  await expect.poll(async () => (await readDb(page)).meals.length).toBe(2);
+  expect((await readDb(page)).days[0].lastBite).toBeNull();
+});
+
+test('a refused finish does not stay behind; an early-morning time on a past day stays on that day', async ({ page }) => {
+  await openAt(page, '2026-09-27T10:00');
+  await seed(page, { days: [{ day: '2026-09-26', firstBite: ms('2026-09-26T13:00'), lastBite: ms('2026-09-26T19:00') }], settings: install });
+  await tap(page, 'add-meal');
+  const s = sheet(page, 'add-meal');
+  const note = s.getByTestId('add-meal-finish-note');
+  await tap(page, 'added-start-30'); // 09:30, ending 10:00
+  await setTime(page, 'added-finish', '09:10');
+  await expect(note).toHaveText('That is before the meal started.');
+  // Moving the start brings back the length last accepted, 30 minutes.
+  await setTime(page, 'added-start', '08:30');
+  await expect(note).toHaveText('');
+  await expect(s.locator('[data-time="added-finish"] [data-part="hour"]')).toHaveAttribute('aria-valuenow', '9');
+  await expect(s.locator('[data-time="added-finish"] [data-part="minute"]')).toHaveAttribute('aria-valuenow', '0');
+  // Yesterday: no meal lasts over 12 hours, and 00:30 is that morning, before its window.
+  await choose(page, 'added-day', '2026-09-26');
+  await setTime(page, 'added-start', '07:00');
+  await setTime(page, 'added-finish', '20:00');
+  await expect(note).toHaveText('A meal lasts at most 12 hours.');
+  await setTime(page, 'added-start', '00:30');
+  await expect(effect(page)).toHaveText("Yesterday's window becomes 00:30 to 19:00, 18 h 30 min.");
+});

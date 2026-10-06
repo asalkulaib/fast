@@ -230,6 +230,8 @@ export function showStagesSheet(currentKey = null) {
     const motion = (smooth) => (smooth && !matchMedia('(prefers-reduced-motion: reduce)').matches ? 'smooth' : 'auto');
     let marked = -1;
     const mark = (i, smooth = true) => {
+      // A timer or a frame can outlive the sheet.
+      if (!line.isConnected || !stops[i]) return;
       stops.forEach((b, j) => b.setAttribute('aria-current', String(j === i)));
       if (i === marked) return;
       marked = i;
@@ -246,6 +248,7 @@ export function showStagesSheet(currentKey = null) {
       clearTimeout(settle);
       settle = setTimeout(() => { target = null; mark(shownCard()); }, 800);
       cards.scrollTo({ left: i * step(), behavior: motion(smooth) });
+      marked = -1; // a tapped stage is centred even when it is the one marked
       mark(i, smooth);
     }
     // Swiping moves the mark along the line.

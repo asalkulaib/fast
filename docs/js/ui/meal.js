@@ -6,7 +6,7 @@ import { button, choice, scale, textField, timeField, STOP_OPTIONS } from './com
 import { openSheet, sheetHead } from './sheet.js';
 import * as store from '../store.js';
 import { MIN, HOUR, addDays, at, dayKey, floorToMinute, fmtDayLong, fmtDayShort, fmtDuration, fmtOnDay, fmtTime, fmtWhen, minutesOfDay, nearestTime, now } from '../core/time.js';
-import { CUTOFF_MIN, LATE_NIGHT_END_MIN, canReopen, cutoffApplies, evaluateDay, isFlexible, plannedStartMin, timeOnOrAfter, windowMsFor } from '../core/rules.js';
+import { CUTOFF_MIN, LATE_NIGHT_END_MIN, canReopen, cutoffApplies, evaluateDay, isFlexible, plannedStartMin, timeOnOrAfter, windowMsFor, FORGOT_AFTER_MS } from '../core/rules.js';
 import { placeAddedMeal } from '../core/added-meal.js';
 import { MEAL_TYPES, guessMealType, typeOfName } from '../core/meal-types.js';
 import { mealInProgress } from './shared.js';
@@ -120,7 +120,7 @@ export function showStartMealSheet(app) {
     showFinishMealSheet(app, running.id, { next: () => showStartMealSheet(app), lead: 'One meal at a time. First, how did this one finish?' });
     return;
   }
-  const draft = { name: '', pick: null, other: '', hungerBefore: null, ts: floorToMinute(now()) };
+  const draft = { name: '', pick: null, other: '', hungerBefore: null, ts: floorToMinute(now()), moved: false };
   let hint = '';
   openSheet((api) => {
     const ctx = app.ctx();
@@ -143,11 +143,12 @@ export function showStartMealSheet(app) {
       label: 'Started at',
       minutes: draft.ts == null ? minutesOfDay(now()) : minutesOfDay(draft.ts),
       name: 'meal-start',
-      onChange: (m) => { draft.ts = resolveFirstBite(app.ctx().todayKey, m); updateWarn(); typeBox.refresh(); },
+      onChange: (m) => { draft.ts = resolveFirstBite(app.ctx().todayKey, m); draft.moved = true; updateWarn(); typeBox.refresh(); },
     });
     const presets = h('div', { class: 'presets gap-s', role: 'group', 'aria-label': 'Quick times' },
       QUICK.map(([mins, label]) => button(label, () => {
         draft.ts = floorToMinute(now() - mins * MIN);
+        draft.moved = true;
         field.set(minutesOfDay(draft.ts));
         updateWarn();
         typeBox.refresh();
@@ -199,7 +200,7 @@ export function showStartMealSheet(app) {
       h('div', { class: 'gap-s' }, button('Already finished? Add a meal', () => showAddMealSheet(app, { from: {
         pick: draft.pick, other: draft.other, hungerBefore: draft.hungerBefore,
         // A start left at now would make a meal of no length: Add a meal then starts an hour ago.
-        ts: draft.ts != null && draft.ts < floorToMinute(now()) - MIN ? draft.ts : null,
+        ts: draft.moved && draft.ts != null && draft.ts < floorToMinute(now()) - MIN ? draft.ts : null,
       } }), { kind: 'outline', block: true, name: 'already-finished' })),
     );
   }, { name: 'start-meal', label: 'Start a meal' });
@@ -278,10 +279,11 @@ function defaultStart(ctx, day, ts) {
   } else {
     t = floorToMinute(now() - HOUR);
   }
+  // Clear of meals already logged, over the half hour it first takes: after a finished one, before one still being eaten.
   for (let i = 0; i < ctx.meals.length; i++) {
-    const clash = ctx.meals.find((m) => m.finishedAt && m.startedAt <= t && t < m.finishedAt);
+    const clash = ctx.meals.find((m) => m.startedAt < t + 30 * MIN && t < (m.finishedAt || now()));
     if (!clash) break;
-    t = clash.finishedAt;
+    t = clash.finishedAt || clash.startedAt - 30 * MIN;
   }
   return t;
 }
@@ -302,11 +304,11 @@ export function showAddMealSheet(app, { day = null, from = null } = {}) {
   const fixed = day && day !== today && day !== yesterday ? day : null;
   const start0 = defaultStart(ctx0, day, from ? from.ts : null);
   const draft = {
-    day: day || dayKey(start0),
+    day: day && day !== today ? day : dayKey(start0),
     minutes: minutesOfDay(start0),
     length: 30, // minutes, as wanted; the meal never ends after `until`
     until: floorToMinute(now()),
-    finishAhead: false, // the Finished at wheel was rolled past now
+    refused: '', // why the Finished at wheel's time cannot be the end; the length stays as it was
     name: '', pick: from ? from.pick ?? null : null, other: from ? from.other || '' : '',
     hungerBefore: from ? from.hungerBefore ?? null : null, stop: null, fullnessNow: null, fullness20: null,
     last: null, // unanswered: yes for a day already over, no for today
@@ -318,17 +320,23 @@ export function showAddMealSheet(app, { day = null, from = null } = {}) {
     const r = store.state.days.get(draft.day);
     if (r && r.firstBite && ts < r.firstBite && draft.minutes < LATE_NIGHT_END_MIN) {
       const next = at(addDays(draft.day, 1), draft.minutes);
-      if (next <= now() + MIN && ((r.lastBite && next <= r.lastBite) || next - r.firstBite < windowMsFor(draft.day, store.state.settings))) return next;
+      const inGoal = next - r.firstBite < windowMsFor(draft.day, store.state.settings);
+      // Inside a closed window, or still that late night; an open window takes its goal.
+      const late = r.lastBite ? next <= r.lastBite || (minutesOfDay(now()) < LATE_NIGHT_END_MIN && inGoal) : inGoal;
+      if (next <= now() + MIN && late) return next;
     }
     return ts;
   };
   const finishTs = () => Math.min(startTs() + draft.length * MIN, Math.max(startTs(), draft.until));
-  const lastAnswer = () => draft.last ?? draft.day < today;
-  const placeNow = () => placeAddedMeal(store.data(), { start: startTs(), finish: finishTs(), last: lastAnswer(), nowTs: now() });
-  const finishProblem = () => {
-    if (draft.length > MAX_LENGTH) return 'That is before the meal started.';
-    return draft.finishAhead ? 'That time is still ahead.' : '';
+  // Unanswered: yes once the day's window would be past the point where Today asks for its last bite.
+  const lastAnswer = () => {
+    if (draft.last != null) return draft.last;
+    const r = store.state.days.get(draft.day);
+    const opened = Math.min(startTs(), r && r.firstBite ? r.firstBite : Infinity);
+    return draft.day < today && now() - opened >= windowMsFor(draft.day, store.state.settings) + FORGOT_AFTER_MS;
   };
+  const placeNow = () => placeAddedMeal(store.data(), { start: startTs(), finish: finishTs(), last: lastAnswer(), nowTs: now() });
+  const finishProblem = () => draft.refused;
 
   openSheet((api) => {
     const ctx = app.ctx();
@@ -372,14 +380,17 @@ export function showAddMealSheet(app, { day = null, from = null } = {}) {
       name: 'added-finish',
       onChange: (m) => {
         draft.until = floorToMinute(now());
-        draft.length = Math.round((timeOnOrAfter(startTs(), m) - startTs()) / MIN);
-        draft.finishAhead = startTs() + draft.length * MIN > draft.until + MIN;
+        const length = Math.round((timeOnOrAfter(startTs(), m) - startTs()) / MIN);
+        if (length > MAX_LENGTH) draft.refused = m < draft.minutes ? 'That is before the meal started.' : 'A meal lasts at most 12 hours.';
+        else if (startTs() + length * MIN > draft.until + MIN) draft.refused = 'That time is still ahead.';
+        else draft.refused = '';
+        if (!draft.refused) draft.length = length;
         refresh();
       },
     });
     const followStart = () => {
       draft.until = floorToMinute(now());
-      draft.finishAhead = false;
+      draft.refused = '';
       finishField.set(minutesOfDay(finishTs()));
       refresh();
     };
@@ -395,7 +406,7 @@ export function showAddMealSheet(app, { day = null, from = null } = {}) {
       if (key !== draft.day) {
         draft.day = key;
         draft.until = floorToMinute(now());
-        draft.finishAhead = false;
+        draft.refused = '';
         api.rerender();
         return;
       }
@@ -438,7 +449,7 @@ export function showAddMealSheet(app, { day = null, from = null } = {}) {
         ? h('p', { class: 'statement gap', 'data-testid': 'add-meal-day' }, fmtDayLong(fixed))
         : h('section', { class: 'section gap' }, choice({
           label: 'Day', options: [{ value: today, label: 'Today' }, { value: yesterday, label: 'Yesterday' }], value: draft.day, cols: 2, name: 'added-day',
-          onChange: (v) => { draft.day = v; draft.until = floorToMinute(now()); draft.finishAhead = false; api.rerender(); },
+          onChange: (v) => { draft.day = v; draft.until = floorToMinute(now()); draft.refused = ''; api.rerender(); },
         })),
       h('section', { class: 'section' }, draft.day === today ? ago : null, startField, aheadEl),
       h('section', { class: 'section' }, h('div', { class: 'label field-label' }, 'How long it took'), lengths, finishField, finishNoteEl),

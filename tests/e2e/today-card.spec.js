@@ -104,6 +104,10 @@ test('the stages show three at a time; the line swipes on its own and follows th
   await line.evaluate((el) => el.scrollTo({ left: el.scrollWidth }));
   await expect.poll(() => inLine('sparing')).toBe(true);
   expect(await s.locator('.stage-cards').evaluate((el) => Math.round(el.scrollLeft / el.clientWidth))).toBe(2);
+  // Tapping the stage already shown centres it again.
+  await s.locator('[data-action="stage-switch"]').evaluate((b) => b.click());
+  await expect.poll(() => inLine('switch')).toBe(true);
+  await line.evaluate((el) => el.scrollTo({ left: el.scrollWidth }));
   // Swiping the cards brings the line back to the card in view.
   await s.locator('.stage-cards').evaluate((el) => el.scrollTo({ left: el.children[0].offsetLeft }));
   await expect(s.locator('[data-action="stage-digesting"]')).toHaveAttribute('aria-current', 'true');

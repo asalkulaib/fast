@@ -2021,8 +2021,10 @@ html.locked body {
 
 /* ---------- Fasting stages, one at a time ---------- */
 
+/* Room above and below for a stop's focus ring, which the sideways scroll would clip. */
 .stage-line {
-  margin-top: var(--s4);
+  margin-top: calc(var(--s4) - 4px);
+  padding-block: 4px;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
