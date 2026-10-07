@@ -90,20 +90,29 @@ function surfState(t, nowTs) {
   return { startedAt, done: nowTs >= t.surfEndsAt, checkpoint: due.length ? due[due.length - 1] : null };
 }
 
+/** Where the urge timer stands, as drawn: done or not, and the rating due. Empty outside the timer. */
+function surfSig(id, nowTs) {
+  const t = store.state.temptations.get(id);
+  if (!t || t.step !== 'surf' || !t.surfEndsAt) return '';
+  const st = surfState(t, nowTs);
+  return `${st.done}|${st.checkpoint}`;
+}
+
 function showFlow(app, id) {
-  let lastSig = '';
+  // What the sheet last drew, so the tick redraws it as soon as the timer moves on,
+  // even when that happens before the first tick (the app reopened after the timer ended).
+  let drawnSig = '';
   let flow = null;
-  flow = openSheet((api) => render(app, api, id), {
+  flow = openSheet((api) => {
+    drawnSig = surfSig(id, now());
+    return render(app, api, id);
+  }, {
     full: true,
     name: 'temptation',
     label: 'Tempted',
     tick: (nowTs) => {
-      const t = store.state.temptations.get(id);
-      if (!t || t.step !== 'surf' || !t.surfEndsAt) return;
-      const st = surfState(t, nowTs);
-      const sig = `${st.done}|${st.checkpoint}`;
-      if (lastSig && sig !== lastSig && flow) flow.rerender();
-      lastSig = sig;
+      const sig = surfSig(id, nowTs);
+      if (sig && sig !== drawnSig && flow) flow.rerender();
     },
   });
 }

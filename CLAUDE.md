@@ -40,6 +40,7 @@ How to work on Fast, and what the owner has decided. README.md covers what the a
 - Anything tappable must look tappable (a pill or an outline), never plain text.
 - Day fullness is the worst meal rating, and the gold dot in the week rows means left wanting only. The owner confirmed this twice: don't propose alternatives or extra marks.
 - Just now on Last bite always moves the last bite to this minute, even when that makes the day a miss.
+- Alarms start one kind of timer only: the 20-minute fullness check, when a meal is finished, the first meal of the day included. The owner had the timer for the window closing removed: starting a meal starts no timer.
 - Add a meal adds a meal already eaten, whole, with no timer: today or yesterday from Today and Satiety, any day from a day in Week. It follows the same window rules as any meal (`placeAddedMeal` in `docs/js/core/added-meal.js`) and says before saving what it does to the day, misses in words. Start a meal, Finished this meal and the automatic 20-minute check stay exactly as they are; the owner asked for that.
 - Weights arrive by clipboard paste from an iOS Shortcut (10 steps in Help and README), because iOS keeps a Home Screen app's storage apart from Safari. No single weigh-in is ever shown; the CSV export is the only place raw weights appear.
 - If weights stop arriving: Health must let Shortcuts read Weight, and the scale's own app must be allowed to write Weight to Health (some scale apps sync only when opened).
@@ -64,7 +65,7 @@ How to work on Fast, and what the owner has decided. README.md covers what the a
 
 - Chromium is at `/opt/pw-browsers/chromium`: run e2e through an untracked config that sets `launchOptions.executablePath` to it.
 - WebKit needs `cdn.playwright.dev` allowed in the environment's network settings (the owner added it). Its usual address redirects to a blocked Microsoft host, so curl `https://cdn.playwright.dev/builds/webkit/<revision>/webkit-ubuntu-24.04.zip` (the revision is in `node_modules/playwright-core/browsers.json`) into a folder of the scratchpad, unzip it into `webkit-<revision>/`, run with `PLAYWRIGHT_BROWSERS_PATH` set to that folder, and `apt-get install` the libraries the launch error names (libevent-2.1-7t64, libsoup-3.0-0, libavif16, libmanette-0.2-0, libenchant-2-2, libwoff1, libgstreamer-gl1.0-0, libgstreamer-plugins-bad1.0-0 and the like).
-- In this Linux WebKit, two Tempted tests fail on `main` as well (the urge timer's minute 3, and a slip just after midnight), so a change did not cause them. Without WebKit, `screens.spec.js` skips, so shoot screens with an untracked copy that drops the skip, and say plainly which browser did not run.
+- Without WebKit, `screens.spec.js` skips, so shoot screens with an untracked copy that drops the skip, and say plainly which browser did not run.
 
 ## Offered, not built
 

@@ -53,7 +53,7 @@ test('More shows each time as a row; tapping it opens the wheel', async ({ page 
   expect(s.trainingTime).toBe('17:15');
 });
 
-test('Alarms: when on, starting the first meal and finishing a meal start timers through the shortcut', async ({ page }) => {
+test('Alarms: when on, finishing a meal starts the 20-minute timer through the shortcut; starting one, the first included, starts none', async ({ page }) => {
   await page.addInitScript(() => { window.__fastOpened = []; });
   await openAt(page, '2026-09-27T18:00');
   const opened = () => page.evaluate(() => window.__fastOpened);
@@ -66,13 +66,24 @@ test('Alarms: when on, starting the first meal and finishing a meal start timers
   await page.locator('.tab[data-tab="more"]').click();
   await choose(page, 'alarms', 'true');
   await page.locator('.tab[data-tab="today"]').click();
+  // The meal that breaks the fast starts no timer, like every other meal.
   await tap(page, 'start-meal');
-  await tap(page, 'meal-start-30'); // started 17:30: the window closes at 21:30
+  await tap(page, 'meal-start-30');
   await tap(page, 'start-eating');
-  await expect.poll(opened).toEqual(['shortcuts://run-shortcut?name=Fast%20Timer&input=text&text=210']);
+  await expect(page.locator('[data-block="eating"]')).toBeVisible();
+  expect(await opened()).toEqual([]);
   await tap(page, 'finish-meal');
   await choose(page, 'stop', 'before_full');
   await pick(page, 'fullness-now', 6);
   await tap(page, 'save-finish');
-  await expect.poll(async () => (await opened())[1]).toBe('shortcuts://run-shortcut?name=Fast%20Timer&input=text&text=20');
+  await expect.poll(opened).toEqual(['shortcuts://run-shortcut?name=Fast%20Timer&input=text&text=20']);
+  // The next meal: again nothing at its start, and 20 minutes once it is finished.
+  await tap(page, 'start-meal');
+  await tap(page, 'start-eating');
+  await expect(page.locator('[data-block="eating"]')).toBeVisible();
+  expect(await opened()).toHaveLength(1);
+  await tap(page, 'finish-meal');
+  await tap(page, 'save-finish');
+  await expect.poll(async () => (await opened()).length).toBe(2);
+  expect((await opened())[1]).toBe('shortcuts://run-shortcut?name=Fast%20Timer&input=text&text=20');
 });

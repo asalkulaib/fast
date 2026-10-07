@@ -246,22 +246,22 @@ test('Already finished? hands Add a meal the time, meal and hunger picked in Sta
   expect((await readDb(page)).meals[0]).toMatchObject({ name: 'Snack', hungerBefore: 7, startedAt: ms('2026-09-26T18:30'), finishedAt: ms('2026-09-26T19:00') });
 });
 
-test('Alarms: a window it leaves open today gets its timer, otherwise a fullness check still ahead does', async ({ page }) => {
+test('Alarms: only a fullness check still ahead starts a timer, never the window it opens', async ({ page }) => {
   await page.addInitScript(() => { window.__fastOpened = []; });
   await openAt(page, '2026-09-26T15:00');
   await seed(page, { settings: [...install, ...settings({ alarms: true })] });
   const opened = () => page.evaluate(() => window.__fastOpened);
-  await tap(page, 'add-meal'); // 14:00 to 14:30, the first meal: the window closes at 18:00
+  // The first meal, 13:00 to 13:30: it opens the window, and its check (13:50) is long past.
+  await tap(page, 'add-meal');
+  await setTime(page, 'added-start', '13:00');
   await tap(page, 'save-added-meal');
-  await expect.poll(opened).toEqual(['shortcuts://run-shortcut?name=Fast%20Timer&input=text&text=180']);
+  await expect(page.locator('[data-block="open"]')).toBeVisible();
+  expect(await opened()).toEqual([]);
   await tap(page, 'add-meal');
   await setTime(page, 'added-start', '14:40');
   await tap(page, 'added-length-15'); // ends 14:55: its check is at 15:15
   await tap(page, 'save-added-meal');
-  await expect.poll(opened).toEqual([
-    'shortcuts://run-shortcut?name=Fast%20Timer&input=text&text=180',
-    'shortcuts://run-shortcut?name=Fast%20Timer&input=text&text=15',
-  ]);
+  await expect.poll(opened).toEqual(['shortcuts://run-shortcut?name=Fast%20Timer&input=text&text=15']);
 });
 
 test('from Today: the sheet starts clear of a meal just logged, and just after midnight a live window stays open', async ({ page }) => {

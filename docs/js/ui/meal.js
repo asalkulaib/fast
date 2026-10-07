@@ -174,11 +174,6 @@ export function showStartMealSheet(app) {
       const res = await store.startMealAs(cur.kind, { day: cur.rec ? cur.rec.day : null, name: draft.name, startedAt: ts, hungerBefore: draft.hungerBefore });
       if (res.error) return refuse(res.error);
       await api.close();
-      // Alarms: a timer for when the window closes, counted from its first bite.
-      if (cur.kind === 'first') {
-        const c = app.ctx();
-        ringIn((res.meal.startedAt + c.windowMsFor(res.meal.day) - now()) / MIN);
-      }
       const at = fmtTime(res.meal.startedAt);
       app.flash(cur.kind === 'first' ? `Window open from ${at}.` : `Meal started at ${at}.`, { undo: res.undo });
       return null;
@@ -431,13 +426,9 @@ export function showAddMealSheet(app, { day = null, from = null } = {}) {
         hungerBefore: draft.hungerBefore, stop: draft.stop, fullnessNow: draft.fullnessNow, fullness20: draft.fullness20,
       });
       await api.close();
-      // Alarms, as Start a meal and Finished this meal give them: a window it
-      // leaves open today, else a fullness check still ahead.
-      const c = app.ctx();
-      const r = c.days.get(place.day);
+      // Alarms, as Finished this meal gives them: a fullness check still ahead.
       const due = res.meal.fullness20DueAt;
-      if (place.kind === 'first' && place.day === c.todayKey && r && !r.lastBite) ringIn((r.firstBite + c.windowMsFor(place.day) - now()) / MIN);
-      else if (due) ringIn((due - now()) / MIN);
+      if (due) ringIn((due - now()) / MIN);
       app.flash(due && due > now() ? `Meal saved. Fullness check at ${fmtTime(due)}.` : 'Meal saved.', { undo: res.undo });
       return null;
     };

@@ -1,7 +1,7 @@
 // Alarms while Fast is closed. A web app cannot ring on its own, so with
 // Alarms on, Fast hands the minutes to a Shortcut named "Fast Timer", which
-// starts an iPhone Clock timer: once when a window opens (until it closes)
-// and once when a meal is finished (the 20-minute fullness check).
+// starts an iPhone Clock timer when a meal is finished: the 20-minute
+// fullness check, for every meal, the first one of the day included.
 
 import * as store from '../store.js';
 

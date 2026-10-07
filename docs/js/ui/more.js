@@ -32,7 +32,7 @@ function timeSetting(label, key, ctx) {
 function alarmSection(ctx) {
   return h('section', { class: 'section', 'data-block': 'alarms' },
     h('div', { class: 'label' }, 'Alarms'),
-    h('p', { class: 'small gap-s' }, 'Fast cannot ring while it is closed. With Alarms on, it asks your Fast Timer shortcut to start an iPhone timer: when a window opens, for when it closes, and when you finish a meal, for the 20-minute fullness check. The Shortcuts app opens for a moment each time.'),
+    h('p', { class: 'small gap-s' }, 'Fast cannot ring while it is closed. With Alarms on, it asks your Fast Timer shortcut to start an iPhone timer when you finish a meal, for the 20-minute fullness check. The Shortcuts app opens for a moment each time.'),
     h('div', { class: 'gap' }, choice({
       options: [{ value: true, label: 'On' }, { value: false, label: 'Off' }],
       value: !!ctx.settings.alarms, cols: 2, name: 'alarms',

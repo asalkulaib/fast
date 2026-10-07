@@ -166,7 +166,7 @@ If an import fails:
 
 ## Alarms
 
-Fast cannot ring while it is closed. In More, Alarms, switch it on and build a shortcut once: in Shortcuts, tap +, name it Fast Timer, add the action Start Timer, set its duration to Shortcut Input in minutes, and tap Done. Fast then starts an iPhone timer when your first meal opens the window (for when it closes) and when you finish a meal (for the 20-minute fullness check). Add a meal starts one when the meal opens today's window and leaves it open, or else when its fullness check is still ahead. The Shortcuts app opens for a moment each time.
+Fast cannot ring while it is closed. In More, Alarms, switch it on and build a shortcut once: in Shortcuts, tap +, name it Fast Timer, add the action Start Timer, set its duration to Shortcut Input in minutes, and tap Done. Fast then starts an iPhone timer when you finish a meal, for the 20-minute fullness check. Every meal works the same way, the first one of the day included: starting a meal starts no timer. Add a meal starts one only when its fullness check is still ahead. The Shortcuts app opens for a moment each time. The time left in your window shows on Today.
 
 ## Week
 
