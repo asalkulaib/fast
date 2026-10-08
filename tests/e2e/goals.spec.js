@@ -84,7 +84,7 @@ test('custom by fasting: 17 hours leaves a 7-hour window', async ({ page }) => {
   await expect(s.locator('[data-pick="goal-hours"] [data-part="option"]')).toHaveAttribute('aria-valuetext', '7 hours');
 });
 
-test('a long fast: 48 hours for every fast, a fasting day on Today, and a day wholly fasted counts as a success', async ({ page }) => {
+test('a long fast: 48 hours for every fast, a fasting day on Today, and a day begun inside the goal counts as a success', async ({ page }) => {
   // Last bite Saturday 21:00, on 18:6.
   const lastNight = { days: [{ day: '2026-09-26', firstBite: ms('2026-09-26T16:00'), lastBite: ms('2026-09-26T21:00') }] };
   await openAt(page, '2026-09-27T10:00');
@@ -96,7 +96,7 @@ test('a long fast: 48 hours for every fast, a fasting day on Today, and a day wh
   await choose(page, 'goal-by', 'fast');
   await setPick(page, 'goal-fast', 48);
   await expect(page.getByTestId('flash')).toHaveText('Goal 48 h fast from today.');
-  await expect(s.getByTestId('goal-text')).toHaveText('Fasting 48 hours each time, with an eating window of 6 hours between. A day spent wholly fasting counts as a success.');
+  await expect(s.getByTestId('goal-text')).toHaveText('Fasting 48 hours each time, with an eating window of 6 hours between. A day that begins inside the fast\'s goal, with nothing eaten, counts as a success.');
   expect((await settingsOf(page)).goalChanges).toEqual([{ from: '2026-09-26', hours: 6 }, { from: '2026-09-27', hours: 6, fast: 48 }]);
   await tap(page, 'close-sheet');
 
@@ -130,4 +130,19 @@ test('a long fast: after the window closes, Today says when the next fast reache
   await expect(page.getByTestId('next-window')).toHaveText('Your 36-hour fast reaches its goal at 08:00 Tue 29 Sep.');
   await expect(page.locator('[data-block="stages"]').getByTestId('goal-tick')).toHaveCount(0);
   await expect(page.getByTestId('goal-line')).toHaveText('Fasting goal 36 h: 35 h to go.');
+});
+
+test('after a reload, the Fasting wheel stays in use when it leaves a long fast, even on a preset', async ({ page }) => {
+  await openAt(page, '2026-09-27T10:00');
+  await seed(page, { settings: settings({ installedAt: ms('2026-09-26T08:00'), goalChanges: [{ from: '2026-09-26', hours: 4, fast: 48 }] }) });
+  await tap(page, 'edit-goal');
+  const s = sheet(page, 'goal');
+  await expect(s.locator('button[data-choice="goal-by"][data-value="fast"]')).toHaveAttribute('aria-checked', 'true');
+  await setPick(page, 'goal-fast', 21);
+  await expect(page.getByTestId('flash')).toHaveText('Goal 21:3 from today.');
+  await expect(s.locator('button[data-choice="goal-by"][data-value="fast"]')).toHaveAttribute('aria-checked', 'true');
+  await setPick(page, 'goal-fast', 20);
+  await expect(page.getByTestId('flash')).toHaveText('Goal 20:4 from today.');
+  await expect(s.locator('[data-pick="goal-fast"]')).toBeVisible();
+  await expect(s.locator('button[data-choice="goal"][data-value="custom"]')).toHaveAttribute('aria-checked', 'true');
 });

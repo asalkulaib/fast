@@ -38,9 +38,9 @@ test('a fasting goal: 12 to 23 hours is the rest of the day; 24 to 72 hours is a
   assert.equal(rules.noWindowAlerts('2026-09-26', settings), true);
 });
 
-test('a long fast: a day spent wholly inside its goal is a success; past the goal it is not logged', () => {
+test('a long fast: a day that begins inside its goal is a success; past the goal it is not logged', () => {
   const settings = { goalChanges: [{ from: '2026-09-20', hours: 6, fast: 48 }] };
-  // Last bite Sat 21:00; the goal is reached Mon 21:00. Sunday is wholly inside it.
+  // Last bite Sat 21:00; the goal is reached Mon 21:00. Sunday begins inside it.
   const d = days(win('2026-09-26', '16:00', '21:00'));
   const at = (now, todayKey) => rules.makeEvaluator({ days: d, outside: [], nowTs: T(now), todayKey, startKey: '2026-09-26', settings });
   const mon = at('2026-09-28T10:00', '2026-09-28');
@@ -67,6 +67,27 @@ test('a long fast: a day spent wholly inside its goal is a success; past the goa
   assert.equal(e('2026-09-27').result, 'success');
   assert.equal(e('2026-09-28').state, 'fasted');
   assert.equal(e('2026-09-29').result, 'miss');
+});
+
+test('a long fast: a window past midnight, a window left open, and eating on a paused day', () => {
+  const settings = { goalChanges: [{ from: '2026-09-20', hours: 4, fast: 24 }] };
+  const judge = (recs, now, todayKey, meals = []) => rules.makeEvaluator({ days: days(...recs), outside: [], meals, nowTs: T(now), todayKey, startKey: '2026-09-26', settings });
+  // Sunday's dinner runs 23:30 to 00:10: the fast is timed from it, so Monday begins inside a 24-hour goal.
+  const late = { day: '2026-09-27', firstBite: T('2026-09-27T23:30'), lastBite: T('2026-09-28T00:10') };
+  const e = judge([win('2026-09-26', '17:00', '20:00'), late], '2026-10-01T10:00', '2026-10-01');
+  assert.equal(e('2026-09-28').state, 'fasted');
+  assert.equal(e('2026-09-29').state, 'fasted'); // begins 23 h 50 min after the last bite, at 00:10
+  assert.equal(e('2026-09-30').result, 'unlogged');
+  // A window still open: when eating ended is unknown, so no day after it counts as fasted.
+  const open = judge([win('2026-09-26', '17:00', '20:00'), win('2026-09-27', '18:00', null)], '2026-09-29T10:00', '2026-09-29');
+  assert.equal(open('2026-09-28').result, 'unlogged');
+  // A meal on a paused day: eating then went unrecorded, so the next day is not judged fasted.
+  const paused = [win('2026-09-26', '17:00', '20:00'), { day: '2026-09-27', paused: 'travel' }];
+  const meal = [{ id: 1, day: '2026-09-27', startedAt: T('2026-09-27T13:00'), finishedAt: T('2026-09-27T13:30') }];
+  assert.equal(judge(paused, '2026-09-29T10:00', '2026-09-29', meal)('2026-09-28').result, 'unlogged');
+  // A fast begun on the paused day itself still counts.
+  const begun = [win('2026-09-26', '17:00', '20:00'), { day: '2026-09-27', paused: 'travel', fastFrom: T('2026-09-27T22:00') }];
+  assert.equal(judge(begun, '2026-09-29T10:00', '2026-09-29')('2026-09-28').state, 'fasted');
 });
 
 test('a long fast still short of its goal, from the last bite or Begin fast', () => {

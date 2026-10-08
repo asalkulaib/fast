@@ -2394,6 +2394,12 @@ html.locked body {
   border-color: var(--bg-raised);
 }
 
+.s-ketones .btn:focus-visible,
+.s-brain .btn:focus-visible,
+.s-sparing .btn:focus-visible {
+  outline-color: var(--bg-raised);
+}
+
 .s-ketones .btn.outline:active,
 .s-ketones .btn.outline.pressed,
 .s-brain .btn.outline:active,

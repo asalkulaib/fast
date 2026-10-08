@@ -11,8 +11,8 @@
 // The eating window is a goal: 4 hours (20:4) unless changed. A change
 // applies from its day on, so past days keep the goal they had. The goal
 // can also be a long fast of 24 to 72 hours, for every fast: each eating
-// day keeps the window it had, and a day spent wholly inside the fast's
-// goal counts as a success on its own.
+// day keeps the window it had, and a day that begins inside the fast's
+// goal, with nothing eaten, counts as a success on its own.
 
 import { HOUR, MIN, addDays, at, dayKey, dayStart, minutesOfDay, isWorkweekday, toMinutes } from './time.js';
 
@@ -147,8 +147,8 @@ export function plannedStartMin(key, rec, settings) {
  * result: 'success' | 'miss' | 'pending' (today, not decided yet)
  *       | 'unlogged' (a past day with nothing logged) | 'none' (outside tracking)
  *       | 'paused' (not tracked, whatever is logged)
- * state 'fasted': a past day with nothing eaten, wholly inside a long fast's
- * goal (fasted is true): a success on its own, like a day without eating.
+ * state 'fasted': a past day with nothing eaten that begins inside a long
+ * fast's goal (fasted is true): a success on its own, like a day without eating.
  * reasons for a miss: 'early' (workday window opened before 16:00; never on flexible timing),
  *                     'over' (longer than the goal plus 15 min), 'outside' (ate outside the window)
  */
@@ -219,43 +219,49 @@ export function countByDay(items) {
 export function makeEvaluator({ days, outside, meals = [], nowTs, todayKey, startKey, settings }) {
   const outsideByDay = countByDay([...outside, ...meals.filter((m) => m.outside)]);
   const eating = eatingTimes({ days, meals, outside });
+  const fastStarts = new Set([...days.values()].map((r) => r.fastFrom).filter(Boolean));
   const cache = new Map();
   return (key) => {
     if (!cache.has(key)) {
-      const fasted = insideLongFast(key, { days, settings }, eating);
+      const fasted = insideLongFast(key, { days, settings }, eating, fastStarts);
       cache.set(key, evaluateDay(key, days.get(key), outsideByDay.get(key) || 0, nowTs, todayKey, startKey, windowMsFor(key, settings), isFlexible(key, settings), fasted));
     }
     return cache.get(key);
   };
 }
 
-/** Every moment eating ended or a fast began (windows, meals, eating outside, Begin fast), oldest first. */
+/**
+ * Every moment of eating on record, both ends of each window and meal, and
+ * each Begin fast, oldest first. A window that runs past midnight so has its
+ * first bite before the next day starts.
+ */
 export function eatingTimes({ days, meals = [], outside = [] }) {
   const out = [];
-  for (const r of days.values()) {
-    if (r.lastBite) out.push(r.lastBite);
-    else if (r.firstBite) out.push(r.firstBite);
-    if (r.fastFrom) out.push(r.fastFrom);
-  }
-  for (const m of meals) out.push(m.finishedAt || m.startedAt);
+  for (const r of days.values()) out.push(r.firstBite, r.lastBite, r.fastFrom);
+  for (const m of meals) out.push(m.startedAt, m.finishedAt);
   for (const o of outside) out.push(o.at);
   return out.filter(Boolean).sort((a, b) => a - b);
 }
 
 /**
- * Whether a day lies wholly inside a long fast's goal: the goal in force that
- * day is a long fast, the day has no window, and it starts less than the
- * goal's hours after the last eating (or Begin fast) before it, with no
- * pause between. Nothing eaten that day is checked by the caller.
+ * Whether a day begins inside a long fast's goal: the goal in force that day
+ * is a long fast, the day has no window, and it starts less than the goal's
+ * hours after the last eating (or Begin fast) before it. Not while a window
+ * from before it is still open, since when that eating ended is unknown, and
+ * not across a pause: eating then went unrecorded (a fast begun on the paused
+ * day itself still counts, as in lastEatingSource). Nothing eaten that day is
+ * checked by the caller.
  */
-export function insideLongFast(key, { days, settings }, eating) {
+export function insideLongFast(key, { days, settings }, eating, fastStarts = new Set()) {
   const hours = longFastHours(key, settings);
   if (!hours || hasWindow(days.get(key))) return false;
   const start = dayStart(key);
+  for (const r of days.values()) if (isOpen(r) && r.firstBite < start) return false;
   let from = null;
   for (const t of eating) { if (t < start) from = t; else break; }
   if (from === null || start - from >= hours * HOUR) return false;
-  return !pausedBetween(days, addDays(dayKey(from), 1), key);
+  const fromKey = fastStarts.has(from) ? addDays(dayKey(from), 1) : dayKey(from);
+  return !pausedBetween(days, fromKey, key);
 }
 
 /**

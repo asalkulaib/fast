@@ -17,7 +17,7 @@ const hours = (n) => `${n} ${n === 1 ? 'hour' : 'hours'}`;
 /** 'Eating window 4 hours, fasting 20 hours.', or for a long fast how long each fast and each window is. */
 export function goalText(windowMs, longFast = null) {
   const w = Math.round(windowMs / HOUR);
-  if (longFast) return `Fasting ${hours(longFast)} each time, with an eating window of ${hours(w)} between. A day spent wholly fasting counts as a success.`;
+  if (longFast) return `Fasting ${hours(longFast)} each time, with an eating window of ${hours(w)} between. A day that begins inside the fast's goal, with nothing eaten, counts as a success.`;
   return `Eating window ${hours(w)}, fasting ${hours(24 - w)}.`;
 }
 
@@ -40,7 +40,12 @@ function goalControls(app, redraw) {
     app.flash(`Goal ${goalLabel(windowHours * HOUR, fast)} from today.`, { undo });
   };
   // A fast of a day or more keeps the eating window; a shorter one leaves the rest of the day to eat.
-  const setFast = (f) => (f >= LONG_FAST_MIN ? set(current, f) : set(24 - f));
+  // The wheel in use stays on screen, even when the goal it lands on is a preset.
+  const setFast = (f) => {
+    customOpen = true;
+    customBy = 'fast';
+    return f >= LONG_FAST_MIN ? set(current, f) : set(24 - f);
+  };
   const wheel = by === 'fast'
     ? optionWheel({
       label: 'Fasting',
@@ -54,7 +59,11 @@ function goalControls(app, redraw) {
       options: Array.from({ length: GOAL_HOURS_MAX }, (_, i) => ({ value: i + 1, label: hours(i + 1) })),
       value: current,
       name: 'goal-hours',
-      onChange: (w) => set(w),
+      onChange: (w) => {
+        customOpen = true;
+        customBy = 'window';
+        return set(w);
+      },
     });
   return h('div', { 'data-block': 'goal-controls' },
     choice({

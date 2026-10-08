@@ -10,7 +10,7 @@ export const STAGE_MORE = {
   digesting: {
     body: [
       'Your gut breaks the meal down and absorbs it: starch and sugar as glucose, protein as amino acids, fat as fatty acids. As the glucose reaches your blood, your blood sugar rises and your pancreas releases insulin to match.',
-      'Insulin moves sugar out of your blood and into your cells, mostly your muscles. Your liver takes up more than half of the sugar from a meal and stores some of it as glycogen, a store it draws on later. While insulin is up, your liver holds back its own sugar and your fat tissue holds on to its fat.',
+      'Insulin helps your muscles and other tissues take sugar out of your blood. Your liver takes up more than half of the sugar from a meal and stores some of it as glycogen, a store it draws on later. While insulin is up, your liver holds back its own sugar and your fat tissue holds on to its fat.',
       'Over the next few hours, as the last of the meal is absorbed, your blood sugar and insulin settle back to where they were before you ate.',
     ],
     findings: [
@@ -18,7 +18,7 @@ export const STAGE_MORE = {
       { text: 'Each meal primes the body for the next, so blood sugar is handled better as the day goes on.', by: 'Dimitriadis' },
     ],
     good: [
-      'Fast times every stage from your last bite, so this one starts when you log it.',
+      'Fast times every stage from the time of your last bite, even one you add later, so this one starts then.',
       'A bigger meal takes longer to absorb, so this stage can run past 4 hours.',
     ],
   },
@@ -77,7 +77,7 @@ export const STAGE_MORE = {
     ],
     findings: [
       { text: 'Ketones measured in the brain itself, with magnetic resonance, were about 12 times their usual level after two days of fasting and about 20 times after three, rising in step with the blood.', by: 'Pan' },
-      { text: 'After three and a half days of fasting, the brain used about a quarter less sugar, took up about 13 times more ketones, and met about a quarter of its energy needs from ketones. Blood flow to the brain did not change.', by: 'Hasselbalch' },
+      { text: 'After three and a half days of fasting, the brain used about a quarter less sugar, took up about 13 times more beta-hydroxybutyrate, the main ketone, and met about a quarter of its energy needs from ketones. Blood flow to the brain did not change.', by: 'Hasselbalch' },
     ],
     good: [
       'If you feel faint, dizzy, confused or unwell, end the fast and eat.',

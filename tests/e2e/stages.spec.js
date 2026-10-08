@@ -146,7 +146,7 @@ test('the icon of the stage the fast is in moves, on the dial and under the time
   await expect(page.locator('.stage-chip .stage-icon')).toHaveClass(/\blive\b/);
   await expect(ring(page).locator('.dial .stage-icon.live')).toHaveAttribute('data-stage-icon', 'switch');
   await expect(ring(page).locator('.dial .stage-icon.live')).toHaveCount(1);
-  const moving = (sel) => page.evaluate((q) => [...document.querySelectorAll(q)].map((el) => el.getAnimations({ subtree: true }).length), sel);
+  const moving = (sel) => page.evaluate((q) => [...document.querySelectorAll(q)].map((el) => el.getAnimations({ subtree: true }).filter((a) => a.animationName).length), sel);
   await expect.poll(() => moving('.stage-chip .stage-icon')).toEqual([expect.any(Number)]);
   expect((await moving('.stage-chip .stage-icon'))[0]).toBeGreaterThan(0);
   expect((await moving('.dial .stage-icon:not(.live)')).every((n) => n === 0)).toBe(true);
@@ -163,8 +163,14 @@ test('with Reduce Motion on, the stage icons rest', async ({ page }) => {
   await openAt(page, '2026-09-27T13:10');
   await seed(page, LAST_NIGHT);
   await expect(page.locator('.stage-chip .stage-icon')).toHaveClass(/\blive\b/);
-  const n = await page.evaluate(() => document.querySelector('.dial').getAnimations({ subtree: true }).length + document.querySelector('.stage-chip').getAnimations({ subtree: true }).length);
+  const n = await page.evaluate(() => document.querySelector('.dial').getAnimations({ subtree: true }).filter((a) => a.animationName).length + document.querySelector('.stage-chip').getAnimations({ subtree: true }).filter((a) => a.animationName).length);
   expect(n).toBe(0);
+  // The stage in view in the sheet rests too (only the 1 ms transitions Reduce Motion leaves may run).
+  await tap(page, 'open-stages');
+  await tap(page, 'stage-brain');
+  await expect(sheet(page, 'stages').locator('[data-action="stage-brain"]')).toHaveAttribute('aria-current', 'true');
+  const stops = await page.evaluate(() => [...document.querySelectorAll('.stage-stop .stage-icon')].map((el) => el.getAnimations({ subtree: true }).filter((a) => a.animationName).length));
+  expect(stops).toEqual([0, 0, 0, 0, 0, 0]);
 });
 
 test('no bite logged yet: no ring', async ({ page }) => {
