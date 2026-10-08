@@ -104,6 +104,42 @@ test('about the stages: every stage with its icon, the autophagy note and the so
   await expect(s).toContainText('Brain metabolism during short-term starvation in humans');
 });
 
+test('read more: a stage opens its own longer page, with no links, and Back returns to its card', async ({ page }) => {
+  await openAt(page, '2026-09-27T13:10'); // the metabolic switch
+  await seed(page, LAST_NIGHT);
+  await tap(page, 'open-stages');
+  const s = sheet(page, 'stages');
+  await expect(s.locator('[data-action^="more-"]')).toHaveCount(6);
+  await expect(s.locator('[data-action="more-switch"]')).toHaveAccessibleName('Read more about Metabolic switch');
+  await tap(page, 'more-switch');
+  const more = s.getByTestId('stage-more');
+  await expect(more).toHaveAttribute('data-stage', 'switch');
+  await expect(more.locator('h2')).toHaveText('Metabolic switch');
+  await expect(more.getByTestId('stage-now')).toHaveText('Now');
+  await expect(more).toContainText('What happens');
+  await expect(more).toContainText('12 to 36 hours after the last meal');
+  await expect(more.getByTestId('stage-findings').locator('> li')).toHaveCount(3);
+  await expect(more).toContainText('Anton and colleagues, 2018');
+  await expect(more).toContainText('Flipping the metabolic switch');
+  await expect(s.locator('a')).toHaveCount(0);
+  // Back returns to the cards, at the stage just read.
+  await tap(page, 'stages-back-end');
+  await expect(s.getByTestId('stage-more')).toHaveCount(0);
+  await expect(s.locator('[data-action="stage-switch"]')).toHaveAttribute('aria-current', 'true');
+  // Another stage's page: no Now badge, and its own findings.
+  await tap(page, 'stage-sparing');
+  await expect(s.locator('[data-action="stage-sparing"]')).toHaveAttribute('aria-current', 'true');
+  await tap(page, 'more-sparing');
+  await expect(more).toHaveAttribute('data-stage', 'sparing');
+  await expect(more.getByTestId('stage-now')).toHaveCount(0);
+  await expect(more).toContainText("best done with a doctor's guidance");
+  await expect(more).toContainText('Ho and colleagues, 1988');
+  await tap(page, 'stages-back');
+  await expect(s.locator('[data-action="stage-sparing"]')).toHaveAttribute('aria-current', 'true');
+  const inView = () => s.locator('.stage-cards').evaluate((el) => Math.round(el.scrollLeft / el.clientWidth));
+  await expect.poll(inView).toBe(5);
+});
+
 test('no bite logged yet: no ring', async ({ page }) => {
   await openAt(page, '2026-09-27T13:10');
   await expect(page.locator('[data-block="before"]')).toContainText('Fasting');

@@ -54,7 +54,28 @@ test('the copy stays within the evidence', () => {
   assert.doesNotMatch(STAGES.map((s) => `${s.name} ${s.text}`).join(' '), /autophagy/i);
   assert.doesNotMatch(all, /you are in ketosis/i);
   assert.match(AUTOPHAGY_NOTE, /not known/);
-  assert.equal(SOURCES.length, 10);
+  assert.equal(SOURCES.length, 11);
   // The longest fast carries the advice to fast that long only with a doctor.
   assert.match(STAGES.at(-1).text, /doctor's guidance/);
+});
+
+test('read more: every stage has its longer page, each finding from a named source', async () => {
+  const { STAGE_MORE, citeBy, sourceBy, stageSources } = await import('../../docs/js/core/stage-more.js');
+  assert.deepEqual(Object.keys(STAGE_MORE), STAGES.map((s) => s.key));
+  for (const s of STAGES) {
+    const more = STAGE_MORE[s.key];
+    assert.ok(more.body.length >= 2, `${s.key} has a body`);
+    assert.ok(more.findings.length >= 2, `${s.key} has findings`);
+    assert.ok(more.good.length >= 1, `${s.key} has advice`);
+    for (const f of more.findings) assert.ok(sourceBy(f.by), `${s.key}: ${f.by} is in SOURCES`);
+    assert.ok(stageSources(s.key).length >= 1);
+  }
+  assert.equal(citeBy('Rothman'), 'Rothman and colleagues, 1991');
+  assert.equal(citeBy('Göschke'), 'Göschke and colleagues, 1975');
+  assert.deepEqual(stageSources('sparing'), [SOURCES.find((x) => x.startsWith('Ho ')), SOURCES.find((x) => x.startsWith('Göschke '))]);
+  // Autophagy stays off the clock here too, and the long fasts carry a doctor's advice.
+  const all = Object.values(STAGE_MORE).flatMap((m) => [...m.body, ...m.findings.map((f) => f.text), ...m.good]).join(' ');
+  assert.doesNotMatch(all, /autophagy/i);
+  assert.doesNotMatch(all, /https?:|www\./);
+  for (const key of ['ketones', 'brain', 'sparing']) assert.match(STAGE_MORE[key].good.join(' '), /doctor/);
 });

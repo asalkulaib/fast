@@ -18,6 +18,9 @@
 //     1988 (growth hormone about three times higher on day 5).
 //   Stage 2 sugar: Rothman DL et al., Science 1991 (new sugar made by the
 //     body is about 64% of supply in the first 22 hours of a fast).
+//   Hunger in waves (Read more): Natalucci G et al., Eur J Endocrinol 2005
+//     (in a 24-hour fast, ghrelin rose and fell at the usual meal times).
+//   Read more (stage-more.js) holds the longer write-up, from the same sources.
 //   Autophagy: Bagherniya M et al., Ageing Res Rev 2018; Bensalem J et al.,
 //     J Physiol 2025. Human timing is unknown, so it has no place on the clock.
 
@@ -89,6 +92,7 @@ export const SOURCES = [
   'Rothman DL et al. Quantitation of hepatic glycogenolysis and gluconeogenesis in fasting humans with 13C NMR. Science, 1991.',
   'Hasselbalch SG et al. Brain metabolism during short-term starvation in humans. Journal of Cerebral Blood Flow and Metabolism, 1994.',
   'Göschke H et al. Nitrogen loss in normal and obese subjects during total fast. Klinische Wochenschrift, 1975.',
+  'Natalucci G et al. Spontaneous 24-h ghrelin secretion pattern in fasting subjects: maintenance of a meal-related pattern. European Journal of Endocrinology, 2005.',
   'Bagherniya M et al. The effect of fasting or calorie restriction on autophagy induction: a review of the literature. Ageing Research Reviews, 2018.',
   'Bensalem J et al. Intermittent time-restricted eating may increase autophagic flux in humans: an exploratory analysis. Journal of Physiology, 2025.',
 ];

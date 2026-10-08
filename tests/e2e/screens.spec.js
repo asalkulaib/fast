@@ -493,6 +493,16 @@ test('the stages one at a time, opened from the stage under the time', async ({ 
   await shot(page, '87-stages-brain');
   await tap(page, 'stage-sparing');
   await shot(page, '88-stages-sparing');
+  await tap(page, 'more-sparing');
+  await shot(page, '88b-stage-more-sparing');
+  await page.locator('[data-sheet="stages"]').evaluate((el) => { el.scrollTop = el.scrollHeight; });
+  await shot(page, '88c-stage-more-sparing-end');
+  await tap(page, 'stages-back-end');
+  await tap(page, 'stage-switch');
+  await tap(page, 'more-switch');
+  await shot(page, '88d-stage-more-switch');
+  await page.getByTestId('stage-findings').scrollIntoViewIfNeeded();
+  await shot(page, '88e-stage-more-switch-findings');
 });
 
 test('today on the third day of a fast: the sun on the far horizon, the stage beyond a day', async ({ page }) => {

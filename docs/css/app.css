@@ -2208,6 +2208,63 @@ html.locked body {
   stroke: var(--bg-raised);
 }
 
+/* Read more sits at the foot of every card, level across them. */
+.stage-cards .stage-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.stage-more-row {
+  margin-top: auto;
+  padding-top: var(--s4);
+}
+
+/* On the dark cards the outline is drawn in light. */
+.s-ketones .btn.outline,
+.s-brain .btn.outline,
+.s-sparing .btn.outline {
+  color: var(--bg-raised);
+  border-color: var(--bg-raised);
+}
+
+.s-ketones .btn.outline:active,
+.s-ketones .btn.outline.pressed,
+.s-brain .btn.outline:active,
+.s-brain .btn.outline.pressed,
+.s-sparing .btn.outline:active,
+.s-sparing .btn.outline.pressed {
+  color: var(--ink);
+  background: var(--bg-raised);
+  border-color: var(--bg-raised);
+}
+
+/* A stage's own page: its card at the top, then the longer read. */
+.stage-hero {
+  margin: var(--s4) 0 var(--s5);
+}
+
+.findings {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.findings > li {
+  padding: var(--s2) 0;
+}
+
+.findings > li + li {
+  border-top: 1px solid var(--rule-quiet);
+}
+
+.findings p {
+  max-width: none;
+}
+
+.findings .small {
+  margin-top: 2px;
+}
+
 .stage-card-head {
   display: flex;
   justify-content: space-between;

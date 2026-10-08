@@ -106,6 +106,8 @@ While you fast, Today shows the fast as the sun crossing the Nafud: it rises fro
 
 Tap the stage under the time, or About the stages, to see the stages one at a time: all six along a line across the top, three at a time with the next ones peeking in at the edges, the one the fast is in ringed in the sun's gold, and a card for each below, marked Now on the current one. Each card is a shade deeper than the last, from pale sand to dark rock. Swipe the line to see the other stages, swipe the cards, or tap a stage; the line follows the card in view.
 
+Read more, at the foot of each card, turns the sheet to that stage's own page: what happens in your body, what the studies found (each finding named by its first author and year), plain advice, and the studies it draws on. Nothing in it links out of the app. Back to the stages returns to that stage's card.
+
 While the window is open, a band under the countdown fills as the hours pass: time used in dark rock, time left in sand, then the dashed 15 minutes of grace. Past the grace it turns to clay stripes.
 
 | Stage | Typical time | Based on |
@@ -118,6 +120,8 @@ While the window is open, a band under the countdown fills as the hours pass: ti
 | Protein sparing | 72 h and beyond | [Göschke et al., 1975](https://pubmed.ncbi.nlm.nih.gov/1177405/); [Ho et al., J Clin Invest 1988](https://pmc.ncbi.nlm.nih.gov/articles/PMC329619/) |
 
 Protein sparing also says that a fast this long is best done with a doctor's guidance, more so with medicine or a health condition.
+
+Read more on Blood sugar settles also cites [Natalucci et al., 2005](https://pubmed.ncbi.nlm.nih.gov/15941923/): in a 24-hour fast, the hunger hormone ghrelin still rose and fell at the usual meal times. From Ketones climbing on, Read more advises a doctor's guidance, above all with medicine or a health condition, and says to end the fast and eat if you feel faint, dizzy, confused or unwell.
 
 Autophagy is described as uncertain instead of being given an hour: the evidence comes mostly from cell and animal studies ([Bagherniya et al., 2018](https://pubmed.ncbi.nlm.nih.gov/30172870/); [Bensalem et al., 2025](https://pubmed.ncbi.nlm.nih.gov/40345145)).
 
