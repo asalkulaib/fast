@@ -210,7 +210,7 @@ test('touching the chart moves the big box to that day; Back to latest, a new ti
   const back = page.locator('[data-action="weight-latest"]');
   await expect(average).toHaveText('98.0 kg');
   await expect(notes).toContainText('7 Oct');
-  await expect(back).toHaveCount(0);
+  await expect(back).toBeHidden();
   await expect(page.locator('.chart-readout')).toHaveText('Touch the chart to see a day above.');
 
   // Touch near the start of the chart (8 Sep): its 7 days were all 100 kg.
@@ -230,7 +230,7 @@ test('touching the chart moves the big box to that day; Back to latest, a new ti
   // Back to latest.
   await back.click();
   await expect(average).toHaveText('98.0 kg');
-  await expect(back).toHaveCount(0);
+  await expect(back).toBeHidden();
 
   // A new time frame returns to the latest too.
   await chart.focus();
@@ -238,7 +238,7 @@ test('touching the chart moves the big box to that day; Back to latest, a new ti
   await expect(back).toBeVisible();
   await choose(page, 'weight-range', '3m');
   await expect(average).toHaveText('98.0 kg');
-  await expect(back).toHaveCount(0);
+  await expect(back).toBeHidden();
 
   // So does leaving Weight.
   await page.locator('[data-block="chart"] svg.chart').focus();
@@ -248,5 +248,42 @@ test('touching the chart moves the big box to that day; Back to latest, a new ti
   await expect(page.locator('.today')).toBeVisible();
   await page.evaluate(() => { window.location.hash = '#weight'; });
   await expect(average).toHaveText('98.0 kg');
-  await expect(back).toHaveCount(0);
+  await expect(back).toBeHidden();
+});
+
+test('a finger dragged along the chart moves the box with it; a scroll that starts on it changes nothing', async ({ page, browserName }) => {
+  test.skip(browserName !== 'chromium', 'touch drags are sent through the Chromium DevTools protocol');
+  await openAt(page, '2026-10-08T09:00', '#weight');
+  const weights = [];
+  for (let d = 1; d <= 30; d++) weights.push({ date: `2026-09-${String(d).padStart(2, '0')}`, kg: 100 });
+  for (let d = 1; d <= 7; d++) weights.push({ date: `2026-10-0${d}`, kg: 98 });
+  await seed(page, { weights, settings: settings({ installedAt: ms('2026-09-01T08:00'), weightRange: '1m' }) });
+  const notes = page.getByTestId('weight-notes');
+  const back = page.locator('[data-action="weight-latest"]');
+  const chart = page.locator('[data-block="chart"] svg.chart');
+  await chart.scrollIntoViewIfNeeded();
+  const cdp = await page.context().newCDPSession(page);
+  const touch = (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
+
+  // Drag from a fifth of the way along to 70%: the box ends on 1 Oct (day 23 of the month shown).
+  let box = await chart.boundingBox();
+  const along = (f) => box.x + box.width * f;
+  const mid = box.y + box.height / 2;
+  await touch('touchStart', along(0.2), mid);
+  for (let i = 1; i <= 10; i++) await touch('touchMove', along(0.2 + i * 0.05), mid);
+  await touch('touchEnd');
+  await expect(notes).toContainText('1 Oct');
+  await expect(back).toBeVisible();
+
+  // Back to latest, then an upward swipe that starts on the chart: the page scrolls, the box stays put.
+  await back.click();
+  await expect(back).toBeHidden();
+  await chart.scrollIntoViewIfNeeded();
+  box = await chart.boundingBox();
+  const low = box.y + box.height * 0.7;
+  await touch('touchStart', along(0.35), low);
+  for (let i = 1; i <= 10; i++) await touch('touchMove', along(0.35), low - i * 30);
+  await touch('touchEnd');
+  await expect(notes).toContainText('7 Oct');
+  await expect(back).toBeHidden();
 });

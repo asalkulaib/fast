@@ -231,6 +231,8 @@ function showFlash(text, { ms = 8000, undo = null } = {}) {
 async function importText(text) {
   const result = await importWeightText(text);
   app.ui.showPaste = !result.ok;
+  // New weigh-ins: the big box goes back to the latest figure.
+  if (result.ok) app.ui.weightDay = null;
   showFlash(result.ok ? result.message : `${result.message} Run the Fast Weight shortcut, then tap Import weight again.`, { ms: 12000 });
   if (result.ok && navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText('').catch(() => {});
@@ -399,6 +401,8 @@ async function boot() {
       return;
     }
     for (const key of [...prompted]) if (key.startsWith('f')) prompted.delete(key);
+    // Back from the Shortcut or another app: the Weight box shows the latest again.
+    app.ui.weightDay = null;
     try {
       await store.load();
       await followZone();

@@ -86,12 +86,13 @@ function summaryBox(ctx, app, day, latest) {
       h('div', { class: 'margin', 'data-testid': 'weight-notes' },
         note('Up to', fmtDayMonth(summary.end)),
         note('Weigh-ins', `${cur.n} of 7`))),
+    // Both lines take one line of the same size, so the box keeps its height from day to day.
     summary.change != null
       ? h('p', { class: 'gap', 'data-testid': 'weight-change' }, `Change from the 7 days before: ${signedKg(summary.change)}.`)
-      : h('p', { class: 'quiet small gap', 'data-testid': 'weight-change' }, 'The change appears once the 7 days before also have a weigh-in.'),
-    latest
-      ? null
-      : h('div', { class: 'gap' }, button('Back to latest', () => { app.ui.weightDay = null; app.refresh(); }, { kind: 'outline', name: 'weight-latest' })),
+      : h('p', { class: 'quiet gap', 'data-testid': 'weight-change' }, 'No weigh-in in the 7 days before.'),
+    // Shown only for a day chosen on the chart, but its room is always kept.
+    h('div', { class: latest ? 'gap-s latest-idle' : 'gap-s' },
+      button('Back to latest', () => { app.ui.weightDay = null; app.refresh(); }, { kind: 'chip', name: 'weight-latest', disabled: latest })),
   ];
 }
 
@@ -122,7 +123,7 @@ export function renderWeight(ctx, app) {
     const isLatest = date === latest;
     if ((isLatest ? null : date) === app.ui.weightDay && box.childElementCount) return;
     app.ui.weightDay = isLatest ? null : date;
-    box.replaceChildren(...summaryBox(ctx, app, date, isLatest).filter(Boolean));
+    box.replaceChildren(...summaryBox(ctx, app, date, isLatest));
   };
   return h('div', { class: 'weight' },
     head,

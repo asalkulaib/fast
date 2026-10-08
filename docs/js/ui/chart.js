@@ -119,8 +119,18 @@ export function weightChart(points, { from, to, selected = null, onSelect = () =
     data.forEach((p, i) => { if (Math.abs(x(p.date) - px) < Math.abs(x(data[best].date) - px)) best = i; });
     return best;
   };
-  svg.addEventListener('pointerdown', (e) => show(nearest(e)));
-  svg.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse' || e.buttons) show(nearest(e)); });
+  // A touch that turns out to be a scroll (the browser cancels it) puts the day back as it was.
+  let before = null;
+  svg.addEventListener('pointerdown', (e) => { before = active; show(nearest(e)); });
+  svg.addEventListener('pointermove', (e) => { if (e.buttons || e.pointerType === 'touch') show(nearest(e)); });
+  svg.addEventListener('pointerup', () => { before = null; });
+  svg.addEventListener('pointercancel', () => {
+    if (before != null) {
+      const back = before;
+      before = null;
+      show(back);
+    }
+  });
   svg.addEventListener('focus', () => show(active));
   svg.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowLeft') { e.preventDefault(); show(active - 1); }

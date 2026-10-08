@@ -1283,6 +1283,16 @@ sup.fn {
   overflow: visible;
 }
 
+/* The weight chart follows a finger dragged along it; the page still scrolls up and down. */
+.chart-wrap .chart {
+  touch-action: pan-y;
+}
+
+/* Back to latest keeps its room while the latest is shown, so the chart never jumps. */
+.latest-idle {
+  visibility: hidden;
+}
+
 .chart text {
   font-family: var(--font-ui);
   font-weight: 500;
