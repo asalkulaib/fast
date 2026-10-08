@@ -190,8 +190,63 @@ test('with many weigh-ins the line carries them, and a weigh-in standing alone k
   await expect(chart.locator('rect')).toHaveCount(2);
   await expect(chart.locator('rect.latest')).toHaveCount(1);
   expect(((await chart.locator('path').getAttribute('d')).match(/M/g) || []).length).toBe(2);
-  // Its readout names the single weigh-in.
+  // Chosen on the chart, the big box shows that single weigh-in as its 7-day average.
   await chart.focus();
   for (let i = 0; i < 37; i++) await chart.press('ArrowLeft');
-  await expect(page.locator('.chart-readout')).toHaveText('Sat 15 Aug: 103.0 kg, your only weigh-in in the 7 days to then.');
+  await expect(page.getByTestId('weight-average')).toHaveText('103.0 kg');
+  await expect(page.getByTestId('weight-notes')).toContainText('15 Aug');
+  await expect(page.getByTestId('weight-notes')).toContainText('1 of 7');
+});
+
+test('touching the chart moves the big box to that day; Back to latest, a new time frame or leaving returns', async ({ page }) => {
+  await openAt(page, '2026-10-08T09:00', '#weight');
+  const weights = [];
+  // Daily from 1 to 30 Sep at 100 kg, then 1 to 7 Oct at 98 kg.
+  for (let d = 1; d <= 30; d++) weights.push({ date: `2026-09-${String(d).padStart(2, '0')}`, kg: 100 });
+  for (let d = 1; d <= 7; d++) weights.push({ date: `2026-10-0${d}`, kg: 98 });
+  await seed(page, { weights, settings: settings({ installedAt: ms('2026-09-01T08:00'), weightRange: '1m' }) });
+  const average = page.getByTestId('weight-average');
+  const notes = page.getByTestId('weight-notes');
+  const back = page.locator('[data-action="weight-latest"]');
+  await expect(average).toHaveText('98.0 kg');
+  await expect(notes).toContainText('7 Oct');
+  await expect(back).toHaveCount(0);
+  await expect(page.locator('.chart-readout')).toHaveText('Touch the chart to see a day above.');
+
+  // Touch near the start of the chart (8 Sep): its 7 days were all 100 kg.
+  const chart = page.locator('[data-block="chart"] svg.chart');
+  const box = await chart.boundingBox();
+  await page.mouse.click(box.x + box.width * (40 / 340), box.y + box.height / 2);
+  await expect(average).toHaveText('100.0 kg');
+  await expect(notes).toContainText('Sep');
+  await expect(notes).toContainText('7 of 7');
+  await expect(back).toBeVisible();
+  // 3 Oct (day 25 of 30 along the month) holds 3 days at 98 and 4 at 100.
+  await page.mouse.click(box.x + box.width * ((38 + (25 / 30) * 256) / 340), box.y + box.height / 2);
+  await expect(notes).toContainText('3 Oct');
+  await expect(average).toHaveText('99.1 kg');
+  await expect(page.getByTestId('weight-change')).toHaveText('Change from the 7 days before: −0.9 kg.');
+
+  // Back to latest.
+  await back.click();
+  await expect(average).toHaveText('98.0 kg');
+  await expect(back).toHaveCount(0);
+
+  // A new time frame returns to the latest too.
+  await chart.focus();
+  await chart.press('ArrowLeft');
+  await expect(back).toBeVisible();
+  await choose(page, 'weight-range', '3m');
+  await expect(average).toHaveText('98.0 kg');
+  await expect(back).toHaveCount(0);
+
+  // So does leaving Weight.
+  await page.locator('[data-block="chart"] svg.chart').focus();
+  await page.locator('[data-block="chart"] svg.chart').press('ArrowLeft');
+  await expect(back).toBeVisible();
+  await page.evaluate(() => { window.location.hash = '#today'; });
+  await expect(page.locator('.today')).toBeVisible();
+  await page.evaluate(() => { window.location.hash = '#weight'; });
+  await expect(average).toHaveText('98.0 kg');
+  await expect(back).toHaveCount(0);
 });

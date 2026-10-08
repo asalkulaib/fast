@@ -151,7 +151,11 @@ export function latestDate(weights) {
  * between weekly imports.
  */
 export function rollingSummary(weights) {
-  const end = latestDate(weights);
+  return summaryOn(weights, latestDate(weights));
+}
+
+/** The same summary for the 7 days ending on any day (a day chosen on the chart). */
+export function summaryOn(weights, end) {
   if (!end) return { end: null, current: { avg: null, n: 0 }, previous: { avg: null, n: 0 }, change: null };
   const current = averageBetween(weights, addDays(end, -6), end);
   const previous = averageBetween(weights, addDays(end, -13), addDays(end, -7));

@@ -334,6 +334,13 @@ test('weight: a few weigh-ins a week, with dots and a break in the line', async 
   await seed(page, { weights, settings: [...install, ...settings({ weightRange: '3m' })] });
   await page.locator('[data-block="chart"]').scrollIntoViewIfNeeded();
   await shot(page, '32c-weight-sparse');
+  // A day chosen on the chart: the big box follows it, with Back to latest.
+  const chart = page.locator('[data-block="chart"] svg.chart');
+  const box = await chart.boundingBox();
+  await page.mouse.click(box.x + box.width * 0.45, box.y + box.height / 2);
+  await expect(page.locator('[data-action="weight-latest"]')).toBeVisible();
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await shot(page, '32e-weight-day-chosen');
   await tap(page, 'toggle-table');
   await shot(page, '32d-weight-sparse-table', { full: true });
 });

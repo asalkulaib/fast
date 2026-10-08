@@ -28,11 +28,13 @@ const MARK_ROOM = 10;
 
 /**
  * points: [{ date, avg, n }] oldest first. from and to: the days the axis
- * spans (the time frame chosen, up to today).
+ * spans (the time frame chosen, up to today). selected: a day chosen
+ * earlier, marked by the crosshair; onSelect(date) as touch or the arrow
+ * keys move along the days, so the screen can show that day.
  */
-export function weightChart(points, { from, to }) {
+export function weightChart(points, { from, to, selected = null, onSelect = () => {} }) {
   const data = points;
-  const readout = h('p', { class: 'small quiet chart-readout', 'aria-live': 'polite' }, 'Touch the chart to read a day.');
+  const hint = h('p', { class: 'small quiet chart-readout' }, 'Touch the chart to see a day above.');
   if (!data.length) return h('div');
 
   let lo = Math.min(...data.map((p) => p.avg));
@@ -95,18 +97,21 @@ export function weightChart(points, { from, to }) {
     s('text', { x: lx + 9, y: ly + 4, class: 'chart-end', fill: INK }, last.avg.toFixed(1)),
   );
 
-  // Touch and keyboard readout: snaps to the nearest day with a figure.
-  let active = data.length - 1;
-  const show = (i) => {
-    active = Math.max(0, Math.min(data.length - 1, i));
-    const p = data[active];
+  // Touch and keys snap to the nearest day with a figure, and hand it to the screen.
+  const chosen = data.findIndex((p) => p.date === selected);
+  let active = chosen >= 0 ? chosen : data.length - 1;
+  const place = (i) => {
+    const p = data[i];
     cross.setAttribute('x1', x(p.date));
     cross.setAttribute('x2', x(p.date));
     cross.setAttribute('visibility', 'visible');
-    readout.textContent = p.n === 1
-      ? `${fmtDayShort(p.date)}: ${p.avg.toFixed(1)} kg, your only weigh-in in the 7 days to then.`
-      : `${fmtDayShort(p.date)}: ${p.avg.toFixed(1)} kg, the average of ${p.n} weigh-ins in the 7 days to then.`;
   };
+  const show = (i) => {
+    active = Math.max(0, Math.min(data.length - 1, i));
+    place(active);
+    onSelect(data[active].date);
+  };
+  if (chosen >= 0) place(chosen);
   const nearest = (evt) => {
     const box = svg.getBoundingClientRect();
     const px = ((evt.clientX - box.left) / box.width) * W;
@@ -123,7 +128,7 @@ export function weightChart(points, { from, to }) {
   });
 
   return h('div', { class: 'chart-wrap' }, svg,
-    legend([['rock-line', '7-day average'], ['pick', 'Latest']], 'weight-legend'), readout);
+    legend([['rock-line', '7-day average'], ['pick', 'Latest']], 'weight-legend'), hint);
 }
 
 /** Table view of the same 7-day averages, newest first. */

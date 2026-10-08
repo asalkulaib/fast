@@ -7,7 +7,7 @@ import { button, choice, figureParts } from './components.js';
 import * as store from '../store.js';
 import { metricSwitch } from './history.js';
 import { fmtDayMonth } from '../core/time.js';
-import { WEIGHT_RANGES, rangeStart, rollingSeries, rollingSummary } from '../core/weight.js';
+import { WEIGHT_RANGES, latestDate, rangeStart, rollingSeries, summaryOn } from '../core/weight.js';
 import { dunes } from './art.js';
 import { weightChart, weightTable } from './chart.js';
 import { ago, header, note } from './shared.js';
@@ -68,12 +68,41 @@ function importSection(ctx, app) {
   );
 }
 
+/**
+ * The big box: the 7-day average up to a day, its weigh-ins and the change
+ * from the 7 days before. latest: false while a day chosen on the chart is
+ * shown, which brings Back to latest.
+ */
+function summaryBox(ctx, app, day, latest) {
+  const summary = summaryOn(ctx.weights, day);
+  const cur = summary.current;
+  return [
+    h('div', { class: 'row' },
+      h('div', { class: 'main' },
+        h('div', { class: 'label' }, '7-day average'),
+        cur.avg != null
+          ? h('h1', { class: 'display gap-s', 'data-testid': 'weight-average' }, figureParts([[cur.avg.toFixed(1), ' kg']]))
+          : h('p', { class: 'statement gap-s', 'data-testid': 'weight-average' }, 'No weigh-in in these 7 days.')),
+      h('div', { class: 'margin', 'data-testid': 'weight-notes' },
+        note('Up to', fmtDayMonth(summary.end)),
+        note('Weigh-ins', `${cur.n} of 7`))),
+    summary.change != null
+      ? h('p', { class: 'gap', 'data-testid': 'weight-change' }, `Change from the 7 days before: ${signedKg(summary.change)}.`)
+      : h('p', { class: 'quiet small gap', 'data-testid': 'weight-change' }, 'The change appears once the 7 days before also have a weigh-in.'),
+    latest
+      ? null
+      : h('div', { class: 'gap' }, button('Back to latest', () => { app.ui.weightDay = null; app.refresh(); }, { kind: 'outline', name: 'weight-latest' })),
+  ];
+}
+
 export function renderWeight(ctx, app) {
-  const summary = rollingSummary(ctx.weights);
   const range = WEIGHT_RANGES.includes(ctx.settings.weightRange) ? ctx.settings.weightRange : '3m';
   const series = rollingSeries(ctx.weights);
   const from = rangeStart(range, ctx.todayKey) || (series.length ? series[0].date : ctx.todayKey);
   const shown = series.filter((p) => p.date >= from);
+  const latest = latestDate(ctx.weights);
+  // A day chosen on the chart, while it is still on the chart; otherwise the latest.
+  const chosen = shown.some((p) => p.date === app.ui.weightDay) && app.ui.weightDay !== latest ? app.ui.weightDay : null;
   // Weight is the third view of History, under the same switch.
   const head = [header(ctx, app, { title: 'History' }), metricSwitch(app, 'weight')];
 
@@ -87,27 +116,23 @@ export function renderWeight(ctx, app) {
       dunes());
   }
 
-  const cur = summary.current;
+  // Touching the chart moves the big box to that day, in place, as the finger moves.
+  const box = h('section', { class: 'section strong', 'data-block': 'weight-summary', 'aria-live': 'polite' }, summaryBox(ctx, app, chosen || latest, !chosen));
+  const onSelect = (date) => {
+    const isLatest = date === latest;
+    if ((isLatest ? null : date) === app.ui.weightDay && box.childElementCount) return;
+    app.ui.weightDay = isLatest ? null : date;
+    box.replaceChildren(...summaryBox(ctx, app, date, isLatest).filter(Boolean));
+  };
   return h('div', { class: 'weight' },
     head,
-    h('section', { class: 'section strong' },
-      h('div', { class: 'row' },
-        h('div', { class: 'main' },
-          h('div', { class: 'label' }, '7-day average'),
-          cur.avg != null
-            ? h('h1', { class: 'display gap-s', 'data-testid': 'weight-average' }, figureParts([[cur.avg.toFixed(1), ' kg']]))
-            : h('p', { class: 'statement gap-s', 'data-testid': 'weight-average' }, 'No weigh-in in these 7 days.')),
-        h('div', { class: 'margin' },
-          note('Up to', fmtDayMonth(summary.end)),
-          note('Weigh-ins', `${cur.n} of 7`))),
-      summary.change != null
-        ? h('p', { class: 'gap', 'data-testid': 'weight-change' }, `Change from the 7 days before: ${signedKg(summary.change)}.`)
-        : h('p', { class: 'quiet small gap' }, 'The change appears once the 7 days before also have a weigh-in.')),
+    box,
     h('section', { class: 'section', 'data-block': 'chart' },
       h('div', { class: 'label' }, 'Over time'),
-      h('div', { class: 'gap-s' }, choice({ options: RANGES, value: range, cols: 5, name: 'weight-range', slim: true, ariaLabel: 'Time shown', onChange: (v) => store.setSettings({ weightRange: v }) })),
+      h('div', { class: 'gap-s' }, choice({ options: RANGES, value: range, cols: 5, name: 'weight-range', slim: true, ariaLabel: 'Time shown',
+        onChange: (v) => { app.ui.weightDay = null; store.setSettings({ weightRange: v }); } })),
       shown.length
-        ? h('div', { class: 'gap' }, weightChart(shown, { from, to: ctx.todayKey }))
+        ? h('div', { class: 'gap' }, weightChart(shown, { from, to: ctx.todayKey, selected: chosen, onSelect }))
         : h('p', { class: 'statement gap', 'data-testid': 'weight-chart-empty' }, 'No 7-day average in this time yet.'),
       // What the line is, and why it has gaps, right under it.
       h('p', { class: 'small quiet gap-s', 'data-testid': 'weight-chart-note' },
