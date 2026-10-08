@@ -3,7 +3,7 @@
 // counts, a single one included: the owner chose that over hiding weeks
 // with few weigh-ins, so nothing goes stale.
 
-import { addDays, isDayKey, weekStart } from './time.js';
+import { addDays, daysBetween, isDayKey, weekStart } from './time.js';
 
 export const MIN_WEIGH_INS = 1;
 // Plausible range for this app's single adult user. The upper bound also
@@ -173,6 +173,19 @@ export function rollingSeries(weights) {
   return out;
 }
 
+/**
+ * The series split where a week went by without a weigh-in: points more
+ * than 7 days apart start a new run, so the chart's line breaks there.
+ */
+export function chartRuns(series) {
+  const runs = [];
+  series.forEach((p, i) => {
+    if (!i || daysBetween(series[i - 1].date, p.date) > 7) runs.push([]);
+    runs[runs.length - 1].push(p);
+  });
+  return runs;
+}
+
 /** The time frames the weight chart offers. */
 export const WEIGHT_RANGES = ['1m', '3m', '6m', 'ytd', 'all'];
 
@@ -187,20 +200,6 @@ export function rangeStart(range, todayKey) {
   const mm = (total % 12) + 1;
   const last = new Date(Date.UTC(yy, mm, 0)).getUTCDate();
   return `${yy}-${String(mm).padStart(2, '0')}-${String(Math.min(d, last)).padStart(2, '0')}`;
-}
-
-/** Averages per Sunday-to-Saturday week with a weigh-in. */
-export function weeklyAverages(weights) {
-  const groups = new Map();
-  for (const [date, kg] of weights) {
-    const w = weekStart(date);
-    if (!groups.has(w)) groups.set(w, []);
-    groups.get(w).push(kg);
-  }
-  return [...groups.entries()]
-    .filter(([, values]) => values.length >= MIN_WEIGH_INS)
-    .map(([week, values]) => ({ week, avg: mean(values), n: values.length }))
-    .sort((a, b) => (a.week < b.week ? -1 : 1));
 }
 
 /** Average for one week and the change from the week before. */

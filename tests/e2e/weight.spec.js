@@ -18,7 +18,7 @@ async function bodyText(page) {
 /** Import messages give counts only, never a weight. */
 async function expectNoRawValues(page) {
   const text = await bodyText(page);
-  for (const v of RAW) expect(text, `daily value ${v} must never be shown`).not.toContain(v);
+  for (const v of RAW) expect(text, `an import message never shows a weight (${v})`).not.toContain(v);
   expect(text).not.toMatch(/\d{2,3},\d/); // no comma-decimal forms either
 }
 
@@ -117,7 +117,8 @@ test('every weigh-in counts: one weigh-in is its own average, two are averaged',
     settings: settings({ installedAt: ms('2026-09-20T08:00'), lastImportAt: ms('2026-09-27T08:00') }),
   });
   await expect(page.getByTestId('weight-average')).toHaveText('104.0 kg');
-  await expect(page.locator('[data-block="chart"] svg.chart rect')).toHaveCount(2);
+  await tap(page, 'toggle-table');
+  await expect(page.getByTestId('weight-table').locator('tbody tr')).toHaveText(['Sun 27 Sep104.0 kg2', 'Sat 26 Sep104.1 kg1']);
 });
 
 test('bad entries are skipped and reported by count only', async ({ page }) => {
@@ -136,21 +137,31 @@ test('the chart follows the 7-day average on each day with one, in the time fram
   ].map(([date, kg]) => ({ date, kg }));
   await seed(page, { weights, settings: settings({ installedAt: ms('2026-03-01T08:00'), lastImportAt: ms('2026-10-08T08:00') }) });
   const chart = page.locator('[data-block="chart"]');
-  const marks = chart.locator('svg.chart rect');
+  // The x of each point the line passes through, in order.
+  const linePoints = async () => ((await chart.locator('svg.chart path').getAttribute('d')).match(/[ML][\d.]+ [\d.]+/g) || [])
+    .map((t) => Number(t.slice(1).split(' ')[0]));
+  const rows = page.getByTestId('weight-table').locator('tbody tr');
   await expect(page.getByTestId('weight-average')).toHaveText('99.0 kg');
   await expect(chart.locator('.chart-end')).toHaveText('99.0');
   await expect(chart.getByTestId('weight-chart-note')).toContainText('Each point is your 7-day average on a day you weighed in');
   // 3 months by default: a point on each of the 7 days with a weigh-in since July. The line runs through
-  // August, breaks across September (no weigh-in for over a week), and runs again in October.
+  // August, breaks across September (no weigh-in for over a week), and runs again in October. The points
+  // sit too close together for a mark each, so only the latest has one.
   await expect(chart.locator('button[data-choice="weight-range"][aria-checked="true"]')).toHaveText('3 months');
-  await expect(marks).toHaveCount(7);
-  expect(((await chart.locator('svg.chart path').getAttribute('d')).match(/M/g) || []).length).toBe(2);
-  await choose(page, 'weight-range', '1m');
-  await expect(marks).toHaveCount(3);
-  await choose(page, 'weight-range', 'ytd');
-  await expect(marks).toHaveCount(10);
   await tap(page, 'toggle-table');
-  const rows = page.getByTestId('weight-table').locator('tbody tr');
+  await expect(rows).toHaveCount(7);
+  expect(await linePoints()).toHaveLength(7);
+  expect(((await chart.locator('svg.chart path').getAttribute('d')).match(/M/g) || []).length).toBe(2);
+  await expect(chart.locator('svg.chart rect')).toHaveCount(1);
+  // Placed by date: 7 Oct sits near the right end, 26 Aug about half way along the 3 months.
+  const along = (v) => (v - 38) / (340 - 46 - 38);
+  const xs = await linePoints();
+  expect(along(xs[6])).toBeGreaterThan(0.97); // 7 Oct, of 8 Jul to 8 Oct
+  expect(along(xs[2])).toBeGreaterThan(0.5); // 26 Aug: day 49 of 92
+  expect(along(xs[2])).toBeLessThan(0.56);
+  await choose(page, 'weight-range', '1m');
+  await expect(rows).toHaveCount(3);
+  await choose(page, 'weight-range', 'ytd');
   await expect(rows).toHaveCount(10);
   await expect(rows.first()).toHaveText('Wed 7 Oct99.0 kg3');
   // The choice is remembered.
@@ -163,4 +174,24 @@ test('the chart follows the 7-day average on each day with one, in the time fram
   await expect(chart.getByTestId('weight-chart-empty')).toHaveText('No 7-day average in this time yet.');
   await expect(chart.locator('svg.chart')).toHaveCount(0);
   await expect(chart.getByTestId('weight-chart-note')).toBeVisible();
+});
+
+test('with many weigh-ins the line carries them, and a weigh-in standing alone keeps its mark', async ({ page }) => {
+  await openAt(page, '2026-10-08T09:00', '#weight');
+  const weights = [];
+  // Daily from 1 to 31 Jul, one on 15 Aug (more than a week from either side), daily again from 1 Sep.
+  for (let d = 1; d <= 31; d++) weights.push({ date: `2026-07-${String(d).padStart(2, '0')}`, kg: 104 - d * 0.02 });
+  weights.push({ date: '2026-08-15', kg: 103 });
+  for (let d = 1; d <= 30; d++) weights.push({ date: `2026-09-${String(d).padStart(2, '0')}`, kg: 102 - d * 0.02 });
+  for (let d = 1; d <= 7; d++) weights.push({ date: `2026-10-0${d}`, kg: 101.4 });
+  await seed(page, { weights, settings: settings({ installedAt: ms('2026-07-01T08:00'), weightRange: '6m' }) });
+  const chart = page.locator('[data-block="chart"] svg.chart');
+  // Too close together for a mark each: the lone 15 Aug and the latest keep theirs.
+  await expect(chart.locator('rect')).toHaveCount(2);
+  await expect(chart.locator('rect.latest')).toHaveCount(1);
+  expect(((await chart.locator('path').getAttribute('d')).match(/M/g) || []).length).toBe(2);
+  // Its readout names the single weigh-in.
+  await chart.focus();
+  for (let i = 0; i < 37; i++) await chart.press('ArrowLeft');
+  await expect(page.locator('.chart-readout')).toHaveText('Sat 15 Aug: 103.0 kg, your only weigh-in in the 7 days to then.');
 });

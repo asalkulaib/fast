@@ -93,21 +93,27 @@ test('rolling 7-day average ends on the latest weigh-in and compares with the 7 
   assert.ok(Math.abs(s.change - -0.7) < 1e-9);
 });
 
-test('weekly averages group Sunday to Saturday', () => {
+test("a week's weight, as on the Week tab: Sunday to Saturday, a single weigh-in included", () => {
   const weights = new Map([
-    ['2026-09-19', 105], // Saturday, week of 13 Sep: one entry still counts
+    ['2026-09-19', 105], // Saturday, week of 13 Sep
     ['2026-09-20', 104], ['2026-09-22', 103], ['2026-09-26', 102], // week of 20 Sep
-    ['2026-09-27', 101], ['2026-09-28', 101], ['2026-09-29', 101], // week of 27 Sep
-  ]);
-  assert.deepEqual(w.weeklyAverages(weights), [
-    { week: '2026-09-13', avg: 105, n: 1 },
-    { week: '2026-09-20', avg: 103, n: 3 },
-    { week: '2026-09-27', avg: 101, n: 3 },
+    ['2026-09-29', 101], // week of 27 Sep: one weigh-in
   ]);
   const s = w.weekSummary(weights, '2026-09-27');
-  assert.equal(s.current.avg, 101);
+  assert.deepEqual(s.current, { avg: 101, n: 1 });
   assert.equal(s.previous.avg, 103);
   assert.equal(s.change, -2);
+  const t = w.weekSummary(weights, '2026-09-20');
+  assert.equal(t.previous.avg, 105); // the week before held one weigh-in too
+  assert.equal(t.change, -2);
+});
+
+test('the chart line breaks where a week went by without a weigh-in', () => {
+  const at = (date) => ({ date, avg: 100, n: 1 });
+  // 7 days apart: joined. 8 days apart: a full week without one, so a new run.
+  assert.deepEqual(w.chartRuns([at('2026-09-01'), at('2026-09-08'), at('2026-09-16')]).map((r) => r.map((p) => p.date)),
+    [['2026-09-01', '2026-09-08'], ['2026-09-16']]);
+  assert.deepEqual(w.chartRuns([]), []);
 });
 
 test('the 7-day average on each weigh-in day, a single weigh-in included', () => {

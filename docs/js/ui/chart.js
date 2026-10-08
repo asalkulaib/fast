@@ -7,6 +7,7 @@
 import { h, s } from './dom.js';
 import { legend } from './components.js';
 import { addDays, daysBetween, fmtDayMonth, fmtDayShort, fmtMonthYear } from '../core/time.js';
+import { chartRuns } from '../core/weight.js';
 
 const W = 340;
 const H = 190;
@@ -22,8 +23,8 @@ function niceStep(range) {
   return steps.find((st) => range / st <= 4) || 10;
 }
 
-/** More marks than this, and only the latest keeps its mark: the line carries the rest. */
-const MAX_MARKS = 45;
+/** Marks closer than this (in chart units) would overlap: the line carries those points. */
+const MARK_ROOM = 10;
 
 /**
  * points: [{ date, avg, n }] oldest first. from and to: the days the axis
@@ -60,11 +61,7 @@ export function weightChart(points, { from, to }) {
   const xLabels = ticks.map(([date, anchor]) => s('text', { x: x(date).toFixed(1), y: H - 8, 'text-anchor': span === 0 ? 'middle' : anchor }, label(date)));
 
   // One stroke per run of days no more than a week apart.
-  const runs = [];
-  data.forEach((p, i) => {
-    if (!i || daysBetween(data[i - 1].date, p.date) > 7) runs.push([]);
-    runs[runs.length - 1].push(p);
-  });
+  const runs = chartRuns(data);
   const path = runs.filter((r) => r.length > 1)
     .map((r) => r.map((p, i) => `${i ? 'L' : 'M'}${x(p.date).toFixed(1)} ${y(p.avg).toFixed(1)}`).join(' ')).join(' ');
   const last = data[data.length - 1];
@@ -75,10 +72,15 @@ export function weightChart(points, { from, to }) {
     const size = latest ? 10 : 7;
     return s('rect', {
       x: (x(p.date) - size / 2).toFixed(1), y: (y(p.avg) - size / 2).toFixed(1), width: size, height: size,
-      fill: latest ? LATEST : LINE, stroke: SURFACE, 'stroke-width': '1.5', class: latest ? 'latest' : null,
+      fill: latest ? LATEST : LINE, stroke: latest ? SURFACE : 'none', 'stroke-width': '1.5', class: latest ? 'latest' : null,
     });
   };
-  const marks = data.length > MAX_MARKS ? [marker(last, true)] : data.map((p, i) => marker(p, i === data.length - 1));
+  // Every point gets a mark when there is room for them all; otherwise the line
+  // carries them, and a point standing alone (no line through it) keeps its mark.
+  const gaps = data.slice(1).map((p, i) => x(p.date) - x(data[i].date));
+  const room = !gaps.length || Math.min(...gaps) >= MARK_ROOM;
+  const lone = new Set(runs.filter((r) => r.length === 1).map((r) => r[0]));
+  const marks = data.filter((p) => p !== last && (room || lone.has(p))).map((p) => marker(p, false)).concat(marker(last, true));
 
   const cross = s('line', { y1: PAD.top, y2: H - PAD.bottom, stroke: 'rgba(42, 28, 16, 0.5)', 'stroke-width': '1', visibility: 'hidden' });
   const svg = s('svg', {
@@ -101,7 +103,9 @@ export function weightChart(points, { from, to }) {
     cross.setAttribute('x1', x(p.date));
     cross.setAttribute('x2', x(p.date));
     cross.setAttribute('visibility', 'visible');
-    readout.textContent = `${fmtDayShort(p.date)}: ${p.avg.toFixed(1)} kg, the average of ${p.n} weigh-ins in the 7 days to then.`;
+    readout.textContent = p.n === 1
+      ? `${fmtDayShort(p.date)}: ${p.avg.toFixed(1)} kg, your only weigh-in in the 7 days to then.`
+      : `${fmtDayShort(p.date)}: ${p.avg.toFixed(1)} kg, the average of ${p.n} weigh-ins in the 7 days to then.`;
   };
   const nearest = (evt) => {
     const box = svg.getBoundingClientRect();
