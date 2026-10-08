@@ -11,6 +11,7 @@ import { h, s, live } from './dom.js';
 import { button, durationFigure, key, legend } from './components.js';
 import { openSheet, sheetHead } from './sheet.js';
 import { HOUR, MIN, fmtDuration } from '../core/time.js';
+import { fastHoursFor } from '../core/rules.js';
 import { AUTOPHAGY_NOTE, SCALE_HOURS, SOURCES, STAGES, VARIATION_NOTE, fastingState } from '../core/stages.js';
 import { STAGE_MORE, citeBy, stageSources } from '../core/stage-more.js';
 import { stageGlyph, stageIcon } from './icons.js';
@@ -80,6 +81,8 @@ function dialSvg(state, goalHours) {
     });
   });
   // The fasting goal: an ink bar across the path, edged in sand so it shows on both tones.
+  // A long fast's goal lies past the day the dial shows: the lines below give it instead.
+  const onDial = goalHours <= SCALE_HOURS;
   const [gx, gy] = point(goalHours, R - WIDTH / 2 - 1);
   const [hx, hy] = point(goalHours, R + WIDTH / 2 + 1);
   const goalLine = (stroke, w, testid) => s('line', {
@@ -106,7 +109,7 @@ function dialSvg(state, goalHours) {
     viewBox: `0 0 ${W} ${HT}`,
     'aria-hidden': 'true',
     focusable: 'false',
-  }, ...ticks, ...arcs, goalLine(SURFACE, 5), goalLine(INK, 2, 'goal-tick'), ...sun, ...dunes(), ...icons);
+  }, ...ticks, ...arcs, onDial ? [goalLine(SURFACE, 5), goalLine(INK, 2, 'goal-tick')] : null, ...sun, ...dunes(), ...icons);
 }
 
 /** The current stage as a small button under the time: it opens the stages at this one. */
@@ -136,10 +139,10 @@ function fastingRing(state, lastBiteTs, compact, goalHours) {
       stageChip(state.stage)));
 }
 
-/** What each mark on the dial means, in one row. */
-const ringLegend = () => h('div', { class: 'ring-legend' }, legend([
-  ['fasted', 'Fasted'], ['ahead', 'Ahead'], [key('sun'), 'Now'], ['goal', 'Goal'], [key('stage'), 'Stage'],
-], 'ring-legend'));
+/** What each mark on the dial means, in one row; Goal only when its tick is on the dial. */
+const ringLegend = (goalHours) => h('div', { class: 'ring-legend' }, legend([
+  ['fasted', 'Fasted'], ['ahead', 'Ahead'], [key('sun'), 'Now'], goalHours <= SCALE_HOURS ? ['goal', 'Goal'] : null, [key('stage'), 'Stage'],
+].filter(Boolean), 'ring-legend'));
 
 /** How far the fasting goal is, then the next stage; live. */
 function ringLines(state, lastBiteTs, goalHours) {
@@ -168,14 +171,14 @@ function markStage(el, state, renderTs) {
   return el;
 }
 
-/** The fasting goal in hours: the day less today's eating window. */
-const goalHoursFor = (ctx) => 24 - Math.round(ctx.windowMsFor(ctx.todayKey) / HOUR);
+/** The fasting goal in hours: a long fast, or the day less today's eating window. */
+const goalHoursFor = (ctx) => fastHoursFor(ctx.todayKey, ctx.settings);
 
 /** Before the window: the dial leads Today, with the fast's two times under it. */
 export function ringHero(ctx, lastBiteTs, times = null) {
   const state = fastingState(lastBiteTs, ctx.nowTs);
   return markStage(h('div', { class: 'ring-hero gap' },
-    fastingRing(state, lastBiteTs, false, goalHoursFor(ctx)), ringLegend(), times), state, ctx.nowTs);
+    fastingRing(state, lastBiteTs, false, goalHoursFor(ctx)), ringLegend(goalHoursFor(ctx)), times), state, ctx.nowTs);
 }
 
 /**
@@ -188,7 +191,7 @@ export function stagesSection(ctx, app, lastBiteTs, { withRing, times = null }) 
   const state = fastingState(lastBiteTs, ctx.nowTs);
   const goalHours = goalHoursFor(ctx);
   return markStage(h('section', { class: 'section', 'data-block': 'stages', 'data-stage': state.stage.key },
-    withRing ? [fastingRing(state, lastBiteTs, true, goalHours), ringLegend(), times] : null,
+    withRing ? [fastingRing(state, lastBiteTs, true, goalHours), ringLegend(goalHours), times] : null,
     h('div', { class: withRing ? 'label gap-l' : 'label' }, state.stage.name),
     h('p', { class: 'gap-s' }, state.stage.text),
     ringLines(state, lastBiteTs, goalHours),

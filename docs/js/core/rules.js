@@ -9,7 +9,10 @@
 //     fastFrom: ms (when a fast began, set with Begin fast) }
 //
 // The eating window is a goal: 4 hours (20:4) unless changed. A change
-// applies from its day on, so past days keep the goal they had.
+// applies from its day on, so past days keep the goal they had. The goal
+// can also be a long fast of 24 to 72 hours, for every fast: each eating
+// day keeps the window it had, and a day spent wholly inside the fast's
+// goal counts as a success on its own.
 
 import { HOUR, MIN, addDays, at, dayKey, dayStart, minutesOfDay, isWorkweekday, toMinutes } from './time.js';
 
@@ -25,15 +28,38 @@ export const LATE_NIGHT_END_MIN = 4 * 60; // 00:00 to 04:00 can be logged agains
 /** Goals as hours of eating in 24: 16:8, 18:6, 20:4 and one meal a day, 23:1. */
 export const GOAL_PRESETS = [8, 6, 4, 1];
 export const GOAL_HOURS_MAX = 12;
+/** Fasting goals, in hours: 12 to 23 leave the rest of the day to eat; 24 and over are a long fast. */
+export const FAST_HOURS_MIN = 12;
+export const FAST_HOURS_MAX = 72;
+export const LONG_FAST_MIN = 24;
 
 /**
- * The eating-window goal in force on a day, in ms: the latest change on or
- * before it (settings.goalChanges: [{ from: 'YYYY-MM-DD', hours }], oldest first).
+ * The goal change in force on a day: the latest on or before it
+ * (settings.goalChanges: [{ from: 'YYYY-MM-DD', hours, fast? }], oldest first),
+ * or null for the default. hours is the eating window; fast, when set, a long
+ * fast of 24 to 72 hours.
  */
+function goalOn(key, settings) {
+  let goal = null;
+  for (const c of (settings && settings.goalChanges) || []) if (c.from <= key) goal = c;
+  return goal;
+}
+
+/** The eating-window goal in force on a day, in ms. */
 export function windowMsFor(key, settings) {
-  let hours = DEFAULT_WINDOW_HOURS;
-  for (const c of (settings && settings.goalChanges) || []) if (c.from <= key) hours = c.hours;
-  return hours * HOUR;
+  const goal = goalOn(key, settings);
+  return (goal ? goal.hours : DEFAULT_WINDOW_HOURS) * HOUR;
+}
+
+/** The long fast in force on a day, in hours, or null when the fast is the rest of the day. */
+export function longFastHours(key, settings) {
+  const goal = goalOn(key, settings);
+  return goal && goal.fast >= LONG_FAST_MIN ? goal.fast : null;
+}
+
+/** The fasting goal in force on a day, in hours: a long fast, or the day less its window. */
+export function fastHoursFor(key, settings) {
+  return longFastHours(key, settings) || 24 - Math.round(windowMsFor(key, settings) / HOUR);
 }
 
 /**
@@ -47,10 +73,24 @@ export function isFlexible(key, settings) {
   return on;
 }
 
-/** '20:4' for a 4-hour window: fasting hours, then eating hours. */
-export function goalLabel(windowMs) {
+/**
+ * Whether the calendar's window alerts go out cancelled: on flexible timing
+ * there is no planned opening, and on a long fast not every day has a window.
+ */
+export function noWindowAlerts(key, settings) {
+  return isFlexible(key, settings) || !!longFastHours(key, settings);
+}
+
+/** '20:4' for a 4-hour window: fasting hours, then eating hours; '48 h fast' for a long fast. */
+export function goalLabel(windowMs, longFast = null) {
+  if (longFast) return `${longFast} h fast`;
   const hours = Math.round(windowMs / HOUR);
   return `${24 - hours}:${hours}`;
+}
+
+/** The goal in force on a day, as a label. */
+export function goalLabelFor(key, settings) {
+  return goalLabel(windowMsFor(key, settings), longFastHours(key, settings));
 }
 
 export const PAUSE_REASONS = ['travel', 'illness', 'ramadan', 'other'];
@@ -107,10 +147,12 @@ export function plannedStartMin(key, rec, settings) {
  * result: 'success' | 'miss' | 'pending' (today, not decided yet)
  *       | 'unlogged' (a past day with nothing logged) | 'none' (outside tracking)
  *       | 'paused' (not tracked, whatever is logged)
+ * state 'fasted': a past day with nothing eaten, wholly inside a long fast's
+ * goal (fasted is true): a success on its own, like a day without eating.
  * reasons for a miss: 'early' (workday window opened before 16:00; never on flexible timing),
  *                     'over' (longer than the goal plus 15 min), 'outside' (ate outside the window)
  */
-export function evaluateDay(key, rec, outsideCount, nowTs, todayKey, startKey, windowMs = WINDOW_MS, flexible = false) {
+export function evaluateDay(key, rec, outsideCount, nowTs, todayKey, startKey, windowMs = WINDOW_MS, flexible = false, fasted = false) {
   const workday = isWorkday(key, rec);
   const base = {
     day: key,
@@ -155,9 +197,11 @@ export function evaluateDay(key, rec, outsideCount, nowTs, todayKey, startKey, w
   if (rec && rec.noEating) {
     return { ...base, state: 'noEating', reasons: [], result: 'success' };
   }
+  const tracked = key < todayKey && (!startKey || key >= startKey);
+  if (fasted && tracked) return { ...base, state: 'fasted', reasons: [], result: 'success' };
   let result = 'none';
   if (key === todayKey) result = 'pending';
-  else if (key < todayKey && (!startKey || key >= startKey)) result = 'unlogged';
+  else if (tracked) result = 'unlogged';
   return { ...base, state: 'none', reasons: [], result };
 }
 
@@ -174,13 +218,44 @@ export function countByDay(items) {
  */
 export function makeEvaluator({ days, outside, meals = [], nowTs, todayKey, startKey, settings }) {
   const outsideByDay = countByDay([...outside, ...meals.filter((m) => m.outside)]);
+  const eating = eatingTimes({ days, meals, outside });
   const cache = new Map();
   return (key) => {
     if (!cache.has(key)) {
-      cache.set(key, evaluateDay(key, days.get(key), outsideByDay.get(key) || 0, nowTs, todayKey, startKey, windowMsFor(key, settings), isFlexible(key, settings)));
+      const fasted = insideLongFast(key, { days, settings }, eating);
+      cache.set(key, evaluateDay(key, days.get(key), outsideByDay.get(key) || 0, nowTs, todayKey, startKey, windowMsFor(key, settings), isFlexible(key, settings), fasted));
     }
     return cache.get(key);
   };
+}
+
+/** Every moment eating ended or a fast began (windows, meals, eating outside, Begin fast), oldest first. */
+export function eatingTimes({ days, meals = [], outside = [] }) {
+  const out = [];
+  for (const r of days.values()) {
+    if (r.lastBite) out.push(r.lastBite);
+    else if (r.firstBite) out.push(r.firstBite);
+    if (r.fastFrom) out.push(r.fastFrom);
+  }
+  for (const m of meals) out.push(m.finishedAt || m.startedAt);
+  for (const o of outside) out.push(o.at);
+  return out.filter(Boolean).sort((a, b) => a - b);
+}
+
+/**
+ * Whether a day lies wholly inside a long fast's goal: the goal in force that
+ * day is a long fast, the day has no window, and it starts less than the
+ * goal's hours after the last eating (or Begin fast) before it, with no
+ * pause between. Nothing eaten that day is checked by the caller.
+ */
+export function insideLongFast(key, { days, settings }, eating) {
+  const hours = longFastHours(key, settings);
+  if (!hours || hasWindow(days.get(key))) return false;
+  const start = dayStart(key);
+  let from = null;
+  for (const t of eating) { if (t < start) from = t; else break; }
+  if (from === null || start - from >= hours * HOUR) return false;
+  return !pausedBetween(days, addDays(dayKey(from), 1), key);
 }
 
 /**
@@ -322,6 +397,17 @@ export function lastBiteTs({ days, meals, outside }) {
   for (const m of meals) take(m.finishedAt || m.startedAt);
   for (const o of outside) take(o.at);
   return last;
+}
+
+/**
+ * A long fast still short of its goal: { hours, at } with at the moment it
+ * is reached, or null with no long fast set, no fast known, or the goal reached.
+ */
+export function longFastAhead(data) {
+  const hours = longFastHours(data.todayKey, data.settings);
+  const last = hours ? lastEatingTs(data) : null;
+  if (!last || data.nowTs >= last + hours * HOUR) return null;
+  return { hours, at: last + hours * HOUR };
 }
 
 /** Latest eating time on record (for time since last bite), or null. */

@@ -6,7 +6,7 @@ import { requestPersistence } from './db.js';
 import { h, fadeIn, fadeOut, updateLive } from './ui/dom.js';
 import { button, sliding } from './ui/components.js';
 import { MIN, HOME_ZONE, now, dayKey, isDayKey, fmtDayLong, sameClock, switchZone, zoneName } from './core/time.js';
-import { isFlexible, makeEvaluator, streaks, todayMode, trackingStart, windowMsFor } from './core/rules.js';
+import { makeEvaluator, noWindowAlerts, streaks, todayMode, trackingStart, windowMsFor } from './core/rules.js';
 import { buildIcs, icsTimes } from './core/ics.js';
 import { buildCsvFiles } from './core/csv.js';
 import { buildBackup, backupFileName, describeBackup, parseBackup } from './core/backup.js';
@@ -277,7 +277,7 @@ async function exportCsv() {
 async function addCalendar() {
   const ctx = context();
   const s = ctx.settings;
-  const flexible = isFlexible(ctx.todayKey, s);
+  const flexible = noWindowAlerts(ctx.todayKey, s);
   const fingerprint = icsTimes(s, { flexible });
   const sequence = s.icsTimes && s.icsTimes !== fingerprint ? (s.icsSequence || 0) + 1 : s.icsSequence || 0;
   const text = buildIcs(s, { nowTs: ctx.nowTs, todayKey: ctx.todayKey, sequence, flexible });

@@ -12,7 +12,7 @@ import { pausesSection } from './pause.js';
 import { goalSection } from './goal.js';
 import { choice } from './components.js';
 import { DEFAULT_CLIMB } from '../core/climb.js';
-import { isFlexible } from '../core/rules.js';
+import { isFlexible, noWindowAlerts } from '../core/rules.js';
 
 /** A time shown as a row; tapping it opens its wheel in a sheet, where each roll saves. */
 function timeSetting(label, key, ctx) {
@@ -126,7 +126,7 @@ function calendarStatus(ctx) {
     return h('p', { class: 'small gap-s', 'data-testid': 'ics-status' },
       'Your calendar alerts ring by Kuwait time, even when you travel. Add the new file so they follow your phone\'s clock, then delete the old Fast events: open one, tap Delete Event, then Delete All Future Events.');
   }
-  if (s.icsTimes !== icsTimes(s, { flexible: isFlexible(ctx.todayKey, s) })) {
+  if (s.icsTimes !== icsTimes(s, { flexible: noWindowAlerts(ctx.todayKey, s) })) {
     return h('p', { class: 'small gap-s', 'data-testid': 'ics-status' },
       'Your times changed since the last file. Add the new file, then delete the old Fast events: open one, tap Delete Event, then Delete All Future Events.');
   }

@@ -3,7 +3,7 @@
 import { h, live } from './dom.js';
 import { button } from './components.js';
 import { DAY, HOME_ZONE, addDays, dayKey, fmtDayLong, fmtDuration, fmtMinutes, fmtWhen, sameClock, zoneAt, zoneName } from '../core/time.js';
-import { isFlexible, isOpen, isWorkday, plannedStartMin } from '../core/rules.js';
+import { isFlexible, isOpen, isWorkday, longFastAhead, plannedStartMin } from '../core/rules.js';
 
 /** Margin note: a small scholar's note. */
 export function note(title, value) {
@@ -104,6 +104,9 @@ export function temptationsOfDay(ctx, key) {
 
 /** The next planned window after a day, as a sentence. */
 export function nextWindowLine(ctx, fromKey = ctx.todayKey) {
+  // On a long fast the next window waits for its goal.
+  const ahead = longFastAhead(ctx);
+  if (ahead) return `Your ${ahead.hours}-hour fast reaches its goal at ${fmtWhen(ahead.at, ctx.todayKey)}.`;
   const next = addDays(fromKey, 1);
   if (isFlexible(next, ctx.settings)) {
     const when = next === addDays(ctx.todayKey, 1) ? 'Tomorrow' : 'Today';

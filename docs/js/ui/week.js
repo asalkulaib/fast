@@ -176,7 +176,7 @@ function dayResult(d) {
   if (d.result === 'paused') return { text: 'Paused', ok: false };
   if (d.future) return { text: '', ok: false };
   switch (d.result) {
-    case 'success': return { text: d.state === 'noEating' ? 'No eating' : 'Success', ok: true };
+    case 'success': return { text: d.state === 'noEating' ? 'No eating' : d.state === 'fasted' ? 'Fasted' : 'Success', ok: true };
     case 'miss': return { text: 'Miss', ok: false };
     case 'pending': return { text: d.state === 'open' ? 'Open' : 'Today', ok: false };
     case 'unlogged': return { text: 'Not logged', ok: false };

@@ -18,7 +18,7 @@ const reasonText = (r, e) => ({ early: 'opened before 16:00', over: `over ${fmtD
 
 function resultLine(e) {
   switch (e.result) {
-    case 'success': return h('p', { class: 'gap-s' }, hl(e.state === 'noEating' ? 'Success: no eating.' : 'Success.'));
+    case 'success': return h('p', { class: 'gap-s' }, hl(e.state === 'noEating' ? 'Success: no eating.' : e.state === 'fasted' ? 'Success: a day of your long fast.' : 'Success.'));
     case 'miss': return h('p', { class: 'gap-s' }, `Miss: ${e.reasons.map((r) => reasonText(r, e)).join(', ')}.`);
     case 'pending': return h('p', { class: 'gap-s quiet' }, e.state === 'open' ? 'Window open.' : 'In progress.');
     case 'unlogged': return h('p', { class: 'gap-s quiet' }, 'Nothing logged yet.');

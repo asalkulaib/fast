@@ -352,14 +352,16 @@ function apply(ops) {
 // ---------- Goal ----------
 
 /**
- * Sets the eating-window goal (hours) from a day on. Earlier days keep the
- * goal they had. Resolves with { undo }.
+ * Sets the goal from a day on: the eating window (hours) and, for a long
+ * fast, its hours (24 to 72), kept for every fast. Earlier days keep the goal
+ * they had. Resolves with { undo }.
  */
-export async function setGoal(hours, fromKey) {
+export async function setGoal(hours, fromKey, fast = null) {
   const before = state.settings.goalChanges || [];
   const kept = before.filter((c) => c.from < fromKey);
-  const previous = kept.length ? kept[kept.length - 1].hours : DEFAULT_WINDOW_HOURS;
-  await setSettings({ goalChanges: previous === hours ? kept : [...kept, { from: fromKey, hours }] });
+  const previous = kept.length ? kept[kept.length - 1] : { hours: DEFAULT_WINDOW_HOURS };
+  const same = previous.hours === hours && (previous.fast || null) === (fast || null);
+  await setSettings({ goalChanges: same ? kept : [...kept, fast ? { from: fromKey, hours, fast } : { from: fromKey, hours }] });
   return { undo: () => setSettings({ goalChanges: before }) };
 }
 

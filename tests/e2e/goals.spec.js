@@ -68,3 +68,66 @@ test('the ring marks the fasting goal and says how far it is', async ({ page }) 
   await expect(page.getByTestId('goal-tick')).toHaveAttribute('data-hours', '16');
   await expect(page.getByTestId('goal-line')).toHaveText('Fasting goal of 16 h reached.');
 });
+
+test('custom by fasting: 17 hours leaves a 7-hour window', async ({ page }) => {
+  await openAt(page, '2026-09-27T10:00');
+  await tap(page, 'edit-goal');
+  const s = sheet(page, 'goal');
+  await choose(page, 'goal', 'custom');
+  await choose(page, 'goal-by', 'fast');
+  await setPick(page, 'goal-fast', 17);
+  await expect(page.getByTestId('flash')).toHaveText('Goal 17:7 from today.');
+  await expect(s.getByTestId('goal-text')).toHaveText('Eating window 7 hours, fasting 17 hours.');
+  expect((await settingsOf(page)).goalChanges).toEqual([{ from: '2026-09-27', hours: 7 }]);
+  // The wheels stay in step: the window wheel shows the same goal.
+  await choose(page, 'goal-by', 'window');
+  await expect(s.locator('[data-pick="goal-hours"] [data-part="option"]')).toHaveAttribute('aria-valuetext', '7 hours');
+});
+
+test('a long fast: 48 hours for every fast, a fasting day on Today, and a day wholly fasted counts as a success', async ({ page }) => {
+  // Last bite Saturday 21:00, on 18:6.
+  const lastNight = { days: [{ day: '2026-09-26', firstBite: ms('2026-09-26T16:00'), lastBite: ms('2026-09-26T21:00') }] };
+  await openAt(page, '2026-09-27T10:00');
+  await seed(page, { ...lastNight, settings: settings({ installedAt: ms('2026-09-26T08:00'), goalChanges: [{ from: '2026-09-26', hours: 6 }] }) });
+  await tap(page, 'edit-goal');
+  const s = sheet(page, 'goal');
+  await expect(s.locator('button[data-choice="goal"][data-value="6"]')).toHaveAttribute('aria-checked', 'true');
+  await choose(page, 'goal', 'custom');
+  await choose(page, 'goal-by', 'fast');
+  await setPick(page, 'goal-fast', 48);
+  await expect(page.getByTestId('flash')).toHaveText('Goal 48 h fast from today.');
+  await expect(s.getByTestId('goal-text')).toHaveText('Fasting 48 hours each time, with an eating window of 6 hours between. A day spent wholly fasting counts as a success.');
+  expect((await settingsOf(page)).goalChanges).toEqual([{ from: '2026-09-26', hours: 6 }, { from: '2026-09-27', hours: 6, fast: 48 }]);
+  await tap(page, 'close-sheet');
+
+  // Sunday is a fasting day: the goal comes on Monday at 21:00, off the 24-hour dial.
+  const before = page.locator('[data-block="before"]');
+  await expect(before.getByTestId('before-label')).toHaveText('Fasting day');
+  await expect(page.locator('[data-action="edit-goal"]')).toHaveAttribute('aria-label', '48 h goal, 21:00 tomorrow. Change');
+  await expect(page.getByTestId('long-fast-line')).toHaveText('Your 48-hour fast reaches its goal at 21:00 tomorrow.');
+  await expect(page.getByTestId('goal-tick')).toHaveCount(0);
+  await expect(page.getByTestId('ring-legend')).not.toContainText('Goal');
+  await expect(page.getByTestId('goal-line')).toHaveText('Fasting goal 48 h: 35 h to go.');
+
+  // Monday: Sunday counts as a success, and the day the goal comes is before the window again.
+  await openAt(page, '2026-09-28T10:00', '#week');
+  await expect(page.locator('.dayrow[data-day="2026-09-27"]')).toContainText('Fasted');
+  await page.locator('.tab[data-tab="today"]').click();
+  await expect(page.getByTestId('before-label')).toHaveText('Before the window');
+  await expect(page.getByTestId('long-fast-line')).toHaveText('Your 48-hour fast reaches its goal at 21:00.');
+  await expect(page.getByText('Nothing logged')).toHaveCount(0);
+  // Past the goal, the pill turns gold with the day it came.
+  await openAt(page, '2026-09-29T09:00');
+  await expect(page.locator('[data-action="edit-goal"]')).toHaveText('Reached 21:00 yesterday');
+});
+
+test('a long fast: after the window closes, Today says when the next fast reaches its goal', async ({ page }) => {
+  await openAt(page, '2026-09-27T21:00');
+  await seed(page, {
+    days: [{ day: '2026-09-27', firstBite: ms('2026-09-27T16:00'), lastBite: ms('2026-09-27T20:00') }],
+    settings: settings({ installedAt: ms('2026-09-26T08:00'), goalChanges: [{ from: '2026-09-26', hours: 6, fast: 36 }] }),
+  });
+  await expect(page.getByTestId('next-window')).toHaveText('Your 36-hour fast reaches its goal at 08:00 Tue 29 Sep.');
+  await expect(page.locator('[data-block="stages"]').getByTestId('goal-tick')).toHaveCount(0);
+  await expect(page.getByTestId('goal-line')).toHaveText('Fasting goal 36 h: 35 h to go.');
+});

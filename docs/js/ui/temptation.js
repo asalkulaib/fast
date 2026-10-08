@@ -5,8 +5,8 @@ import { h, live } from './dom.js';
 import { button, choice, scale, TRIGGER_OPTIONS } from './components.js';
 import { openSheet } from './sheet.js';
 import * as store from '../store.js';
-import { HOUR, MIN, at, fmtDuration, fmtMinutes, fmtTime, fmtTimer, minutesOfDay, now } from '../core/time.js';
-import { CUTOFF_MIN, cutoffApplies, isFlexible, isWorkday, lateNightDay, plannedStartMin } from '../core/rules.js';
+import { HOUR, MIN, at, fmtDuration, fmtMinutes, fmtTime, fmtTimer, fmtWhen, minutesOfDay, now } from '../core/time.js';
+import { CUTOFF_MIN, cutoffApplies, isFlexible, isWorkday, lateNightDay, longFastAhead, plannedStartMin } from '../core/rules.js';
 import { SUMMIT, climbers } from '../core/climb.js';
 import { energySplit } from '../core/review.js';
 import { showStartMealSheet } from './meal.js';
@@ -141,7 +141,10 @@ function gains(ctx, sit) {
   else if (sit.kind === 'late' && lastRes === 'success') out.push(`Last night stays a success. Your streak: ${days(streak)}.`);
   else if (streak > 0) out.push(`Your streak: ${days(streak)}, ${streak + 1} if today holds.`);
   else out.push('Today can start a new streak.');
-  if (waiting && isFlexible(today, ctx.settings)) {
+  const ahead = longFastAhead(ctx);
+  if (waiting && ahead) {
+    out.push(`Your ${ahead.hours}-hour fast reaches its goal at ${fmtWhen(ahead.at, today)}. Each hour you wait adds to it.`);
+  } else if (waiting && isFlexible(today, ctx.settings)) {
     out.push(`A ${Math.round(ctx.windowMsFor(today) / 3600000)}-hour window, whenever you choose. Each hour you wait adds to the fast.`);
   } else if (waiting) {
     const start = plannedStartMin(today, rec, ctx.settings);
@@ -210,7 +213,11 @@ function render(app, api, id) {
 
     case 'gain': {
       let lead;
-      if (sit.kind === 'before' && isFlexible(today, ctx.settings)) {
+      const ahead = longFastAhead(ctx);
+      if (sit.kind === 'before' && ahead) {
+        lead = h('p', { class: 'statement' }, `Your ${ahead.hours}-hour fast reaches its goal at ${fmtWhen(ahead.at, today)}. `,
+          live('span', {}, (ts) => `That is ${fmtDuration(Math.max(0, ahead.at - ts))} away.`));
+      } else if (sit.kind === 'before' && isFlexible(today, ctx.settings)) {
         lead = h('p', { class: 'statement' }, 'Your window opens when you choose. Every hour you wait adds to the fast.');
       } else if (sit.kind === 'before') {
         const plannedMin = plannedStartMin(today, todayRec, ctx.settings);

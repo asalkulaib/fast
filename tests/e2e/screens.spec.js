@@ -405,9 +405,27 @@ test('start screen, Begin fast and goals', async ({ page }) => {
   await choose(page, 'goal', 'custom');
   await setPick(page, 'goal-hours', 6);
   await shot(page, '63-goal-sheet');
+  await choose(page, 'goal-by', 'fast');
+  await setPick(page, 'goal-fast', 48);
+  await shot(page, '63b-goal-sheet-long-fast');
   await tap(page, 'close-sheet');
+  await page.locator('[data-block="before"]').scrollIntoViewIfNeeded();
+  await shot(page, '63c-today-long-fast');
   await page.locator('.tab[data-tab="more"]').click();
   await shot(page, '64-more-goal');
+});
+
+test('a long fast: the fasting day after the last bite, then the day of the goal', async ({ page }) => {
+  await openAt(page, '2026-09-27T10:00');
+  await seed(page, {
+    days: [{ day: '2026-09-26', firstBite: ms('2026-09-26T16:00'), lastBite: ms('2026-09-26T21:00') }],
+    settings: settings({ installedAt: ms('2026-09-26T08:00'), goalChanges: [{ from: '2026-09-26', hours: 6, fast: 48 }] }),
+  });
+  await shot(page, '64b-today-fasting-day');
+  await page.locator('[data-block="plan"]').scrollIntoViewIfNeeded();
+  await shot(page, '64c-today-fasting-day-plan');
+  await openAt(page, '2026-09-28T10:00', '#week');
+  await shot(page, '64d-week-fasted-day');
 });
 
 test('the Uhud climb and the fullness of the day', async ({ page }) => {

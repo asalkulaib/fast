@@ -10,6 +10,7 @@ import { button, choice, durationFigure, focusLine, hatch, key, legend } from '.
 import * as store from '../store.js';
 import { HOUR, addDays, fmtDayMonth, fmtDayShort, fmtDuration, fmtFigure, weekdayShort, keyParts } from '../core/time.js';
 import { dailySeries, hourScale, rollingAverage, summarize } from '../core/history.js';
+import { fastHoursFor } from '../core/rules.js';
 import { dunes } from './art.js';
 import { header } from './shared.js';
 
@@ -241,8 +242,8 @@ export function renderHistory(ctx, app) {
   const set = (values) => store.setSettings(values);
   const focus = FOCUS_KEYS.includes(app.ui.historyFocus) ? app.ui.historyFocus : null;
   const setFocus = (v) => { app.ui.historyFocus = v; app.refresh(); };
-  // The fasting goal each day had: the day less its eating window.
-  const goalMs = (day) => (24 * HOUR) - ctx.windowMsFor(day);
+  // The fasting goal each day had: a long fast, or the day less its eating window.
+  const goalMs = (day) => fastHoursFor(day, ctx.settings) * HOUR;
   const reachedGoal = (d) => p.metric === 'fast' && d && d.fastMs != null && !isMiss(d.day) && d.fastMs >= goalMs(d.day);
 
   // The chart's own switches, slim, on one line at the top of its card.

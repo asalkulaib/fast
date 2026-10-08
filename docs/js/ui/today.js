@@ -4,10 +4,10 @@ import { h, s, live } from './dom.js';
 import { button, choice, closeButton, durationFigure, figureParts, hatch, key, legend, scale, timeField, TRAINING_OPTIONS, STOP_TEXT } from './components.js';
 import * as store from '../store.js';
 import {
-  HOUR, MIN, addDays, fmtCountdown, fmtDayLong, fmtDayShort, fmtDuration, fmtMinutes, fmtTime, fmtWhen, isWorkweekday, minutesOfDay, now,
+  HOUR, MIN, addDays, dayStart, fmtCountdown, fmtDayLong, fmtDayShort, fmtDuration, fmtMinutes, fmtTime, fmtWhen, isWorkweekday, minutesOfDay, now,
 } from '../core/time.js';
 import {
-  CUTOFF_MIN, GRACE_MS, canReopen, cutoffApplies, goalLabel, isFlexible, isWorkday, lastEatingSource, lastEatingTs, lateNightDay, plannedStartMin, timeOnOrAfter, windowPhase,
+  CUTOFF_MIN, GRACE_MS, canReopen, cutoffApplies, fastHoursFor, goalLabelFor, isFlexible, isWorkday, lastEatingSource, lastEatingTs, lateNightDay, longFastAhead, plannedStartMin, timeOnOrAfter, windowPhase,
 } from '../core/rules.js';
 import { dailySeries } from '../core/history.js';
 import { dunes } from './art.js';
@@ -39,8 +39,8 @@ export function signature(ctx) {
   return parts.join('|');
 }
 
-/** The fasting goal in hours: the day less today's eating window. */
-const goalHoursOf = (ctx, key = ctx.todayKey) => 24 - Math.round(ctx.windowMsFor(key) / HOUR);
+/** The fasting goal in hours: a long fast, or the day less today's eating window. */
+const goalHoursOf = (ctx, key = ctx.todayKey) => fastHoursFor(key, ctx.settings);
 
 const fasting = (mode) => mode === 'before' || mode === 'closed' || mode === 'noEating';
 
@@ -85,24 +85,29 @@ function beforeBlock(ctx, app) {
   const lastSrc = lastEatingSource(ctx);
   const last = lastSrc ? lastSrc.ts : null;
   const late = lateNightDay(ctx);
+  // A long fast short of its goal: its goal leads the plan, and a day it fills is a fasting day.
+  const ahead = longFastAhead(ctx);
+  const fastingDay = !!ahead && ahead.at >= dayStart(addDays(key, 1));
   // On feasting hours there is no planned time: the window opens when you choose.
-  const plannedLine = (cls) => (isFlexible(key, ctx.settings)
-    ? h('p', { class: cls, 'data-testid': 'flexible-line' }, `Your ${Math.round(ctx.windowMsFor(key) / HOUR)}-hour window opens when you choose.`)
-    : h('p', { class: cls }, `Window planned for ${fmtMinutes(planned)}.`));
+  const plannedLine = (cls) => (ahead
+    ? h('p', { class: cls, 'data-testid': 'long-fast-line' }, `Your ${ahead.hours}-hour fast reaches its goal at ${fmtWhen(ahead.at, key)}.`)
+    : isFlexible(key, ctx.settings)
+      ? h('p', { class: cls, 'data-testid': 'flexible-line' }, `Your ${Math.round(ctx.windowMsFor(key) / HOUR)}-hour window opens when you choose.`)
+      : h('p', { class: cls }, `Window planned for ${fmtMinutes(planned)}.`));
   const startMeal = button('Start a meal', () => showStartMealSheet(app), { big: true, block: true, name: 'start-meal' });
   // The fast in one card: the dial, when the fast began and when it reaches
   // its goal, then the way in, with the 16:00 warning just above it. The
   // rest of the plan follows on its own panel.
   const card = h('section', { class: 'section strong', 'data-block': 'before' },
     last
-      ? h('div', { class: 'label' }, 'Before the window')
+      ? h('div', { class: 'label', 'data-testid': 'before-label' }, fastingDay ? 'Fasting day' : 'Before the window')
       // Before any bite on record: a plain title, and Begin fast beside Start a meal.
       : h('div', { class: 'row' },
         h('div', { class: 'main' },
           h('div', { class: 'label' }, 'Before the window'),
           h('h1', { class: 'display gap-s' }, 'Fasting'),
           plannedLine('gap')),
-        h('div', { class: 'margin' }, tapNote('Goal', goalLabel(ctx.windowMsFor(key)), () => showGoalSheet(app), 'edit-goal'))),
+        h('div', { class: 'margin' }, tapNote('Goal', goalLabelFor(key, ctx.settings), () => showGoalSheet(app), 'edit-goal'))),
     last ? ringHero(ctx, last, fastTimes(ctx, app, lastSrc)) : null,
     last ? null : h('p', { class: 'quiet small gap-s', 'data-testid': 'begin-fast-hint' }, 'Already fasting? Tap Begin fast and set when it began, so none of it is lost.'),
     workdayEarly ? h('p', { class: 'statement gap-l', 'data-testid': 'firm-reminder' }, 'Opening before 16:00 makes today a miss.') : null,
@@ -153,7 +158,7 @@ function fastTimes(ctx, app, src) {
     src.kind === 'fast'
       ? timePill('Fast began', fmtWhen(src.ts, key), beginFastFor(app), 'edit-fast-start')
       : timePill('Last bite', fmtWhen(src.ts, key), () => editLastBite(app, src), 'edit-last-bite'),
-    timePill(`${goalHours} h goal`, reached ? `Reached ${fmtTime(goalAt)}` : fmtWhen(goalAt, key), () => showGoalSheet(app), 'edit-goal', { reached }));
+    timePill(`${goalHours} h goal`, reached ? `Reached ${fmtWhen(goalAt, key)}` : fmtWhen(goalAt, key), () => showGoalSheet(app), 'edit-goal', { reached }));
 }
 
 /**

@@ -38,6 +38,7 @@ How to work on Fast, and what the owner has decided. README.md covers what the a
 - Every choice, every rating and the bottom tabs are sliding tracks with an ink pill (no liquid glass). The tab bar and the message bar float with nothing behind them.
 - Big figures: large digits with small units (15h 10m).
 - Anything tappable must look tappable (a pill or an outline), never plain text.
+- Custom sets the goal by eating window or by fasting (`goal-by`). Fasting 12 to 23 h sets the window to the rest of the day; 24 to 72 h is a long fast the owner chose to keep for every fast (`goalChanges` entry `{ from, hours, fast }`): eating days keep their window and its rules, a past day wholly inside the fast's goal with nothing eaten is a success (state `fasted`, `insideLongFast` in `docs/js/core/rules.js`), breaking it early is not a miss, and the dial shows no goal tick past 24 h.
 - Day fullness is the worst meal rating, and the gold dot in the week rows means left wanting only. The owner confirmed this twice: don't propose alternatives or extra marks.
 - Just now on Last bite always moves the last bite to this minute, even when that makes the day a miss.
 - Alarms start one kind of timer only: the 20-minute fullness check, when a meal is finished, the first meal of the day included. The owner had the timer for the window closing removed: starting a meal starts no timer.

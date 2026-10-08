@@ -3,7 +3,7 @@
 // column a single fact, so a spreadsheet can sort, filter and chart it.
 
 import { HOUR, MIN, addDays, at, dayKey, fmtDuration, fmtMinutes, fmtTime, minutesOfDay, weekdayName, zoneAt, zoneName } from './time.js';
-import { CUTOFF_MIN, GRACE_MS, isFlexible, isWorkday, makeEvaluator, plannedStartMin } from './rules.js';
+import { CUTOFF_MIN, GRACE_MS, fastHoursFor, isFlexible, isWorkday, makeEvaluator, plannedStartMin } from './rules.js';
 import { FULLNESS_WORD, dayFullness, mealsByDay } from './fullness.js';
 import { dailySeries } from './history.js';
 import { typeOfName } from './meal-types.js';
@@ -76,12 +76,12 @@ export function buildCsvFiles(data, { nowTs, todayKey, startKey }) {
     windowKeys.map((k) => {
       const rec = data.days.get(k);
       const e = evaluate(k);
-      let result = e.state === 'open' ? 'open' : e.state === 'noEating' && e.result === 'success' ? 'no eating' : e.result;
+      let result = e.state === 'open' ? 'open' : e.state === 'noEating' && e.result === 'success' ? 'no eating' : e.state === 'fasted' ? 'fasted' : e.result;
       if (Object.hasOwn(RESULT_TEXT, result)) result = RESULT_TEXT[result];
       if (e.result === 'paused' && typeof e.paused === 'string') result = `paused (${e.paused})`;
       const flexible = isFlexible(k, data.settings);
       const fastMs = fastOf.get(k) ?? null;
-      const fastGoalMs = 24 * HOUR - e.windowMs;
+      const fastGoalMs = fastHoursFor(k, data.settings) * HOUR;
       return [
         k, weekdayName(k), dayType(k, rec),
         flexible ? 'feasting hours' : 'planned start',

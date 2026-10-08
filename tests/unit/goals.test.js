@@ -24,6 +24,62 @@ test('the eating-window goal: 4 hours unless changed, and a change applies from 
   assert.equal(rules.goalLabel(H), '23:1');
 });
 
+test('a fasting goal: 12 to 23 hours is the rest of the day; 24 to 72 hours is a long fast that keeps the window', () => {
+  const settings = { goalChanges: [{ from: '2026-09-22', hours: 6 }, { from: '2026-09-25', hours: 6, fast: 48 }] };
+  assert.equal(rules.fastHoursFor('2026-09-21', settings), 20);
+  assert.equal(rules.fastHoursFor('2026-09-22', settings), 18);
+  assert.equal(rules.longFastHours('2026-09-22', settings), null);
+  assert.equal(rules.fastHoursFor('2026-09-26', settings), 48);
+  assert.equal(rules.longFastHours('2026-09-26', settings), 48);
+  assert.equal(rules.windowMsFor('2026-09-26', settings), 6 * H); // each eating day keeps its window
+  assert.equal(rules.goalLabelFor('2026-09-22', settings), '18:6');
+  assert.equal(rules.goalLabelFor('2026-09-26', settings), '48 h fast');
+  assert.equal(rules.noWindowAlerts('2026-09-22', settings), false);
+  assert.equal(rules.noWindowAlerts('2026-09-26', settings), true);
+});
+
+test('a long fast: a day spent wholly inside its goal is a success; past the goal it is not logged', () => {
+  const settings = { goalChanges: [{ from: '2026-09-20', hours: 6, fast: 48 }] };
+  // Last bite Sat 21:00; the goal is reached Mon 21:00. Sunday is wholly inside it.
+  const d = days(win('2026-09-26', '16:00', '21:00'));
+  const at = (now, todayKey) => rules.makeEvaluator({ days: d, outside: [], nowTs: T(now), todayKey, startKey: '2026-09-26', settings });
+  const mon = at('2026-09-28T10:00', '2026-09-28');
+  assert.equal(mon('2026-09-27').result, 'success');
+  assert.equal(mon('2026-09-27').state, 'fasted');
+  assert.equal(mon('2026-09-28').result, 'pending'); // today waits
+  // Fasting on past the goal: Monday began inside it, Tuesday did not.
+  const wed = at('2026-09-30T10:00', '2026-09-30');
+  assert.equal(wed('2026-09-28').state, 'fasted');
+  assert.equal(wed('2026-09-29').result, 'unlogged');
+  // Eating outside on a fasted day is still a miss.
+  const slip = rules.makeEvaluator({ days: d, outside: [{ day: '2026-09-27', at: T('2026-09-27T13:00') }], nowTs: T('2026-09-28T10:00'), todayKey: '2026-09-28', startKey: '2026-09-26', settings });
+  assert.equal(slip('2026-09-27').result, 'miss');
+  // A pause in between makes the fast unknown.
+  const paused = days(win('2026-09-26', '16:00', '21:00'), { day: '2026-09-27', paused: 'travel' });
+  const p = rules.makeEvaluator({ days: paused, outside: [], nowTs: T('2026-09-29T10:00'), todayKey: '2026-09-29', startKey: '2026-09-26', settings });
+  assert.equal(p('2026-09-28').result, 'unlogged');
+  // On a daily goal, the same day is not logged.
+  const daily = rules.makeEvaluator({ days: d, outside: [], nowTs: T('2026-09-28T10:00'), todayKey: '2026-09-28', startKey: '2026-09-26', settings: { goalChanges: [{ from: '2026-09-20', hours: 6 }] } });
+  assert.equal(daily('2026-09-27').result, 'unlogged');
+  // Eating days keep the window rules: breaking the fast early is no miss, a long window is.
+  const ate = days(win('2026-09-26', '16:00', '21:00'), win('2026-09-27', '17:00', '20:00'), win('2026-09-29', '16:00', '23:00'));
+  const e = rules.makeEvaluator({ days: ate, outside: [], nowTs: T('2026-09-30T10:00'), todayKey: '2026-09-30', startKey: '2026-09-26', settings });
+  assert.equal(e('2026-09-27').result, 'success');
+  assert.equal(e('2026-09-28').state, 'fasted');
+  assert.equal(e('2026-09-29').result, 'miss');
+});
+
+test('a long fast still short of its goal, from the last bite or Begin fast', () => {
+  const settings = { goalChanges: [{ from: '2026-09-20', hours: 6, fast: 36 }] };
+  const data = (nowTs, d) => ({ days: d, meals: [], outside: [], todayKey: '2026-09-27', nowTs: T(nowTs), settings });
+  const d = days(win('2026-09-26', '16:00', '21:00'));
+  assert.deepEqual(rules.longFastAhead(data('2026-09-27T12:00', d)), { hours: 36, at: T('2026-09-28T09:00') });
+  assert.equal(rules.longFastAhead(data('2026-09-28T09:00', d)), null);
+  const begun = days({ day: '2026-09-26', fastFrom: T('2026-09-26T22:00') });
+  assert.equal(rules.longFastAhead(data('2026-09-27T12:00', begun)).at, T('2026-09-28T10:00'));
+  assert.equal(rules.longFastAhead({ ...data('2026-09-27T12:00', d), settings: {} }), null);
+});
+
 test('a day is judged by the goal it had: 7 h passes on 16:8, not on 20:4', () => {
   const d = days(win('2026-09-21', '16:00', '23:00'), win('2026-09-22', '16:00', '23:00'), win('2026-09-23', '16:00', '00:30'));
   d.set('2026-09-23', { ...d.get('2026-09-23'), lastBite: T('2026-09-24T00:30') });
