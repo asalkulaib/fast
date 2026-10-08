@@ -85,7 +85,7 @@ test('legends name every colour: week strip, ring, Uhud and weight', async ({ pa
   await expect(items(page, 'uhud-legend')).toHaveText(['Fast trail walked', 'Fullness trail walked', 'Trail still ahead', 'Faded figures: past summits']);
   await tab(page, 'history').click();
   await choose(page, 'history-metric', 'weight');
-  await expect(items(page, 'weight-legend')).toHaveText(['Weekly average', 'Latest week']);
+  await expect(items(page, 'weight-legend')).toHaveText(['7-day average', 'Latest']);
 });
 
 test('Weight lives in History: the third view, and back to Fast', async ({ page }) => {

@@ -195,9 +195,7 @@ export function renderWeek(ctx, app, weekKey) {
       stat('7-day average', `${one(r.weight.current.avg)} kg`, 'weight-avg'),
       stat('Change from last week', r.weight.change != null ? `${signed(r.weight.change)} kg` : 'needs last week', 'weight-change'),
     ]
-    : [h('p', { class: 'quiet small' }, r.weight.current.n
-      ? 'Fewer than 3 weigh-ins this week, so no average yet.'
-      : 'No weigh-ins imported for this week.')];
+    : [h('p', { class: 'quiet small' }, 'No weigh-ins imported for this week.')];
 
   const t = r.temptations;
   return h('div', { class: 'week', 'data-week': start },

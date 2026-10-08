@@ -1,10 +1,11 @@
 // Weight import and averages. Pure functions only.
-// Daily values are never displayed: the UI only receives counts, averages
-// over at least MIN_WEIGH_INS entries, and changes between such averages.
+// The screens show 7-day averages and changes between them. Every weigh-in
+// counts, a single one included: the owner chose that over hiding weeks
+// with few weigh-ins, so nothing goes stale.
 
 import { addDays, isDayKey, weekStart } from './time.js';
 
-export const MIN_WEIGH_INS = 3;
+export const MIN_WEIGH_INS = 1;
 // Plausible range for this app's single adult user. The upper bound also
 // rejects most readings accidentally taken in pounds.
 export const MIN_KG = 30;
@@ -131,7 +132,7 @@ function mean(values) {
   return values.reduce((a, b) => a + b, 0) / values.length;
 }
 
-/** Average over an inclusive day range; null below the privacy floor. */
+/** Average over an inclusive day range; null with no weigh-in in it. */
 export function averageBetween(weights, fromKey, toKey) {
   const values = [];
   for (const [date, kg] of weights) if (date >= fromKey && date <= toKey) values.push(kg);
@@ -158,7 +159,37 @@ export function rollingSummary(weights) {
   return { end, current, previous, change };
 }
 
-/** Averages per Sunday-to-Saturday week, only weeks at or above the floor. */
+/**
+ * The 7-day average on each day with a weigh-in: the weigh-ins in the 7 days
+ * up to and including that day, a single one included. [{ date, avg, n }]
+ * oldest first; the last is rollingSummary's figure.
+ */
+export function rollingSeries(weights) {
+  const out = [];
+  for (const date of [...weights.keys()].sort()) {
+    const a = averageBetween(weights, addDays(date, -6), date);
+    if (a.avg != null) out.push({ date, avg: a.avg, n: a.n });
+  }
+  return out;
+}
+
+/** The time frames the weight chart offers. */
+export const WEIGHT_RANGES = ['1m', '3m', '6m', 'ytd', 'all'];
+
+/** The first day a time frame covers, ending today; null for all of it. */
+export function rangeStart(range, todayKey) {
+  const [y, m, d] = todayKey.split('-').map(Number);
+  if (range === 'ytd') return `${y}-01-01`;
+  const months = { '1m': 1, '3m': 3, '6m': 6 }[range];
+  if (!months) return null;
+  const total = y * 12 + (m - 1) - months;
+  const yy = Math.floor(total / 12);
+  const mm = (total % 12) + 1;
+  const last = new Date(Date.UTC(yy, mm, 0)).getUTCDate();
+  return `${yy}-${String(mm).padStart(2, '0')}-${String(Math.min(d, last)).padStart(2, '0')}`;
+}
+
+/** Averages per Sunday-to-Saturday week with a weigh-in. */
 export function weeklyAverages(weights) {
   const groups = new Map();
   for (const [date, kg] of weights) {

@@ -123,7 +123,9 @@ Autophagy is described as uncertain instead of being given an hour: the evidence
 
 ## History
 
-History has three views: Fast, Feast and Weight. Weight opens the weight averages and import (see below). Fast and Feast chart, day by day, either your fasts or your eating windows, as bars or a line, over 7, 30 or 90 days. It is one card: those switches on one slim line, then the average as a big figure with the dates it covers, then the chart, so the chart is on the first screen. Over 7 days each bar carries its hours. A day's fast runs from your last bite before it to that day's first bite. Fasts that reached your fasting goal are gold, and the rest rock brown. Missed days show in clay stripes, even after a long fast; the selected day is solid ink. A solid line shows the 7-day trend and a dashed line the average. A legend names every mark: goal reached, short of the goal (or hours in the window), miss, selected day, trend, average and paused. Paused days are shaded and left out. Tap a day to read its value and trend, then Open this day to edit it. Show as a table lists every value. Fast remembers your choices.
+History has three views: Fast, Feast and Weight. Weight opens your 7-day weight average, its chart and the import (see below). Fast and Feast chart, day by day, either your fasts or your eating windows, as bars or a line, over 7, 30 or 90 days. It is one card: those switches on one slim line, then the average as a big figure with the dates it covers, then the chart, so the chart is on the first screen. Over 7 days each bar carries its hours. A day's fast runs from your last bite before it to that day's first bite. Fasts that reached your fasting goal are gold, and the rest rock brown. Missed days show in clay stripes, even after a long fast; the selected day is solid ink. A solid line shows the 7-day trend and a dashed line the average. A legend names every mark: goal reached, short of the goal (or hours in the window), miss, selected day, trend, average and paused. Paused days are shaded and left out. Tap a day to read its value and trend, then Open this day to edit it. Show as a table lists every value. Fast remembers your choices.
+
+Weight shows your 7-day average as a big figure: the average of every weigh-in in the 7 days up to your latest, a single one included, so nothing goes stale. Beside it, the day it runs up to and how many weigh-ins it holds; under it, the change from the 7 days before. Over time charts that same 7-day average on each day you weighed in, over 1 month, 3 months, 6 months, This year or All; Fast remembers your choice. A week with no weigh-in breaks the line, and a note under the chart says what each point is. Touch the chart to read a day, or Show as a table to list every point.
 
 ## Pauses
 
@@ -131,7 +133,7 @@ For travel, illness, holidays, leave or Ramadan. On Today, Pause today pauses th
 
 ## Weight Shortcut
 
-Your scale syncs each weigh-in to Apple Health. This Shortcut reads the last 14 days, scrambles them and copies them to the clipboard. It never shows a number, and Fast shows only 7-day and weekly averages.
+Your scale syncs each weigh-in to Apple Health. This Shortcut reads the last 14 days, scrambles them and copies them to the clipboard. The Shortcut never shows a number. Fast shows your 7-day average: the average of every weigh-in in the 7 days up to your latest, a single one included, so nothing goes stale.
 
 Build it once in the Shortcuts app:
 

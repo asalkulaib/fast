@@ -1,10 +1,12 @@
-// Weekly weight averages: one series, a recessive rock line with the latest
-// week emphasised in gold and labelled. Solid hairline grid. A touch readout
-// and a table view carry every value, so the chart never gates a number.
+// The 7-day weight average over time: one series, a recessive rock line
+// with a mark on each day you weighed in and the latest emphasised and
+// labelled. Days sit at their place in time, and the line breaks where a
+// week went without a figure. Solid hairline grid. A touch readout and a
+// table view carry every value, so the chart never gates a number.
 
 import { h, s } from './dom.js';
 import { legend } from './components.js';
-import { fmtDayMonth } from '../core/time.js';
+import { addDays, daysBetween, fmtDayMonth, fmtDayShort, fmtMonthYear } from '../core/time.js';
 
 const W = 340;
 const H = 190;
@@ -20,10 +22,16 @@ function niceStep(range) {
   return steps.find((st) => range / st <= 4) || 10;
 }
 
-/** points: [{ week, avg, n }] oldest first. */
-export function weightChart(points) {
-  const data = points.slice(-12);
-  const readout = h('p', { class: 'small quiet chart-readout', 'aria-live': 'polite' }, 'Touch the chart to read a week.');
+/** More marks than this, and only the latest keeps its mark: the line carries the rest. */
+const MAX_MARKS = 45;
+
+/**
+ * points: [{ date, avg, n }] oldest first. from and to: the days the axis
+ * spans (the time frame chosen, up to today).
+ */
+export function weightChart(points, { from, to }) {
+  const data = points;
+  const readout = h('p', { class: 'small quiet chart-readout', 'aria-live': 'polite' }, 'Touch the chart to read a day.');
   if (!data.length) return h('div');
 
   let lo = Math.min(...data.map((p) => p.avg));
@@ -35,7 +43,8 @@ export function weightChart(points) {
 
   const plotW = W - PAD.left - PAD.right;
   const plotH = H - PAD.top - PAD.bottom;
-  const x = (i) => PAD.left + (data.length === 1 ? plotW / 2 : (i / (data.length - 1)) * plotW);
+  const span = Math.max(0, daysBetween(from, to));
+  const x = (date) => PAD.left + (span === 0 ? plotW / 2 : (daysBetween(from, date) / span) * plotW);
   const y = (v) => PAD.top + (1 - (v - lo) / (hi - lo)) * plotH;
 
   const grid = [];
@@ -45,50 +54,60 @@ export function weightChart(points) {
     grid.push(s('text', { x: PAD.left - 8, y: Number(yy) + 4, 'text-anchor': 'end' }, v.toFixed(step < 1 ? 1 : 0)));
   }
 
-  const labelIdx = data.length <= 3 ? data.map((_, i) => i) : [0, Math.floor((data.length - 1) / 2), data.length - 1];
-  const xLabels = [...new Set(labelIdx)].map((i) => s('text', { x: x(i), y: H - 8, 'text-anchor': i === 0 && data.length > 1 ? 'start' : i === data.length - 1 && data.length > 1 ? 'end' : 'middle' }, fmtDayMonth(data[i].week)));
+  // The axis: its first day, its middle and today; months and years past most of a year.
+  const label = span > 330 ? fmtMonthYear : fmtDayMonth;
+  const ticks = [[from, 'start'], span > 1 ? [addDays(from, Math.floor(span / 2)), 'middle'] : null, span > 0 ? [to, 'end'] : null].filter(Boolean);
+  const xLabels = ticks.map(([date, anchor]) => s('text', { x: x(date).toFixed(1), y: H - 8, 'text-anchor': span === 0 ? 'middle' : anchor }, label(date)));
 
-  const path = data.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(p.avg).toFixed(1)}`).join(' ');
+  // One stroke per run of days no more than a week apart.
+  const runs = [];
+  data.forEach((p, i) => {
+    if (!i || daysBetween(data[i - 1].date, p.date) > 7) runs.push([]);
+    runs[runs.length - 1].push(p);
+  });
+  const path = runs.filter((r) => r.length > 1)
+    .map((r) => r.map((p, i) => `${i ? 'L' : 'M'}${x(p.date).toFixed(1)} ${y(p.avg).toFixed(1)}`).join(' ')).join(' ');
   const last = data[data.length - 1];
-  const lx = x(data.length - 1);
+  const lx = x(last.date);
   const ly = y(last.avg);
 
-  const marker = (i, p, latest) => {
-    const size = latest ? 10 : 8;
+  const marker = (p, latest) => {
+    const size = latest ? 10 : 7;
     return s('rect', {
-      x: (x(i) - size / 2).toFixed(1), y: (y(p.avg) - size / 2).toFixed(1), width: size, height: size,
-      fill: latest ? LATEST : LINE, stroke: SURFACE, 'stroke-width': latest ? '1.5' : '2', class: latest ? 'latest' : null,
+      x: (x(p.date) - size / 2).toFixed(1), y: (y(p.avg) - size / 2).toFixed(1), width: size, height: size,
+      fill: latest ? LATEST : LINE, stroke: SURFACE, 'stroke-width': '1.5', class: latest ? 'latest' : null,
     });
   };
+  const marks = data.length > MAX_MARKS ? [marker(last, true)] : data.map((p, i) => marker(p, i === data.length - 1));
 
   const cross = s('line', { y1: PAD.top, y2: H - PAD.bottom, stroke: 'rgba(42, 28, 16, 0.5)', 'stroke-width': '1', visibility: 'hidden' });
   const svg = s('svg', {
     class: 'chart', viewBox: `0 0 ${W} ${H}`, role: 'img', tabindex: '0',
-    'aria-label': `Weekly weight averages, ${data.length} ${data.length === 1 ? 'week' : 'weeks'}. Latest ${last.avg.toFixed(1)} kg, week of ${fmtDayMonth(last.week)}.`,
+    'aria-label': `7-day weight average on ${data.length} ${data.length === 1 ? 'day' : 'days'} from ${fmtDayShort(from)} to ${fmtDayShort(to)}. Latest ${last.avg.toFixed(1)} kg on ${fmtDayShort(last.date)}.`,
   },
     ...grid,
     ...xLabels,
-    data.length > 1 ? s('path', { d: path, fill: 'none', stroke: LINE, 'stroke-width': '2', 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }) : null,
+    path ? s('path', { d: path, fill: 'none', stroke: LINE, 'stroke-width': '2', 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }) : null,
     cross,
-    ...data.map((p, i) => marker(i, p, i === data.length - 1)),
+    ...marks,
     s('text', { x: lx + 9, y: ly + 4, class: 'chart-end', fill: INK }, last.avg.toFixed(1)),
   );
 
-  // Touch and keyboard readout: snaps to the nearest week.
+  // Touch and keyboard readout: snaps to the nearest day with a figure.
   let active = data.length - 1;
   const show = (i) => {
     active = Math.max(0, Math.min(data.length - 1, i));
     const p = data[active];
-    cross.setAttribute('x1', x(active));
-    cross.setAttribute('x2', x(active));
+    cross.setAttribute('x1', x(p.date));
+    cross.setAttribute('x2', x(p.date));
     cross.setAttribute('visibility', 'visible');
-    readout.textContent = `Week of ${fmtDayMonth(p.week)}: ${p.avg.toFixed(1)} kg average of ${p.n} weigh-ins.`;
+    readout.textContent = `${fmtDayShort(p.date)}: ${p.avg.toFixed(1)} kg, the average of ${p.n} weigh-ins in the 7 days to then.`;
   };
   const nearest = (evt) => {
     const box = svg.getBoundingClientRect();
     const px = ((evt.clientX - box.left) / box.width) * W;
     let best = 0;
-    data.forEach((_, i) => { if (Math.abs(x(i) - px) < Math.abs(x(best) - px)) best = i; });
+    data.forEach((p, i) => { if (Math.abs(x(p.date) - px) < Math.abs(x(data[best].date) - px)) best = i; });
     return best;
   };
   svg.addEventListener('pointerdown', (e) => show(nearest(e)));
@@ -100,13 +119,13 @@ export function weightChart(points) {
   });
 
   return h('div', { class: 'chart-wrap' }, svg,
-    legend([['mark', 'Weekly average'], ['pick', 'Latest week']], 'weight-legend'), readout);
+    legend([['rock-line', '7-day average'], ['pick', 'Latest']], 'weight-legend'), readout);
 }
 
-/** Table view of the same weekly averages. */
+/** Table view of the same 7-day averages, newest first. */
 export function weightTable(points) {
-  return h('table', { class: 'table' },
-    h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, 'Week of'), h('th', { scope: 'col' }, 'Average'), h('th', { scope: 'col' }, 'Weigh-ins'))),
+  return h('table', { class: 'table', 'data-testid': 'weight-table' },
+    h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, 'Day'), h('th', { scope: 'col' }, '7-day average'), h('th', { scope: 'col' }, 'Weigh-ins'))),
     h('tbody', {}, [...points].reverse().map((p) => h('tr', {},
-      h('td', {}, fmtDayMonth(p.week)), h('td', {}, `${p.avg.toFixed(1)} kg`), h('td', {}, String(p.n))))));
+      h('td', {}, fmtDayShort(p.date)), h('td', {}, `${p.avg.toFixed(1)} kg`), h('td', {}, String(p.n))))));
 }

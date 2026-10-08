@@ -73,11 +73,13 @@ test('diff counts new, changed and unchanged dates', () => {
   assert.deepEqual(w.diffEntries(existing, incoming), { added: 1, updated: 1, unchanged: 1 });
 });
 
-test('averages respect the three weigh-in floor', () => {
-  const weights = new Map([['2026-09-20', 100], ['2026-09-21', 101]]);
-  assert.deepEqual(w.averageBetween(weights, '2026-09-19', '2026-09-25'), { avg: null, n: 2 });
-  weights.set('2026-09-22', 102);
-  assert.deepEqual(w.averageBetween(weights, '2026-09-19', '2026-09-25'), { avg: 101, n: 3 });
+test('every weigh-in counts: one gives itself, two their average, none no figure', () => {
+  const weights = new Map([['2026-09-20', 100]]);
+  assert.deepEqual(w.averageBetween(weights, '2026-09-19', '2026-09-25'), { avg: 100, n: 1 });
+  weights.set('2026-09-21', 101);
+  assert.deepEqual(w.averageBetween(weights, '2026-09-19', '2026-09-25'), { avg: 100.5, n: 2 });
+  assert.deepEqual(w.averageBetween(weights, '2026-09-26', '2026-10-02'), { avg: null, n: 0 });
+  assert.equal(w.MIN_WEIGH_INS, 1);
 });
 
 test('rolling 7-day average ends on the latest weigh-in and compares with the 7 days before', () => {
@@ -93,11 +95,12 @@ test('rolling 7-day average ends on the latest weigh-in and compares with the 7 
 
 test('weekly averages group Sunday to Saturday', () => {
   const weights = new Map([
-    ['2026-09-19', 105], // Saturday, week of 13 Sep (only one entry: hidden)
+    ['2026-09-19', 105], // Saturday, week of 13 Sep: one entry still counts
     ['2026-09-20', 104], ['2026-09-22', 103], ['2026-09-26', 102], // week of 20 Sep
     ['2026-09-27', 101], ['2026-09-28', 101], ['2026-09-29', 101], // week of 27 Sep
   ]);
   assert.deepEqual(w.weeklyAverages(weights), [
+    { week: '2026-09-13', avg: 105, n: 1 },
     { week: '2026-09-20', avg: 103, n: 3 },
     { week: '2026-09-27', avg: 101, n: 3 },
   ]);
@@ -105,4 +108,34 @@ test('weekly averages group Sunday to Saturday', () => {
   assert.equal(s.current.avg, 101);
   assert.equal(s.previous.avg, 103);
   assert.equal(s.change, -2);
+});
+
+test('the 7-day average on each weigh-in day, a single weigh-in included', () => {
+  const weights = new Map([
+    ['2026-08-20', 104], ['2026-08-22', 103], ['2026-08-26', 102], ['2026-08-27', 101],
+    ['2026-10-05', 100], ['2026-10-06', 99], ['2026-10-07', 98],
+  ]);
+  assert.deepEqual(w.rollingSeries(weights), [
+    { date: '2026-08-20', avg: 104, n: 1 },
+    { date: '2026-08-22', avg: 103.5, n: 2 },
+    { date: '2026-08-26', avg: 103, n: 3 },
+    { date: '2026-08-27', avg: 102, n: 3 },
+    { date: '2026-10-05', avg: 100, n: 1 },
+    { date: '2026-10-06', avg: 99.5, n: 2 },
+    { date: '2026-10-07', avg: 99, n: 3 },
+  ]);
+  // Its last point is the figure at the top of the Weight screen.
+  const s = w.rollingSummary(weights);
+  assert.equal(s.current.avg, 99);
+  assert.deepEqual(w.rollingSeries(new Map()), []);
+});
+
+test('time frames for the weight chart end today', () => {
+  assert.equal(w.rangeStart('1m', '2026-10-08'), '2026-09-08');
+  assert.equal(w.rangeStart('1m', '2026-03-31'), '2026-02-28'); // no 31 February
+  assert.equal(w.rangeStart('3m', '2026-01-15'), '2025-10-15'); // back across the year
+  assert.equal(w.rangeStart('6m', '2026-10-08'), '2026-04-08');
+  assert.equal(w.rangeStart('ytd', '2026-10-08'), '2026-01-01');
+  assert.equal(w.rangeStart('all', '2026-10-08'), null);
+  assert.deepEqual(w.WEIGHT_RANGES, ['1m', '3m', '6m', 'ytd', 'all']);
 });

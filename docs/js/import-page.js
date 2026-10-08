@@ -28,7 +28,7 @@ async function run() {
   view.replaceChildren(...[
     h('div', { class: 'label' }, 'Weight import'),
     h('p', { class: 'statement gap', role: 'status', 'data-testid': 'import-result' }, message),
-    h('p', { class: 'gap' }, 'Fast shows only averages. Daily values appear only in the CSV export.'),
+    h('p', { class: 'gap' }, 'Fast shows your 7-day average, counting every weigh-in. Each weigh-in is listed in the CSV export.'),
     standalone()
       ? null
       : h('p', { class: 'small quiet gap' }, 'This page opened in Safari, so it saved to Safari\'s copy of Fast. The Home Screen app keeps its own data: there, use Import weight on the Weight screen.'),

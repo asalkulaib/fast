@@ -12,7 +12,7 @@ export function renderHelp(ctx, app) {
     header(ctx, app, { title: 'Help' }),
     h('section', { class: 'section strong' },
       h('h1', { class: 'display' }, 'Weight Shortcut'),
-      h('p', { class: 'gap' }, 'Your scale syncs each weigh-in to Apple Health. This Shortcut reads the last 14 days, scrambles them and copies them to the clipboard. It never shows a number. Fast then shows only averages.'),
+      h('p', { class: 'gap' }, 'Your scale syncs each weigh-in to Apple Health. This Shortcut reads the last 14 days, scrambles them and copies them to the clipboard. It never shows a number. Fast then shows your 7-day average.'),
       button('‹ Back', () => app.go('more'), { kind: 'secondary', name: 'back' })),
 
     h('section', { class: 'section' },

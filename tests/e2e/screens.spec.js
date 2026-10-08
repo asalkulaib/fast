@@ -286,6 +286,9 @@ test('week, day, weight, more, help', async ({ page }) => {
   });
   await page.reload();
   await shot(page, '32-weight');
+  await choose(page, 'weight-range', '1m');
+  await shot(page, '32b-weight-1-month');
+  await choose(page, 'weight-range', '3m');
   await page.locator('.chart').click({ position: { x: 120, y: 80 } });
   await tap(page, 'toggle-table');
   await shot(page, '33-weight-table', { full: true });
@@ -317,6 +320,22 @@ test('history: fast and feast, bars and line, ranges, table', async ({ page }) =
   await shot(page, '43-history-feast-bars-7');
   await tap(page, 'history-toggle-table');
   await shot(page, '44-history-table', { full: true });
+});
+
+test('weight: a few weigh-ins a week, with dots and a break in the line', async ({ page }) => {
+  await openAt(page, '2026-10-08T09:00', '#weight');
+  const weights = [];
+  // About three weigh-ins a week from July, two in some weeks, and none for most of September.
+  for (let d = new Date('2026-07-01T12:00:00Z'), i = 0; d <= new Date('2026-10-07T12:00:00Z'); d.setUTCDate(d.getUTCDate() + 1), i++) {
+    const key = d.toISOString().slice(0, 10);
+    if (key > '2026-09-02' && key < '2026-09-28') continue;
+    if ([0, 2, 4].includes(d.getUTCDay()) || (i % 9 === 0)) weights.push({ date: key, kg: Math.round((106 - i * 0.03 + (i % 3) * 0.2) * 10) / 10 });
+  }
+  await seed(page, { weights, settings: [...install, ...settings({ weightRange: '3m' })] });
+  await page.locator('[data-block="chart"]').scrollIntoViewIfNeeded();
+  await shot(page, '32c-weight-sparse');
+  await tap(page, 'toggle-table');
+  await shot(page, '32d-weight-sparse-table', { full: true });
 });
 
 test('weight: empty, import page', async ({ page }) => {

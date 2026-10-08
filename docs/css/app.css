@@ -1448,6 +1448,12 @@ sup.fn {
   background: var(--ink);
 }
 
+/* The weight chart's line, in its own rock. */
+.swatch.rock-line {
+  height: 2px;
+  background: var(--rock-500);
+}
+
 .swatch.avg {
   height: 0;
   border-top: 1px dashed var(--text-display);

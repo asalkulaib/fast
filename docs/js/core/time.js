@@ -273,6 +273,12 @@ export function fmtDayShort(key) {
   return `${weekdayShort(key)} ${d} ${MONTHS[m - 1].slice(0, 3)}`;
 }
 
+/** 'Sep 2026' */
+export function fmtMonthYear(key) {
+  const { y, m } = keyParts(key);
+  return `${MONTHS[m - 1].slice(0, 3)} ${y}`;
+}
+
 /** '25 Sep' */
 export function fmtDayMonth(key) {
   const { m, d } = keyParts(key);

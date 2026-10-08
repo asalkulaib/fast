@@ -1,17 +1,22 @@
-// Weight: the 7-day average, its weekly change and weekly averages.
-// A daily weight is never shown, and there is no way to type one in.
+// Weight: the 7-day average, its change, and the 7-day average over time.
+// Every weigh-in counts toward the averages, a single one included; there is
+// no way to type a weight in.
 
 import { h } from './dom.js';
-import { button, legend, figureParts } from './components.js';
+import { button, choice, figureParts } from './components.js';
+import * as store from '../store.js';
 import { metricSwitch } from './history.js';
 import { fmtDayMonth } from '../core/time.js';
-import { rollingSummary, weeklyAverages, MIN_WEIGH_INS } from '../core/weight.js';
+import { WEIGHT_RANGES, rangeStart, rollingSeries, rollingSummary } from '../core/weight.js';
 import { dunes } from './art.js';
 import { weightChart, weightTable } from './chart.js';
 import { ago, header, note } from './shared.js';
 
 export const SHORTCUT_NAME = 'Fast Weight';
 export const SHORTCUT_URL = `shortcuts://run-shortcut?name=${encodeURIComponent(SHORTCUT_NAME)}`;
+
+// The chart's time frames, ending today.
+const RANGES = [{ value: '1m', label: '1 month' }, { value: '3m', label: '3 months' }, { value: '6m', label: '6 months' }, { value: 'ytd', label: 'This year' }, { value: 'all', label: 'All' }];
 
 const signedKg = (v) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toFixed(1)} kg`;
 
@@ -65,7 +70,10 @@ function importSection(ctx, app) {
 
 export function renderWeight(ctx, app) {
   const summary = rollingSummary(ctx.weights);
-  const weekly = weeklyAverages(ctx.weights);
+  const range = WEIGHT_RANGES.includes(ctx.settings.weightRange) ? ctx.settings.weightRange : '3m';
+  const series = rollingSeries(ctx.weights);
+  const from = rangeStart(range, ctx.todayKey) || (series.length ? series[0].date : ctx.todayKey);
+  const shown = series.filter((p) => p.date >= from);
   // Weight is the third view of History, under the same switch.
   const head = [header(ctx, app, { title: 'History' }), metricSwitch(app, 'weight')];
 
@@ -74,7 +82,7 @@ export function renderWeight(ctx, app) {
       head,
       h('section', { class: 'section strong' },
         h('h1', { class: 'display' }, 'No weigh-ins yet'),
-        h('p', { class: 'gap' }, 'Your scale sends each weigh-in to Apple Health. A Shortcut brings them here, and Fast shows only averages.')),
+        h('p', { class: 'gap' }, 'Your scale sends each weigh-in to Apple Health. A Shortcut brings them here, and Fast shows your 7-day average.')),
       importSection(ctx, app),
       dunes());
   }
@@ -88,21 +96,27 @@ export function renderWeight(ctx, app) {
           h('div', { class: 'label' }, '7-day average'),
           cur.avg != null
             ? h('h1', { class: 'display gap-s', 'data-testid': 'weight-average' }, figureParts([[cur.avg.toFixed(1), ' kg']]))
-            : h('p', { class: 'statement gap-s', 'data-testid': 'weight-average' }, `Needs ${MIN_WEIGH_INS} weigh-ins in 7 days.`)),
+            : h('p', { class: 'statement gap-s', 'data-testid': 'weight-average' }, 'No weigh-in in these 7 days.')),
         h('div', { class: 'margin' },
           note('Up to', fmtDayMonth(summary.end)),
           note('Weigh-ins', `${cur.n} of 7`))),
       summary.change != null
         ? h('p', { class: 'gap', 'data-testid': 'weight-change' }, `Change from the 7 days before: ${signedKg(summary.change)}.`)
-        : h('p', { class: 'quiet small gap' }, 'The change appears once the 7 days before also have 3 weigh-ins.')),
+        : h('p', { class: 'quiet small gap' }, 'The change appears once the 7 days before also have a weigh-in.')),
     h('section', { class: 'section', 'data-block': 'chart' },
-      h('div', { class: 'label' }, 'Weekly averages'),
-      weekly.length
+      h('div', { class: 'label' }, 'Over time'),
+      h('div', { class: 'gap-s' }, choice({ options: RANGES, value: range, cols: 5, name: 'weight-range', slim: true, ariaLabel: 'Time shown', onChange: (v) => store.setSettings({ weightRange: v }) })),
+      shown.length
+        ? h('div', { class: 'gap' }, weightChart(shown, { from, to: ctx.todayKey }))
+        : h('p', { class: 'statement gap', 'data-testid': 'weight-chart-empty' }, 'No 7-day average in this time yet.'),
+      // What the line is, and why it has gaps, right under it.
+      h('p', { class: 'small quiet gap-s', 'data-testid': 'weight-chart-note' },
+        'Each point is your 7-day average on a day you weighed in, the same figure as at the top: the average of every weigh-in in the 7 days up to it, even a single one. A week with no weigh-in breaks the line.'),
+      shown.length
         ? h('div', { class: 'gap' },
-          weightChart(weekly),
-          app.ui.showTable ? h('div', { class: 'gap' }, weightTable(weekly)) : null,
+          app.ui.showTable ? weightTable(shown) : null,
           button(app.ui.showTable ? 'Hide the table' : 'Show as a table', () => { app.ui.showTable = !app.ui.showTable; app.refresh(); }, { kind: 'secondary', name: 'toggle-table' }))
-        : h('p', { class: 'quiet small gap-s' }, 'The chart starts once a Sunday to Saturday week has 3 weigh-ins.')),
+        : null),
     importSection(ctx, app),
   );
 }
