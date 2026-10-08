@@ -35,6 +35,7 @@ How to work on Fast, and what the owner has decided. README.md covers what the a
 
 - Look: "Nafud at midday", sand page and umber ink. Gold only for achievement (a successful day, a fasting goal reached, a day left wanting, the Uhud fast climber) and the sun on the dial. Selections in ink. A miss is clay stripes and always has words. Every colour-coded visual has a labelled legend.
 - Shapes are rounded by the owner's choice: pill buttons, rounded controls, soft panels and sheets. The dial, chart marks and legend keys keep their drawn shapes.
+- The stage icons move (the owner asked for lively, always on): the stage the fast is in, on the dial and in the chip under the time, and the stage in view on the stages line. Movement only, in the icon's own ink: no glow, no gold, no blur. CSS keyframes on each icon's parts (`.p0`, `.p1`... in `docs/js/ui/icons.js`); Reduce Motion stops them.
 - Every choice, every rating and the bottom tabs are sliding tracks with an ink pill (no liquid glass). The tab bar and the message bar float with nothing behind them.
 - Big figures: large digits with small units (15h 10m).
 - Anything tappable must look tappable (a pill or an outline), never plain text.

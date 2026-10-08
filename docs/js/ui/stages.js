@@ -102,7 +102,8 @@ function dialSvg(state, goalHours) {
   const beyond = state.stage.from >= SCALE_HOURS ? state.stage : STAGES.find((st) => st.from >= SCALE_HOURS);
   const icons = [...STAGES.filter((st) => st.key in ICON_AT), beyond].map((st) => {
     const [x, y] = point(ICON_AT[st.key] ?? BEYOND_AT, ICON_R);
-    return stageIcon(st.key, { x, y, size: 22, current: st.key === state.stage.key });
+    // The stage the fast is in moves.
+    return stageIcon(st.key, { x, y, size: 22, current: st.key === state.stage.key, live: st.key === state.stage.key });
   });
   return s('svg', {
     class: 'ring dial',
@@ -121,7 +122,7 @@ function stageChip(stage) {
     'data-testid': 'stage-name',
     'aria-label': `Stage: ${stage.name}. About the stages`,
     onclick: () => showStagesSheet(stage.key),
-  }, stageGlyph(stage.key, { mark: false }), h('span', {}, stage.name));
+  }, stageGlyph(stage.key, { mark: false, live: true }), h('span', {}, stage.name));
 }
 
 /** The dial with the time fasted and the stage under the arc. */

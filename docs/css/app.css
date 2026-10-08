@@ -1856,6 +1856,173 @@ html.locked body {
   column-gap: var(--s3);
 }
 
+/* ---------- Stage icons, alive ---------- */
+
+/* The stage the fast is in (under the time and lit on the dial), and the
+   stage in view on the stages line, move: the plate's fork taps and its
+   ring turns, the drop sways and settles, the flame flickers, the bolt
+   strikes, the brain pulses with its folds firing in turn, and the shield
+   braces while a line runs down it. Movement only: no glow, no new colour.
+   Each part moves about its own centre. With Reduce Motion on, all rest. */
+:is(.stage-icon.live, .stage-stop[aria-current='true'] .stage-icon) path {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+/* Digesting: the fork taps, all of a piece, and the plate's inner ring breathes. */
+:is(.stage-icon.live, .stage-stop[aria-current='true'] .stage-icon).icon-digesting :is(.p0, .p1, .p2) {
+  animation-name: icon-fork;
+  animation-duration: 1.1s;
+}
+
+:is(.stage-icon.live, .stage-stop[aria-current='true'] .stage-icon).icon-digesting .p4 {
+  animation-name: icon-ring;
+  animation-duration: 2.2s;
+}
+
+@keyframes icon-fork {
+  0%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-2px); }
+  55% { transform: translateY(0.8px); }
+}
+
+@keyframes icon-ring {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(0.72); }
+}
+
+/* Blood sugar settles: the drop sways and squashes, the level line rocks. */
+:is(.stage-icon.live, .stage-stop[aria-current='true'] .stage-icon).icon-settling .p0 {
+  transform-origin: 50% 100%;
+  animation-name: icon-drop;
+  animation-duration: 1.6s;
+}
+
+:is(.stage-icon.live, .stage-stop[aria-current='true'] .stage-icon).icon-settling .p1 {
+  animation-name: icon-level;
+  animation-duration: 1.6s;
+}
+
+@keyframes icon-drop {
+  0%, 100% { transform: scale(1, 1) rotate(0deg); }
+  25% { transform: scale(1.06, 0.9) rotate(-4deg); }
+  50% { transform: scale(0.96, 1.05) rotate(0deg); }
+  75% { transform: scale(1.04, 0.94) rotate(4deg); }
+}
+
+@keyframes icon-level {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-1px) rotate(-12deg); }
+  75% { transform: translateY(-1px) rotate(12deg); }
+}
+
+/* Metabolic switch: the flame leans and stretches from its base; its heart flickers. */
+:is(.stage-icon.live, .stage-stop[aria-current='true'] .stage-icon).icon-switch .p0 {
+  transform-origin: 50% 100%;
+  animation-name: icon-flame;
+  animation-duration: 0.9s;
+}
+
+:is(.stage-icon.live, .stage-stop[aria-current='true'] .stage-icon).icon-switch .p1 {
+  transform-origin: 50% 100%;
+  animation-name: icon-flame-heart;
+  animation-duration: 0.6s;
+}
+
+@keyframes icon-flame {
+  0%, 100% { transform: skewX(0deg) scale(1, 1); }
+  25% { transform: skewX(-5deg) scale(0.97, 1.07); }
+  50% { transform: skewX(2deg) scale(1.03, 0.96); }
+  75% { transform: skewX(5deg) scale(0.98, 1.05); }
+}
+
+@keyframes icon-flame-heart {
+  0%, 100% { transform: scale(1, 1); opacity: 1; }
+  40% { transform: scale(0.82, 1.18); opacity: 0.55; }
+  70% { transform: scale(1.08, 0.9); opacity: 0.85; }
+}
+
+/* Ketones climbing: the bolt strikes twice, then rests. */
+:is(.stage-icon.live, .stage-stop[aria-current='true'] .stage-icon).icon-ketones .p0 {
+  animation-name: icon-bolt;
+  animation-duration: 1.4s;
+  animation-timing-function: linear;
+}
+
+@keyframes icon-bolt {
+  0%, 46%, 100% { transform: scale(1) translate(0, 0); opacity: 1; }
+  6% { transform: scale(1.18) translate(-0.6px, 0.4px); opacity: 0.35; }
+  12% { transform: scale(1) translate(0.6px, -0.4px); opacity: 1; }
+  18% { transform: scale(1.14) translate(-0.4px, 0); opacity: 0.45; }
+  26% { transform: scale(1) translate(0, 0); opacity: 1; }
+}
+
+/* Brain on ketones: the brain pulses; its folds fire one after another. */
+:is(.stage-icon.live, .stage-stop[aria-current='true'] .stage-icon).icon-brain .p0 {
+  animation-name: icon-pulse;
+  animation-duration: 1.2s;
+}
+
+:is(.stage-icon.live, .stage-stop[aria-current='true'] .stage-icon).icon-brain :is(.p2, .p3, .p4, .p5) {
+  animation-name: icon-fire;
+  animation-duration: 1.2s;
+}
+
+:is(.stage-icon.live, .stage-stop[aria-current='true'] .stage-icon).icon-brain .p3 { animation-delay: -0.3s; }
+:is(.stage-icon.live, .stage-stop[aria-current='true'] .stage-icon).icon-brain .p5 { animation-delay: -0.6s; }
+:is(.stage-icon.live, .stage-stop[aria-current='true'] .stage-icon).icon-brain .p4 { animation-delay: -0.9s; }
+
+@keyframes icon-pulse {
+  0%, 100% { transform: scale(1); }
+  30% { transform: scale(1.08); }
+  60% { transform: scale(0.98); }
+}
+
+@keyframes icon-fire {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.2; transform: scale(0.7); }
+}
+
+/* Protein sparing: the shield braces, and a line runs down its middle. */
+:is(.stage-icon.live, .stage-stop[aria-current='true'] .stage-icon).icon-sparing .p0 {
+  animation-name: icon-brace;
+  animation-duration: 1.5s;
+}
+
+:is(.stage-icon.live, .stage-stop[aria-current='true'] .stage-icon).icon-sparing .p1 {
+  stroke-dasharray: 10.4;
+  animation-name: icon-run;
+  animation-duration: 1.5s;
+  animation-timing-function: linear;
+}
+
+@keyframes icon-brace {
+  0%, 100% { transform: scale(1); }
+  20% { transform: scale(1.1); }
+  40% { transform: scale(0.97); }
+  55% { transform: scale(1.03); }
+}
+
+@keyframes icon-run {
+  from { stroke-dashoffset: 10.4; }
+  to { stroke-dashoffset: -10.4; }
+}
+
+/* A moving part may reach a little past its picture's edge. */
+.stage-chip svg,
+.stage-stop .disc svg {
+  overflow: visible;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage-icon path {
+    animation: none !important;
+    stroke-dasharray: none !important;
+  }
+}
+
 /* The stage under the time is a button that opens the stages. */
 .ring-centre .stage-chip {
   pointer-events: auto;

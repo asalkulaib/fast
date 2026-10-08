@@ -140,6 +140,33 @@ test('read more: a stage opens its own longer page, with no links, and Back retu
   await expect.poll(inView).toBe(5);
 });
 
+test('the icon of the stage the fast is in moves, on the dial and under the time; in the sheet, the stage in view', async ({ page }) => {
+  await openAt(page, '2026-09-27T13:10'); // the metabolic switch
+  await seed(page, LAST_NIGHT);
+  await expect(page.locator('.stage-chip .stage-icon')).toHaveClass(/\blive\b/);
+  await expect(ring(page).locator('.dial .stage-icon.live')).toHaveAttribute('data-stage-icon', 'switch');
+  await expect(ring(page).locator('.dial .stage-icon.live')).toHaveCount(1);
+  const moving = (sel) => page.evaluate((q) => [...document.querySelectorAll(q)].map((el) => el.getAnimations({ subtree: true }).length), sel);
+  await expect.poll(() => moving('.stage-chip .stage-icon')).toEqual([expect.any(Number)]);
+  expect((await moving('.stage-chip .stage-icon'))[0]).toBeGreaterThan(0);
+  expect((await moving('.dial .stage-icon:not(.live)')).every((n) => n === 0)).toBe(true);
+  await tap(page, 'open-stages');
+  await tap(page, 'stage-brain');
+  const s = sheet(page, 'stages');
+  await expect(s.locator('[data-action="stage-brain"]')).toHaveAttribute('aria-current', 'true');
+  const stops = await moving('.stage-stop .stage-icon');
+  expect(stops.map((n) => n > 0)).toEqual([false, false, false, false, true, false]);
+});
+
+test('with Reduce Motion on, the stage icons rest', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await openAt(page, '2026-09-27T13:10');
+  await seed(page, LAST_NIGHT);
+  await expect(page.locator('.stage-chip .stage-icon')).toHaveClass(/\blive\b/);
+  const n = await page.evaluate(() => document.querySelector('.dial').getAnimations({ subtree: true }).length + document.querySelector('.stage-chip').getAnimations({ subtree: true }).length);
+  expect(n).toBe(0);
+});
+
 test('no bite logged yet: no ring', async ({ page }) => {
   await openAt(page, '2026-09-27T13:10');
   await expect(page.locator('[data-block="before"]')).toContainText('Fasting');

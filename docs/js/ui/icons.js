@@ -46,15 +46,16 @@ const PATHS = {
 /**
  * An icon group centred on (x, y), drawn at size px. mark: false leaves out
  * the data-stage-icon tag, for a copy of an icon beside its stage's name.
+ * live: the icon moves (CSS, by its icon- class and its parts p0, p1 ...).
  */
-export function stageIcon(key, { x = 12, y = 12, size = 24, current = false, mark = true } = {}) {
+export function stageIcon(key, { x = 12, y = 12, size = 24, current = false, mark = true, live = false } = {}) {
   const k = size / 24;
   return s('g', {
-    class: current ? 'stage-icon now' : 'stage-icon',
+    class: ['stage-icon', `icon-${key}`, current ? 'now' : '', live ? 'live' : ''].filter(Boolean).join(' '),
     transform: `translate(${(x - size / 2).toFixed(1)} ${(y - size / 2).toFixed(1)}) scale(${k.toFixed(3)})`,
     'data-stage-icon': mark ? key : null,
     'aria-hidden': 'true',
-  }, current ? s('circle', { class: 'leaf', cx: 12, cy: 12, r: 14 }) : null, ...PATHS[key].map((d) => s('path', { d })));
+  }, current ? s('circle', { class: 'leaf', cx: 12, cy: 12, r: 14 }) : null, ...PATHS[key].map((d, i) => s('path', { class: `p${i}`, d })));
 }
 
 /** A small clock face, for Just now. */
@@ -65,6 +66,6 @@ export function clockGlyph() {
 }
 
 /** A stage icon as its own small picture, for buttons and lists. */
-export function stageGlyph(key, { mark = true } = {}) {
-  return s('svg', { viewBox: '0 0 24 24', 'aria-hidden': 'true', focusable: 'false' }, stageIcon(key, { mark }));
+export function stageGlyph(key, { mark = true, live = false } = {}) {
+  return s('svg', { viewBox: '0 0 24 24', 'aria-hidden': 'true', focusable: 'false' }, stageIcon(key, { mark, live }));
 }
