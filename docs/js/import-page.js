@@ -5,7 +5,8 @@
 import * as store from './store.js';
 import { importWeightText } from './weight-import.js';
 import { h } from './ui/dom.js';
-import { dunes } from './ui/art.js';
+import { scenery } from './ui/art.js';
+import { dayPhase } from './core/daylight.js';
 
 const view = document.getElementById('view');
 
@@ -33,7 +34,7 @@ async function run() {
       ? null
       : h('p', { class: 'small quiet gap' }, 'This page opened in Safari, so it saved to Safari\'s copy of Fast. The Home Screen app keeps its own data: there, use Import weight on the Weight screen.'),
     h('div', { class: 'gap-l' }, h('a', { class: 'btn block', href: '../#weight', 'data-action': 'open-fast' }, 'Open Fast')),
-    dunes(),
+    scenery({ phase: dayPhase(Date.now()) }),
   ].filter(Boolean));
 }
 

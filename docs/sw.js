@@ -1,7 +1,7 @@
 // Fast service worker. Every file is precached, so the app works fully offline.
 // VERSION and ASSETS are stamped by tools/release.mjs on every release.
 
-const VERSION = '2026.10.10-62828a6a';
+const VERSION = '2026.10.10-8d4aa4b0';
 const ASSETS = [
   'css/app.css',
   'css/fonts.css',
@@ -23,6 +23,7 @@ const ASSETS = [
   'js/core/added-meal.js',
   'js/core/backup.js',
   'js/core/csv.js',
+  'js/core/daylight.js',
   'js/core/fullness.js',
   'js/core/history.js',
   'js/core/ics.js',
@@ -56,6 +57,7 @@ const ASSETS = [
   'js/ui/outside.js',
   'js/ui/pause.js',
   'js/ui/satiety.js',
+  'js/ui/scenery.js',
   'js/ui/share.js',
   'js/ui/shared.js',
   'js/ui/sheet.js',

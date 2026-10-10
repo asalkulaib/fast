@@ -11,7 +11,8 @@ import * as store from '../store.js';
 import { HOUR, addDays, fmtDayMonth, fmtDayShort, fmtDuration, fmtFigure, weekdayShort, keyParts } from '../core/time.js';
 import { dailySeries, hourScale, rollingAverage, summarize } from '../core/history.js';
 import { fastHoursFor } from '../core/rules.js';
-import { dunes } from './art.js';
+import { scenery } from './art.js';
+import { dayPhase } from '../core/daylight.js';
 import { header } from './shared.js';
 
 const W = 340;
@@ -271,7 +272,7 @@ export function renderHistory(ctx, app) {
       pick ? h('div', {}, button('Open this day', () => app.go(`day/${pick.day}`), { kind: 'secondary', name: 'history-open-day' })) : null,
       app.ui.showHistoryTable ? h('div', { class: 'gap' }, table(series, trend, m, isMiss)) : null,
       button(app.ui.showHistoryTable ? 'Hide the table' : 'Show as a table', () => { app.ui.showHistoryTable = !app.ui.showHistoryTable; app.refresh(); }, { kind: 'secondary', name: 'history-toggle-table' }))
-    : h('section', { class: 'section strong empty', 'data-block': 'history-chart' }, controls, lead, h('p', { class: 'quiet gap' }, m.empty), dunes());
+    : h('section', { class: 'section strong empty', 'data-block': 'history-chart' }, controls, lead, h('p', { class: 'quiet gap' }, m.empty), scenery({ phase: dayPhase(ctx.nowTs) }));
 
   return h('div', { class: 'history', 'data-metric': p.metric },
     header(ctx, app, { title: 'History' }),

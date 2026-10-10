@@ -556,3 +556,16 @@ test.describe('travel', () => {
     await shot(page, '81-day-kuwait-from-dubai');
   });
 });
+
+test('the scenery through the day: the Edge of the World at the foot of Today, the Hisma under the sun', async ({ page }) => {
+  const days = [{ day: '2026-09-26', firstBite: ms('2026-09-26T17:00'), lastBite: ms('2026-09-26T21:00') }];
+  const times = { dawn: '05:50', morning: '08:00', midday: '13:10', afternoon: '15:30', dusk: '17:30', night: '21:00' };
+  for (const [phase, hm] of Object.entries(times)) {
+    await openAt(page, `2026-09-27T${hm}`);
+    await seed(page, { days, settings: install });
+    await expect(page.locator('.today > svg.dunes')).toHaveAttribute('data-phase', phase);
+    await shot(page, `90-${phase}-today`);
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await shot(page, `90-${phase}-foot`);
+  }
+});

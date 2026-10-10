@@ -8,7 +8,8 @@ import * as store from '../store.js';
 import { metricSwitch } from './history.js';
 import { fmtDayMonth } from '../core/time.js';
 import { WEIGHT_RANGES, latestDate, rangeStart, rollingSeries, summaryOn } from '../core/weight.js';
-import { dunes } from './art.js';
+import { scenery } from './art.js';
+import { dayPhase } from '../core/daylight.js';
 import { weightChart, weightTable } from './chart.js';
 import { ago, header, note } from './shared.js';
 
@@ -114,7 +115,7 @@ export function renderWeight(ctx, app) {
         h('h1', { class: 'display' }, 'No weigh-ins yet'),
         h('p', { class: 'gap' }, 'Your scale sends each weigh-in to Apple Health. A Shortcut brings them here, and Fast shows your 7-day average.')),
       importSection(ctx, app),
-      dunes());
+      scenery({ phase: dayPhase(ctx.nowTs) }));
   }
 
   // Touching the chart moves the big box to that day, in place, as the finger moves.

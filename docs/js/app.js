@@ -11,6 +11,7 @@ import { buildIcs, icsTimes } from './core/ics.js';
 import { buildCsvFiles } from './core/csv.js';
 import { buildBackup, backupFileName, describeBackup, parseBackup } from './core/backup.js';
 import { renderToday, signature as todaySignature } from './ui/today.js';
+import { dayPhase } from './core/daylight.js';
 import { renderWeek } from './ui/week.js';
 import { renderDay } from './ui/day.js';
 import { renderHistory } from './ui/history.js';
@@ -70,7 +71,8 @@ function context() {
 }
 
 function signatureOf(ctx) {
-  const base = `${route.name}|${route.arg || ''}|${ctx.todayKey}|${!!ctx.openRec}`;
+  // The scenery takes the light of the time of day, so a new phase redraws the screen.
+  const base = `${route.name}|${route.arg || ''}|${ctx.todayKey}|${!!ctx.openRec}|${dayPhase(ctx.nowTs)}`;
   return route.name === 'today' ? `${base}|${todaySignature(ctx)}` : base;
 }
 

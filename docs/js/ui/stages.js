@@ -1,6 +1,7 @@
-// Fasting stages on Today: the fast drawn as the sun crossing the Nafud,
-// timed from the last bite and shown only while fasting. The sun's path
-// arcs over the dunes from the left horizon (the last bite) to the right
+// Fasting stages on Today: the fast drawn as the sun crossing the Hisma near
+// Tabuk, timed from the last bite and shown only while fasting. The sun's path
+// arcs over its domed sandstone and red sand (docs/js/ui/scenery.js, in the
+// light of the time of day) from the left horizon (the last bite) to the right
 // (24 hours); the hours already fasted are laid in dark rock behind the sun,
 // a dark tick marks the fasting goal (the day less the eating window), and a
 // line icon marks each stage, the current one set in ink. Past 24 hours the
@@ -15,6 +16,8 @@ import { fastHoursFor } from '../core/rules.js';
 import { AUTOPHAGY_NOTE, SCALE_HOURS, SOURCES, STAGES, VARIATION_NOTE, fastingState } from '../core/stages.js';
 import { STAGE_MORE, citeBy, stageSources } from '../core/stage-more.js';
 import { stageGlyph, stageIcon } from './icons.js';
+import { hismaGround } from './scenery.js';
+import { dayPhase } from '../core/daylight.js';
 
 const W = 340;
 const HT = 214;
@@ -31,7 +34,7 @@ const SUN = '#F0B25C'; // --accent: the sun, gold leaf
 const INK = '#1E140C'; // --ink: edges, ticks and the fasting goal
 
 // Where each icon sits: beside its stage's stretch of the path; the stages
-// past a day share one place near the far horizon, above the dunes.
+// past a day share one place near the far horizon, above the land.
 const ICON_AT = { digesting: 2, settling: 8, switch: 18 };
 const BEYOND_AT = 22.5;
 
@@ -53,16 +56,7 @@ function arc(h0, h1, stroke) {
   });
 }
 
-/** The Nafud along the horizon: far ridge, middle dune, lit near dune. */
-function dunes() {
-  return [
-    s('path', { fill: '#D8BF93', d: 'M0 214 C6 200 18 186 40 180 C90 170 140 176 190 180 C236 184 276 172 304 178 C322 182 334 198 340 214 Z' }),
-    s('path', { fill: '#C9A26C', d: 'M14 214 C24 202 40 194 70 191 C120 186 170 194 214 197 C256 200 290 190 312 196 C322 200 328 206 330 214 Z' }),
-    s('path', { fill: '#C58E50', d: 'M40 214 C56 206 84 202 120 203 C170 205 214 210 256 207 C280 205 296 206 304 214 Z' }),
-  ];
-}
-
-function dialSvg(state, goalHours) {
+function dialSvg(state, goalHours, phase) {
   const now = Math.min(state.elapsedMs / HOUR, SCALE_HOURS);
   const arcs = [];
   for (const st of STAGES.filter((x) => x.from < SCALE_HOURS)) {
@@ -89,7 +83,7 @@ function dialSvg(state, goalHours) {
     x1: gx.toFixed(2), y1: gy.toFixed(2), x2: hx.toFixed(2), y2: hy.toFixed(2),
     stroke, 'stroke-width': w, 'data-testid': testid || null, 'data-hours': testid ? String(goalHours) : null,
   });
-  // The sun, where the fast stands now; it sets behind the dunes at 24 hours.
+  // The sun, where the fast stands now; it sets behind the land at 24 hours.
   const [sx, sy] = point(now, R);
   const sun = [
     s('circle', { cx: sx.toFixed(2), cy: sy.toFixed(2), r: 12, fill: SURFACE }),
@@ -110,7 +104,7 @@ function dialSvg(state, goalHours) {
     viewBox: `0 0 ${W} ${HT}`,
     'aria-hidden': 'true',
     focusable: 'false',
-  }, ...ticks, ...arcs, onDial ? [goalLine(SURFACE, 5), goalLine(INK, 2, 'goal-tick')] : null, ...sun, ...dunes(), ...icons);
+  }, ...ticks, ...arcs, onDial ? [goalLine(SURFACE, 5), goalLine(INK, 2, 'goal-tick')] : null, ...sun, ...hismaGround(s, phase), ...icons);
 }
 
 /** The current stage as a small button under the time: it opens the stages at this one. */
@@ -126,13 +120,13 @@ function stageChip(stage) {
 }
 
 /** The dial with the time fasted and the stage under the arc. */
-function fastingRing(state, lastBiteTs, compact, goalHours) {
+function fastingRing(state, lastBiteTs, compact, goalHours, phase) {
   return h('div', {
     class: `ring-wrap dial-wrap${compact ? ' compact' : ''}`,
     'data-testid': 'fasting-ring',
     'data-stage': state.stage.key,
   },
-    dialSvg(state, goalHours),
+    dialSvg(state, goalHours, phase),
     h('div', { class: 'ring-centre' },
       h('span', { class: 'sr-only' }, 'Fasting for'),
       // Redrawn each minute: large digits, small units.
@@ -179,7 +173,7 @@ const goalHoursFor = (ctx) => fastHoursFor(ctx.todayKey, ctx.settings);
 export function ringHero(ctx, lastBiteTs, times = null) {
   const state = fastingState(lastBiteTs, ctx.nowTs);
   return markStage(h('div', { class: 'ring-hero gap' },
-    fastingRing(state, lastBiteTs, false, goalHoursFor(ctx)), ringLegend(goalHoursFor(ctx)), times), state, ctx.nowTs);
+    fastingRing(state, lastBiteTs, false, goalHoursFor(ctx), dayPhase(ctx.nowTs)), ringLegend(goalHoursFor(ctx)), times), state, ctx.nowTs);
 }
 
 /**
@@ -193,7 +187,7 @@ export function stagesSection(ctx, app, lastBiteTs, { withRing, times = null }) 
   const state = fastingState(lastBiteTs, ctx.nowTs);
   const goalHours = goalHoursFor(ctx);
   return markStage(h('section', { class: 'section', 'data-block': 'stages', 'data-stage': state.stage.key },
-    withRing ? [fastingRing(state, lastBiteTs, true, goalHours), ringLegend(goalHours), times] : null,
+    withRing ? [fastingRing(state, lastBiteTs, true, goalHours, dayPhase(ctx.nowTs)), ringLegend(goalHours), times] : null,
     h('div', { class: withRing ? 'label gap-l' : 'label' }, state.stage.name),
     h('p', { class: 'gap-s' }, state.stage.text),
     ringLines(state, lastBiteTs, goalHours),

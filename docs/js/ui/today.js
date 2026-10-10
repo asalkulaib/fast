@@ -10,7 +10,8 @@ import {
   CUTOFF_MIN, GRACE_MS, canReopen, cutoffApplies, fastHoursFor, goalLabelFor, isFlexible, isWorkday, lastEatingSource, lastEatingTs, lateNightDay, longFastAhead, plannedStartMin, timeOnOrAfter, windowPhase,
 } from '../core/rules.js';
 import { dailySeries } from '../core/history.js';
-import { dunes } from './art.js';
+import { scenery } from './art.js';
+import { dayPhase } from '../core/daylight.js';
 import { weekRow } from './week.js';
 import { forgotCloseDefault, showAddMealSheet, showDoneEatingSheet, showFinishMealSheet, showMealEditSheet, showStartMealSheet } from './meal.js';
 import { showOutsideSheet } from './outside.js';
@@ -78,7 +79,7 @@ export function renderToday(ctx, app) {
     streakSection(ctx),
     // A paused day tracks nothing.
     mode === 'paused' ? null : checkinSection(ctx, app),
-    dunes(),
+    scenery({ phase: dayPhase(ctx.nowTs) }),
   );
 }
 

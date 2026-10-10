@@ -226,3 +226,29 @@ test('no Jebel Uhud: the streak sits under the stage panel, and More has no clim
   await expect(page.locator('[data-block="climb-settings"]')).toHaveCount(0);
   await expect(page.locator('.more')).not.toContainText('Uhud');
 });
+
+test('the scenery takes the light of the time of day: the Edge of the World at the foot, the Hisma under the sun', async ({ page }) => {
+  const phaseAt = async (when) => {
+    await openAt(page, when);
+    await seed(page, LAST_NIGHT);
+    return page.locator('.today > svg.dunes').getAttribute('data-phase');
+  };
+  // Kuwait, 27 September: sunrise about 05:42, solar noon about 11:42, sunset about 17:41.
+  expect(await phaseAt('2026-09-27T05:50')).toBe('dawn');
+  expect(await phaseAt('2026-09-27T08:00')).toBe('morning');
+  expect(await phaseAt('2026-09-27T13:10')).toBe('midday');
+  expect(await phaseAt('2026-09-27T15:30')).toBe('afternoon');
+  expect(await phaseAt('2026-09-27T17:30')).toBe('dusk');
+  expect(await phaseAt('2026-09-27T21:00')).toBe('night');
+  // The dial's ground is drawn in the same light, and nothing in it is gold.
+  await expect(page.locator('.dial path[fill="#F0B25C"]')).toHaveCount(0);
+  await expect(page.locator('.today > svg.dunes [fill="#F0B25C"], .today > svg.dunes [stroke="#F0B25C"]')).toHaveCount(0);
+});
+
+test('the scenery changes with the light while the app is open', async ({ page }) => {
+  await openAt(page, '2026-09-27T16:55');
+  await seed(page, LAST_NIGHT);
+  await expect(page.locator('.today > svg.dunes')).toHaveAttribute('data-phase', 'afternoon');
+  await advance(page, 10);
+  await expect(page.locator('.today > svg.dunes')).toHaveAttribute('data-phase', 'dusk');
+});
