@@ -79,7 +79,20 @@ test('a fullness check still running sits above the new fast', async ({ page }) 
   await tap(page, 'done-eating');
   await tap(page, 'close-window');
   await expect(page.locator('[data-block="satiety-pointer"]')).toBeVisible();
-  expect((await panels(page)).slice(0, 4)).toEqual(['satiety-pointer', 'fasting', 'stages', 'closed']);
+  await expect.poll(async () => (await panels(page)).slice(0, 4)).toEqual(['satiety-pointer', 'fasting', 'stages', 'closed']);
+});
+
+test('a meal still being eaten after the window closed keeps the window, with Finished this meal, on top', async ({ page }) => {
+  await openAt(page, '2026-09-27T22:30');
+  await seed(page, {
+    ...LAST_NIGHT,
+    days: [...LAST_NIGHT.days, { day: '2026-09-27', firstBite: ms('2026-09-27T17:30'), lastBite: ms('2026-09-27T20:00') }],
+    meals: [{ id: 5, day: '2026-09-27', name: 'Dessert', startedAt: ms('2026-09-27T22:00'), finishedAt: null, outside: true }],
+  });
+  await expect(page.locator('[data-block="closed"]')).toHaveClass(/strong/);
+  await expect.poll(async () => (await panels(page))[0]).toBe('closed');
+  await expect(page.locator('[data-block="fasting"]')).toHaveCount(0);
+  await expect(page.locator('[data-block="stages"]').getByTestId('fasting-ring')).toBeVisible();
 });
 
 test('the stage under the time opens the stages at the one the fast is in', async ({ page }) => {

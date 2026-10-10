@@ -56,12 +56,20 @@ test('after the window: tap First bite or Last bite to change just that time', a
   await tap(page, 'save-first-bite');
   await expect(page.getByTestId('flash')).toHaveText('First bite saved: 17:40.');
   await expect(page.locator('[data-block="closed"]')).toHaveAttribute('data-result', 'success');
-  await tap(page, 'edit-last-bite');
+  // The window's own Last bite note, under the new fast.
+  await page.locator('[data-block="closed"] [data-action="edit-last-bite"]').click();
   await setTime(page, 'edit-last-bite', '21:30');
   await tap(page, 'save-last-bite');
   await expect(page.getByTestId('window-length')).toHaveText('3h 50m');
   const db = await readDb(page);
   expect(db.days[0]).toMatchObject({ firstBite: ms('2026-09-27T17:40'), lastBite: ms('2026-09-27T21:30') });
+  // The Last bite pill on the Fasting card edits the same time.
+  await expect(page.locator('[data-block="fasting"] [data-action="edit-last-bite"]')).toHaveText('21:30');
+  await page.locator('[data-block="fasting"] [data-action="edit-last-bite"]').click();
+  await setTime(page, 'edit-last-bite', '21:20');
+  await tap(page, 'save-last-bite');
+  await expect(page.getByTestId('window-length')).toHaveText('3h 40m');
+  await expect(page.locator('[data-block="fasting"] [data-action="edit-last-bite"]')).toHaveText('21:20');
 });
 
 test('a last bite logged outside the window opens that entry', async ({ page }) => {
