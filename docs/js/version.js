@@ -1,2 +1,2 @@
 // Stamped by tools/release.mjs.
-export const VERSION = '2026.10.08-98fb1bb9';
+export const VERSION = '2026.10.10-4078d96e';

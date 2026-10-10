@@ -149,6 +149,18 @@ test('today: window open, phases and sheets', async ({ page }) => {
   await shot(page, '09-done-eating-sheet');
 });
 
+test('today: just closed, the fullness check above the new fast', async ({ page }) => {
+  await openAt(page, '2026-09-27T21:40');
+  await seed(page, {
+    ...WEEK,
+    days: [...WEEK.days, { day: '2026-09-27', firstBite: ms('2026-09-27T20:50'), lastBite: ms('2026-09-27T21:30') }],
+    meals: [...WEEK.meals, { id: 9, day: '2026-09-27', name: 'Dinner', startedAt: ms('2026-09-27T20:50'), finishedAt: ms('2026-09-27T21:30'), hungerBefore: 7, stop: 'before_full', fullnessNow: 6, fullness20DueAt: ms('2026-09-27T21:50') }],
+    settings: install,
+  });
+  await expect(page.locator('[data-block="satiety-pointer"]')).toBeVisible();
+  await shot(page, '10d-today-just-closed-fullness');
+});
+
 test('today: closed, success and miss', async ({ page }) => {
   await openAt(page, '2026-09-27T21:40');
   await seed(page, {
@@ -159,6 +171,8 @@ test('today: closed, success and miss', async ({ page }) => {
   });
   await shot(page, '10-today-closed-success');
   await shot(page, '10b-today-closed-full', { full: true });
+  await page.locator('[data-block="closed"]').scrollIntoViewIfNeeded();
+  await shot(page, '10c-today-closed-window-below');
   await tap(page, 'ate-something');
   await choose(page, 'trigger', 'boredom');
   await choose(page, 'amount', 'little');

@@ -44,7 +44,7 @@ test('a new stage arrives while the app is open', async ({ page }) => {
   await expect(page.locator('.ring-hero')).not.toHaveClass(/fade-in/);
 });
 
-test('hidden while the window is open, then below the main block from the last bite', async ({ page }) => {
+test('hidden while the window is open, then on top again from the last bite', async ({ page }) => {
   await openAt(page, '2026-09-27T17:30');
   await seed(page, LAST_NIGHT);
   await expect(ring(page)).toBeVisible();
@@ -55,8 +55,8 @@ test('hidden while the window is open, then below the main block from the last b
   await advance(page, 60);
   await tap(page, 'done-eating');
   await tap(page, 'close-window');
-  const stages = page.locator('[data-block="stages"]');
-  await expect(stages.getByTestId('fasting-ring')).toBeVisible();
+  await expect(page.locator('[data-block="fasting"]').getByTestId('fasting-ring')).toBeVisible();
+  await expect(page.locator('[data-block="stages"]').getByTestId('fasting-ring')).toHaveCount(0);
   await expect(page.getByTestId('stage-name')).toHaveText('Digesting');
   await expect(page.getByTestId('fasting-for')).toHaveText('0m');
 });

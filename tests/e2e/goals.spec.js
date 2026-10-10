@@ -128,7 +128,8 @@ test('a long fast: after the window closes, Today says when the next fast reache
     settings: settings({ installedAt: ms('2026-09-26T08:00'), goalChanges: [{ from: '2026-09-26', hours: 6, fast: 36 }] }),
   });
   await expect(page.getByTestId('next-window')).toHaveText('Your 36-hour fast reaches its goal at 08:00 Tue 29 Sep.');
-  await expect(page.locator('[data-block="stages"]').getByTestId('goal-tick')).toHaveCount(0);
+  await expect(page.locator('[data-block="fasting"]').getByTestId('fasting-ring')).toBeVisible();
+  await expect(page.getByTestId('goal-tick')).toHaveCount(0);
   await expect(page.getByTestId('goal-line')).toHaveText('Fasting goal 36 h: 35 h to go.');
 });
 

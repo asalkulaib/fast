@@ -47,13 +47,39 @@ test('the goal turns gold the minute it is reached', async ({ page }) => {
   await expect(goal).toHaveClass(/reached/);
 });
 
-test('after the window, the stage panel carries the dial and its two times', async ({ page }) => {
+// The order of Today's main panels, top to bottom.
+const panels = (page) => page.locator('.today > section').evaluateAll((els) => els.map((el) => el.dataset.block).filter(Boolean));
+
+test('after the window, the new fast leads Today: the full dial and its two times, the stage, then the window just closed', async ({ page }) => {
   await openAt(page, '2026-09-27T22:30');
   await seed(page, { ...LAST_NIGHT, days: [...LAST_NIGHT.days, { day: '2026-09-27', firstBite: ms('2026-09-27T17:30'), lastBite: ms('2026-09-27T21:30') }] });
-  const stages = page.locator('[data-block="stages"]');
-  await expect(stages.getByTestId('fasting-ring')).toBeVisible();
-  await expect(stages.locator('[data-action="edit-last-bite"]')).toHaveText('21:30');
-  await expect(stages.locator('[data-action="edit-goal"]')).toHaveText('17:30 tomorrow');
+  const card = page.locator('[data-block="fasting"]');
+  await expect(card).toHaveClass(/strong/);
+  await expect(card.locator('.label').first()).toHaveText('Fasting');
+  await expect(card.getByTestId('fasting-ring')).toBeVisible();
+  await expect(card.getByTestId('fasting-ring')).not.toHaveClass(/compact/);
+  await expect(card.locator('[data-action="edit-last-bite"]')).toHaveText('21:30');
+  await expect(card.locator('[data-action="edit-goal"]')).toHaveText('17:30 tomorrow');
+  expect((await panels(page)).slice(0, 3)).toEqual(['fasting', 'stages', 'closed']);
+  // The window keeps all it had, now as a plain panel under the fast.
+  const closed = page.locator('[data-block="closed"]');
+  await expect(closed).not.toHaveClass(/strong/);
+  await expect(closed.getByTestId('window-length')).toHaveText('4h');
+  await expect(closed.getByTestId('result')).toHaveText('Success. All eating inside the window.');
+  await expect(closed.locator('[data-action="change-times"]')).toBeVisible();
+  await expect(closed.getByTestId('next-window')).toHaveText("Tomorrow's window opens at 17:30.");
+  await expect(page.locator('[data-block="stages"]').getByTestId('fasting-ring')).toHaveCount(0);
+});
+
+test('a fullness check still running sits above the new fast', async ({ page }) => {
+  await openAt(page, '2026-09-27T17:30');
+  await seed(page, LAST_NIGHT);
+  await startMeal(page);
+  await advance(page, 40);
+  await tap(page, 'done-eating');
+  await tap(page, 'close-window');
+  await expect(page.locator('[data-block="satiety-pointer"]')).toBeVisible();
+  expect((await panels(page)).slice(0, 4)).toEqual(['satiety-pointer', 'fasting', 'stages', 'closed']);
 });
 
 test('the stage under the time opens the stages at the one the fast is in', async ({ page }) => {

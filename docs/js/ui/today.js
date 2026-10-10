@@ -47,26 +47,32 @@ const fasting = (mode) => mode === 'before' || mode === 'closed' || mode === 'no
 export function renderToday(ctx, app) {
   const { mode, rec } = ctx.mode;
   const todayRec = ctx.days.get(ctx.todayKey);
+  const src = fasting(mode) ? lastEatingSource(ctx) : null;
+  // Once the window closes, the new fast leads Today, as it does before the
+  // window: the full dial and its two times, the stage, and only then the
+  // window just closed, with its hours, result and buttons.
+  const fastFirst = mode === 'closed' && !!src;
   let main;
   if (mode === 'open') main = openBlock(ctx, app, rec);
   else if (mode === 'forgot') main = forgotBlock(ctx, app, rec);
-  else if (mode === 'closed') main = closedBlock(ctx, app, rec);
+  else if (mode === 'closed') main = closedBlock(ctx, app, rec, { lead: !fastFirst });
   else if (mode === 'noEating') main = noEatingBlock(ctx, app);
   else if (mode === 'paused') main = pausedBlock(ctx, app);
   else main = beforeBlock(ctx, app);
 
-  // While fasting, the stage panel below; after the window it carries the dial too.
-  const src = fasting(mode) ? lastEatingSource(ctx) : null;
   // Meals, fullness checks and how the day ended live on the Satiety tab;
-  // Today points there while a fullness check is running.
+  // Today points there while a fullness check is running: above the fast,
+  // since it lasts only minutes and asks for a tap.
+  const pointer = satietyPointer(ctx, app);
+  // While fasting, the stage panel; on a day without eating it carries a smaller dial too.
+  const ringBelow = mode === 'noEating';
+  const stages = src ? stagesSection(ctx, app, src.ts, { withRing: ringBelow, times: ringBelow ? fastTimes(ctx, app, src) : null }) : null;
   return h('div', { class: 'today', 'data-mode': mode },
     header(ctx, app, { title: fmtDayLong(ctx.todayKey), sub: dayTypeText(ctx.todayKey, todayRec) }),
     weekRow(ctx, app),
     notices(ctx, app),
     mode === 'open' ? fastDone(ctx, rec) : null,
-    main,
-    satietyPointer(ctx, app),
-    src ? stagesSection(ctx, app, src.ts, { withRing: mode !== 'before', times: mode !== 'before' ? fastTimes(ctx, app, src) : null }) : null,
+    fastFirst ? [pointer, fastCard(ctx, app, src), stages, main] : [main, pointer, stages],
     // The climb up Uhud takes the streak's place; with both climbers off, the streak returns.
     climbSection(ctx) || streakSection(ctx),
     // A paused day tracks nothing.
@@ -352,13 +358,21 @@ function eatingNow(app, meal, { another = false } = {}) {
     another ? h('div', { class: 'gap-s' }, button('Start another meal', () => showStartMealSheet(app), { kind: 'secondary', name: 'another-meal' })) : null);
 }
 
-function closedBlock(ctx, app, rec) {
+/** After the window: the new fast on top, the full dial with when it began and when it reaches its goal. */
+function fastCard(ctx, app, src) {
+  return h('section', { class: 'section strong', 'data-block': 'fasting' },
+    h('div', { class: 'label' }, 'Fasting'),
+    ringHero(ctx, src.ts, fastTimes(ctx, app, src)));
+}
+
+/** The window just closed: its hours, result and buttons. lead: it heads Today (when no fast is known to put first). */
+function closedBlock(ctx, app, rec, { lead = true } = {}) {
   const e = ctx.evaluate(rec.day);
   const success = e.result === 'success';
   const reopen = canReopen(rec, ctx.nowTs, ctx.windowMsFor(rec.day));
   // A meal started after the window closed, still being eaten.
   const eating = mealInProgress(ctx, rec.day);
-  return h('section', { class: 'section strong', 'data-block': 'closed', 'data-result': e.result },
+  return h('section', { class: lead ? 'section strong' : 'section', 'data-block': 'closed', 'data-result': e.result },
     h('div', { class: 'row' },
       h('div', { class: 'main' },
         h('div', { class: 'label' }, 'Window closed'),

@@ -184,8 +184,8 @@ export function ringHero(ctx, lastBiteTs, times = null) {
 
 /**
  * The stage panel: the stage, what happens in it, and how far the goal and
- * the next stage are. After the window it holds a smaller dial and its times
- * as well; before it, the dial leads Today above.
+ * the next stage are. On a day without eating it holds a smaller dial and its
+ * times as well; before the window and after it, the dial leads Today above.
  */
 export function stagesSection(ctx, app, lastBiteTs, { withRing, times = null }) {
   if (!lastBiteTs) return null;
