@@ -68,13 +68,19 @@ test('after the goal: a meal counts as eating outside the window, with its satie
   await tap(page, 'start-meal');
   await expect(sheet(page, 'start-meal').getByTestId('meal-context')).toContainText('this meal counts as eating outside it and the day becomes a miss');
   await tap(page, 'start-eating');
+  // The sheet fades out first, as a finger would wait for.
+  await expect(sheet(page, 'start-meal')).toHaveCount(0);
   const closed = page.locator('[data-block="closed"]');
   await expect(closed).toHaveAttribute('data-result', 'miss');
+  // Still eating: the window's card, with Finished this meal, leads Today.
+  await expect(page.locator('[data-block="fasting"]')).toHaveCount(0);
   await expect(closed.getByTestId('result')).toHaveText('Ate outside the window.');
   await expect(closed.locator('[data-block="eating"]')).toContainText('Eating outside the window: ');
   await tap(page, 'finish-meal');
   await choose(page, 'stop', 'full');
   await tap(page, 'save-finish');
+  // Finished: the new fast leads again.
+  await expect(page.locator('[data-block="fasting"]')).toBeVisible();
   const [meal] = (await readDb(page)).meals;
   expect(meal).toMatchObject({ outside: true, stop: 'full', startedAt: ms('2026-09-27T22:00') });
   await page.locator('.tab[data-tab="satiety"]').click();

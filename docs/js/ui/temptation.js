@@ -130,8 +130,13 @@ function gains(ctx, sit) {
   const streak = ctx.streak.current;
   const days = (n) => `${n} ${n === 1 ? 'day' : 'days'}`;
   const lastRes = sit.lastDay ? ctx.evaluate(sit.lastDay).result : null;
+  // Today, or last night's window just after midnight; a day logged without eating is already a success.
+  const todayRes = ctx.evaluate(today).result;
   if (sit.kind === 'after' && lastRes === 'success') out.push(`Today stays a success. Your streak: ${days(streak)}.`);
   else if (sit.kind === 'late' && lastRes === 'success') out.push(`Last night stays a success. Your streak: ${days(streak)}.`);
+  else if (sit.kind === 'late' && lastRes === 'miss') out.push('Last night was a miss. Today can start a new streak.');
+  else if (lastRes === 'miss') out.push(`${sit.lastDay === today ? 'Today' : 'That day'} is already a miss. ${sit.lastDay === today ? 'Tomorrow' : 'Today'} can start a new streak.`);
+  else if (todayRes === 'success') out.push(`Today counts as a success so far. Your streak: ${days(streak)}, today included.`);
   else if (streak > 0) out.push(`Your streak: ${days(streak)}, ${streak + 1} if today holds.`);
   else out.push('Today can start a new streak.');
   const ahead = longFastAhead(ctx);

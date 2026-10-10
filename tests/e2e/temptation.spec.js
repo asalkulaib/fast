@@ -159,3 +159,28 @@ test('closing before choosing a trigger records nothing', async ({ page }) => {
   const db = await readDb(page);
   expect(db.temptations).toHaveLength(0);
 });
+
+test('the streak line in the gains follows the day: a fresh start, a streak to extend, a day already won or lost', async ({ page }) => {
+  const gains = page.getByTestId('gains');
+  const open = async () => { await tap(page, 'tempted'); await choose(page, 'trigger', 'boredom'); };
+  const install = settings({ installedAt: ms('2026-09-24T08:00') });
+  // Nothing yet: a fresh start.
+  await openAt(page, '2026-09-27T13:10');
+  await open();
+  await expect(gains).toContainText('Today can start a new streak.');
+  // Two successful days before today: one more if today holds.
+  await openAt(page, '2026-09-27T13:10');
+  await seed(page, { days: [{ day: '2026-09-25', firstBite: ms('2026-09-25T17:00'), lastBite: ms('2026-09-25T20:00') }, { day: '2026-09-26', firstBite: ms('2026-09-26T17:00'), lastBite: ms('2026-09-26T20:00') }], settings: install });
+  await open();
+  await expect(gains).toContainText('Your streak: 2 days, 3 if today holds.');
+  // Today logged without eating already counts.
+  await openAt(page, '2026-09-27T13:10');
+  await seed(page, { days: [{ day: '2026-09-26', firstBite: ms('2026-09-26T17:00'), lastBite: ms('2026-09-26T20:00') }, { day: '2026-09-27', noEating: true }], settings: install });
+  await open();
+  await expect(gains).toContainText('Today counts as a success so far. Your streak: 2 days, today included.');
+  // After a window that was a miss: tomorrow starts afresh.
+  await openAt(page, '2026-09-27T22:30');
+  await seed(page, { days: [{ day: '2026-09-27', firstBite: ms('2026-09-27T17:00'), lastBite: ms('2026-09-27T22:00') }], settings: install });
+  await open();
+  await expect(gains).toContainText('Today is already a miss. Tomorrow can start a new streak.');
+});
