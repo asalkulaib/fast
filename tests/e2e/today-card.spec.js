@@ -245,6 +245,20 @@ test('the scenery takes the light of the time of day: the Edge of the World at t
   await expect(page.locator('.today > svg.dunes [fill="#F0B25C"], .today > svg.dunes [stroke="#F0B25C"]')).toHaveCount(0);
 });
 
+test('a screen that otherwise stands still takes the new light too: empty Weight, a paused Today', async ({ page }) => {
+  await openAt(page, '2026-09-27T16:55', '#weight');
+  const strip = page.locator('svg.dunes');
+  await expect(strip).toHaveAttribute('data-phase', 'afternoon');
+  await advance(page, 10);
+  await expect(strip).toHaveAttribute('data-phase', 'dusk');
+  await openAt(page, '2026-09-27T16:55');
+  await seed(page, { ...LAST_NIGHT, days: [...LAST_NIGHT.days, { day: '2026-09-27', paused: 'travel' }] });
+  await expect(page.locator('[data-block="paused"]')).toBeVisible();
+  await expect(strip).toHaveAttribute('data-phase', 'afternoon');
+  await advance(page, 10);
+  await expect(strip).toHaveAttribute('data-phase', 'dusk');
+});
+
 test('the scenery changes with the light while the app is open', async ({ page }) => {
   await openAt(page, '2026-09-27T16:55');
   await seed(page, LAST_NIGHT);

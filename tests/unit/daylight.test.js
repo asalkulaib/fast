@@ -31,7 +31,7 @@ test('the phases of a September day in Kuwait', () => {
   assert.equal(at('23:59'), 'night');
 });
 
-test('away from home, the phase follows the clock where you are', () => {
+test('away from home, the phase follows the sun where you are', () => {
   setZones([{ from: null, zone: 'Asia/Kuwait' }, { from: T('2026-09-27T00:00'), zone: 'Europe/London' }]);
   try {
     // London in late September, on summer time: sunrise about 06:57, solar noon about 12:51.
@@ -39,6 +39,26 @@ test('away from home, the phase follows the clock where you are', () => {
     assert.equal(dayPhase(Date.parse('2026-09-27T07:10:00+01:00')), 'dawn');
     assert.equal(dayPhase(Date.parse('2026-09-27T13:00:00+01:00')), 'midday');
     assert.equal(dayPhase(Date.parse('2026-09-27T19:00:00+01:00')), 'dusk');
+  } finally {
+    setZones([]);
+  }
+  // London at midsummer: sunset about 21:21, so the evening stays light, not night.
+  setZones([{ from: null, zone: 'Asia/Kuwait' }, { from: T('2026-06-01T00:00'), zone: 'Europe/London' }]);
+  try {
+    assert.equal(dayPhase(Date.parse('2026-06-21T20:45:00+01:00')), 'dusk');
+    assert.equal(dayPhase(Date.parse('2026-06-21T21:30:00+01:00')), 'dusk');
+    assert.equal(dayPhase(Date.parse('2026-06-21T22:00:00+01:00')), 'night');
+    assert.equal(dayPhase(Date.parse('2026-06-21T05:00:00+01:00')), 'dawn');
+  } finally {
+    setZones([]);
+  }
+  // Sydney in January, southern summer: sunrise about 06:00, sunset about 20:09.
+  setZones([{ from: null, zone: 'Asia/Kuwait' }, { from: Date.parse('2027-01-01T00:00:00+11:00'), zone: 'Australia/Sydney' }]);
+  try {
+    assert.equal(dayPhase(Date.parse('2027-01-15T06:00:00+11:00')), 'dawn');
+    assert.equal(dayPhase(Date.parse('2027-01-15T19:00:00+11:00')), 'afternoon');
+    assert.equal(dayPhase(Date.parse('2027-01-15T20:00:00+11:00')), 'dusk');
+    assert.equal(dayPhase(Date.parse('2027-01-15T21:00:00+11:00')), 'night');
   } finally {
     setZones([]);
   }

@@ -70,9 +70,13 @@ function context() {
   };
 }
 
+// Whether the screen on view draws scenery, which takes the light of the time of day.
+let scenic = false;
+
 function signatureOf(ctx) {
-  // The scenery takes the light of the time of day, so a new phase redraws the screen.
-  const base = `${route.name}|${route.arg || ''}|${ctx.todayKey}|${!!ctx.openRec}|${dayPhase(ctx.nowTs)}`;
+  // A new phase of the day redraws a screen with scenery, and only such a screen.
+  const light = scenic ? `|${dayPhase(ctx.nowTs)}` : '';
+  const base = `${route.name}|${route.arg || ''}|${ctx.todayKey}|${!!ctx.openRec}${light}`;
   return route.name === 'today' ? `${base}|${todaySignature(ctx)}` : base;
 }
 
@@ -121,6 +125,7 @@ function render(fresh) {
   }
   // The pill glides to the tab, however the screen was reached.
   if (tabSlide) tabSlide.sync();
+  scenic = !!node.querySelector('svg[data-phase]');
   lastSignature = signatureOf(ctx);
 }
 
