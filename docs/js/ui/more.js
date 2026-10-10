@@ -11,7 +11,6 @@ import { openSheet, sheetHead } from './sheet.js';
 import { pausesSection } from './pause.js';
 import { goalSection } from './goal.js';
 import { choice } from './components.js';
-import { DEFAULT_CLIMB } from '../core/climb.js';
 import { isFlexible, noWindowAlerts } from '../core/rules.js';
 
 /** A time shown as a row; tapping it opens its wheel in a sheet, where each roll saves. */
@@ -74,23 +73,6 @@ function showResetSheet(app) {
   };
 
   openSheet(confirmFirst, { name: 'reset', label: 'Reset' });
-}
-
-/** Each climber on Uhud can be switched off; switched on again, it resumes where it stopped. */
-function climbSettings(ctx) {
-  const cfg = { ...DEFAULT_CLIMB, ...(ctx.settings.climb || {}) };
-  const toggle = (kind, label) => choice({
-    label,
-    options: [{ value: true, label: 'On' }, { value: false, label: 'Off' }],
-    value: cfg[kind].on,
-    cols: 2,
-    name: `climb-${kind}`,
-    onChange: (on) => store.setClimber(kind, on, ctx.todayKey),
-  });
-  return h('section', { class: 'section', 'data-block': 'climb-settings' },
-    h('div', { class: 'label' }, 'Jebel Uhud'),
-    h('p', { class: 'small gap-s' }, 'A climber switched off is hidden and does not track. Switched on again, it resumes where it stopped.'),
-    h('div', { class: 'btn-pair gap' }, toggle('fast', 'Fast climber'), toggle('fullness', 'Fullness climber')));
 }
 
 export function isStandalone() {
@@ -164,7 +146,6 @@ export function renderMore(ctx, app) {
         timeSetting('Training', 'trainingTime', ctx))),
     alarmSection(ctx),
     pausesSection(ctx, app),
-    climbSettings(ctx),
     h('section', { class: 'section', 'data-block': 'calendar' },
       h('div', { class: 'label' }, 'Calendar reminders'),
       h('p', { class: 'gap-s' },

@@ -19,7 +19,6 @@ import { ringHero, stagesSection } from './stages.js';
 import { currentPause, endPause, pauseToday, showPauseSheet } from './pause.js';
 import { showBeginFastSheet } from './begin-fast.js';
 import { showGoalSheet } from './goal.js';
-import { climbSection } from './climb.js';
 import { dayTypeText, header, mealInProgress, nextWindowLine, note, notices, runningFullness, tapNote, timePill } from './shared.js';
 
 const days = (n) => `${n} ${n === 1 ? 'day' : 'days'}`;
@@ -76,8 +75,7 @@ export function renderToday(ctx, app) {
     notices(ctx, app),
     mode === 'open' ? fastDone(ctx, rec) : null,
     fastFirst ? [pointer, fastCard(ctx, app, src), stages, main] : [main, pointer, stages],
-    // The climb up Uhud takes the streak's place; with both climbers off, the streak returns.
-    climbSection(ctx) || streakSection(ctx),
+    streakSection(ctx),
     // A paused day tracks nothing.
     mode === 'paused' ? null : checkinSection(ctx, app),
     dunes(),
@@ -203,7 +201,7 @@ function pausedBlock(ctx, app) {
   return h('section', { class: 'section strong', 'data-block': 'paused' },
     h('div', { class: 'label' }, 'Paused'),
     h('h1', { class: 'display gap-s', 'data-testid': 'paused-until' }, until === ctx.todayKey ? 'Paused today' : `Paused until ${keepTogether(fmtDayShort(until))}`),
-    h('p', { class: 'gap' }, `${FOR_REASON[run.reason] || ''}Fasting is not tracked and the fast climber waits; fullness still counts. Tracking resumes on ${fmtDayLong(addDays(until, 1))}.`),
+    h('p', { class: 'gap' }, `${FOR_REASON[run.reason] || ''}Fasting is not tracked and your streak holds; fullness still counts. Tracking resumes on ${fmtDayLong(addDays(until, 1))}.`),
     h('div', { class: 'btn-row gap' },
       button('End the pause', () => endPause(app, run), { kind: 'secondary', name: 'end-pause' }),
       button('Change', () => showPauseSheet(app, { run }), { kind: 'secondary', name: 'change-pause' })),

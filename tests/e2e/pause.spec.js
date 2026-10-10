@@ -12,19 +12,19 @@ const pausedDays = async (page) => (await readDb(page)).days.filter((d) => d.pau
 test('Pause today: one tap, nothing to log, and Undo brings the day back', async ({ page }) => {
   await openAt(page, '2026-09-27T13:10');
   await seed(page, LAST_NIGHT);
-  const fastClimber = page.getByTestId('climb-fast').locator('.stat-value');
-  await expect(fastClimber).toHaveText('1 of 30');
+  const streak = page.getByTestId('streak');
+  await expect(streak).toHaveText('1 day');
   await tap(page, 'pause-today');
   await expect(page.getByTestId('flash')).toHaveText('Today is paused.');
   const paused = page.locator('[data-block="paused"]');
   await expect(paused.getByTestId('paused-until')).toHaveText('Paused today');
-  await expect(paused).toContainText('Fasting is not tracked and the fast climber waits; fullness still counts. Tracking resumes on Monday 28 September.');
+  await expect(paused).toContainText('Fasting is not tracked and your streak holds; fullness still counts. Tracking resumes on Monday 28 September.');
   // Nothing to log: no First bite, no ring, no check-in, no Tempted?.
   await expect(page.locator('[data-action="start-meal"]')).toHaveCount(0);
   await expect(page.getByTestId('fasting-ring')).toHaveCount(0);
   await expect(page.locator('[data-block="checkin"]')).toHaveCount(0);
   await expect(page.locator('[data-action="tempted"]')).toHaveCount(0);
-  await expect(fastClimber).toHaveText('1 of 30');
+  await expect(streak).toHaveText('1 day');
   expect(await pausedDays(page)).toEqual([['2026-09-27', true]]);
 
   await tap(page, 'undo');
@@ -50,13 +50,19 @@ test('a pause set from More, with dates and a reason', async ({ page }) => {
   await expect(row).toContainText('Ahead');
   expect(await pausedDays(page)).toEqual([['2026-09-29', 'travel'], ['2026-09-30', 'travel'], ['2026-10-01', 'travel']]);
 
+  // A save redraws More; a tap that lands just as the row is redrawn is tapped again.
+  const openRow = () => expect(async () => {
+    await row.click();
+    await expect(s).toBeVisible({ timeout: 1000 });
+  }).toPass();
   // Changing it: one day longer.
-  await row.click();
+  await openRow();
   await setDate(page, 'pause-to', '2026-10-02');
   await tap(page, 'save-pause');
+  await expect(s).toHaveCount(0);
   expect((await pausedDays(page)).map(([d]) => d)).toEqual(['2026-09-29', '2026-09-30', '2026-10-01', '2026-10-02']);
   // Removing it before it starts.
-  await row.click();
+  await openRow();
   await tap(page, 'end-pause-sheet');
   await expect(page.getByTestId('flash')).toHaveText('Pause removed.');
   expect(await pausedDays(page)).toEqual([]);
@@ -89,7 +95,7 @@ test('paused days keep the streak, are never flagged as unlogged, and leave the 
     days: [T('2026-09-20', '17:30', '21:00'), { day: '2026-09-21', paused: 'illness' }, { day: '2026-09-22', paused: 'illness' }, T('2026-09-23', '17:30', '21:00')],
     settings: settings({ installedAt: ms('2026-09-20T08:00') }),
   });
-  await expect(page.getByTestId('climb-fast').locator('.stat-value')).toHaveText('2 of 30');
+  await expect(page.getByTestId('streak')).toHaveText('2 days');
   await expect(page.locator('[data-notice="unlogged"]')).toHaveCount(0);
   await page.locator('.tab[data-tab="week"]').click();
   await expect(page.locator('[data-stat="streak"]')).toContainText('2 days');

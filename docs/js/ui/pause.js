@@ -1,5 +1,5 @@
 // Pauses: days for travel, illness or Ramadan when fasting is not tracked.
-// No window is logged, they are never a miss, and the fast climber waits.
+// No window is logged, they are never a miss, and the streak holds.
 // Fullness still counts: a paused day can be rated.
 
 import { h } from './dom.js';
@@ -91,7 +91,7 @@ export function showPauseSheet(app, { run = null, from = null } = {}) {
     const summary = h('p', { class: 'quiet small gap-s', 'data-testid': 'pause-summary' }, summaryText());
     return h('div', {},
       sheetHead(api, run ? 'Change the pause' : 'Pause'),
-      h('p', {}, 'Paused days are not tracked for fasting: no windows, no misses, and the fast climber waits. Fullness still counts.'),
+      h('p', {}, 'Paused days are not tracked for fasting: no windows, no misses, and your streak holds. Fullness still counts.'),
       h('section', { class: 'section flush gap' },
         h('div', { class: 'btn-pair' },
           dateField({ label: 'From', value: draft.from, minKey: minFrom, maxKey: maxFrom, todayKey: today, name: 'pause-from',
@@ -123,7 +123,7 @@ export function pausesSection(ctx, app) {
   const runs = pausesAhead(ctx);
   return h('section', { class: 'section', 'data-block': 'pauses' },
     h('div', { class: 'label' }, 'Pauses'),
-    h('p', { class: 'small gap-s' }, 'For travel, illness or Ramadan. Fasting is not tracked on paused days and the fast climber waits; fullness still counts.'),
+    h('p', { class: 'small gap-s' }, 'For travel, illness or Ramadan. Fasting is not tracked on paused days and your streak holds; fullness still counts.'),
     runs.length
       ? h('ul', { class: 'list gap-s' }, runs.map((r) => h('li', {},
         h('button', { type: 'button', class: 'item', 'data-pause': r.from, onclick: () => showPauseSheet(app, { run: r }) },

@@ -442,7 +442,7 @@ test('a long fast: the fasting day after the last bite, then the day of the goal
   await shot(page, '64d-week-fasted-day');
 });
 
-test('the Uhud climb and the fullness of the day', async ({ page }) => {
+test('the streak and the fullness of the day', async ({ page }) => {
   // Forty days: every one a success, every other one left wanting.
   const days = [];
   for (let i = 0; i < 40; i++) {
@@ -452,8 +452,8 @@ test('the Uhud climb and the fullness of the day', async ({ page }) => {
   days[39] = { ...days[39], fullness: undefined };
   await openAt(page, '2026-09-25T22:00');
   await seed(page, { days, settings: install });
-  await page.locator('[data-block="climb"]').scrollIntoViewIfNeeded();
-  await shot(page, '65-today-climb');
+  await page.locator('[data-block="streak"]').scrollIntoViewIfNeeded();
+  await shot(page, '65-today-streak');
   await page.evaluate(() => window.scrollTo(0, 0));
   await shot(page, '66-today-fullness-card');
 });
@@ -480,8 +480,6 @@ test('satiety tab, legends and feasting hours', async ({ page }) => {
   await shot(page, '73-week-legend');
   await page.locator('.tab[data-tab="today"]').click();
   await shot(page, '74-today-closed');
-  await page.locator('[data-block="climb"]').scrollIntoViewIfNeeded();
-  await shot(page, '75-today-uhud-legend');
   await page.locator('.tab[data-tab="history"]').click();
   await shot(page, '76-history-legend', { full: true });
   await page.getByTestId('history-legend').locator('button[data-series="miss"]').click();

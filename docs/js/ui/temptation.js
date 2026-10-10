@@ -7,7 +7,6 @@ import { openSheet } from './sheet.js';
 import * as store from '../store.js';
 import { HOUR, MIN, at, fmtDuration, fmtMinutes, fmtTime, fmtTimer, fmtWhen, minutesOfDay, now } from '../core/time.js';
 import { CUTOFF_MIN, cutoffApplies, isFlexible, isWorkday, lateNightDay, longFastAhead, plannedStartMin } from '../core/rules.js';
-import { SUMMIT, climbers } from '../core/climb.js';
 import { energySplit } from '../core/review.js';
 import { showStartMealSheet } from './meal.js';
 import { nextWindowLine, note } from './shared.js';
@@ -131,13 +130,7 @@ function gains(ctx, sit) {
   const streak = ctx.streak.current;
   const days = (n) => `${n} ${n === 1 ? 'day' : 'days'}`;
   const lastRes = sit.lastDay ? ctx.evaluate(sit.lastDay).result : null;
-  const fast = climbers(ctx).fast;
-  if (fast.on) {
-    // The fast climber on Uhud: a step for each successful day.
-    const place = `Your fast climber is on step ${fast.step} of ${SUMMIT} up Uhud.`;
-    if ((sit.kind === 'after' || sit.kind === 'late') && lastRes === 'success') out.push(`${sit.kind === 'late' ? 'Last night' : 'Today'} stays a success. ${place}`);
-    else out.push(`${place} Today's window, kept, is one more step.`);
-  } else if (sit.kind === 'after' && lastRes === 'success') out.push(`Today stays a success. Your streak: ${days(streak)}.`);
+  if (sit.kind === 'after' && lastRes === 'success') out.push(`Today stays a success. Your streak: ${days(streak)}.`);
   else if (sit.kind === 'late' && lastRes === 'success') out.push(`Last night stays a success. Your streak: ${days(streak)}.`);
   else if (streak > 0) out.push(`Your streak: ${days(streak)}, ${streak + 1} if today holds.`);
   else out.push('Today can start a new streak.');

@@ -4,7 +4,6 @@
 import * as db from './db.js';
 import { now, addDays, dayKey, floorToMinute, fmtDayLong, fmtTime, MIN, setZones } from './core/time.js';
 import { DEFAULT_WINDOW_HOURS, isOpen, lastBiteTs } from './core/rules.js';
-import { DEFAULT_CLIMB, switchClimber } from './core/climb.js';
 
 export const DEFAULTS = {
   workdayStart: '17:30',
@@ -18,7 +17,6 @@ export const DEFAULTS = {
   icsTimes: null,
   persisted: null,
   goalChanges: [], // [{ from: 'YYYY-MM-DD', hours }]: the eating-window goal from that day on
-  climb: DEFAULT_CLIMB,
   alarms: false, // timers through the Fast Timer shortcut
 };
 
@@ -400,17 +398,11 @@ export async function beginFast(ts) {
   return { undo };
 }
 
-// ---------- Fullness and the climb ----------
+// ---------- Fullness ----------
 
 /** The day's own fullness rating: 'before_full', 'full', 'stuffed', or null to clear. */
 export function setDayFullness(key, value) {
   return updateDay(key, { fullness: value });
-}
-
-/** Switches a climber ('fast' or 'fullness') on or off from a day. */
-export function setClimber(kind, on, todayKey) {
-  const cur = { ...DEFAULT_CLIMB, ...(state.settings.climb || {}) };
-  return setSettings({ climb: { ...cur, [kind]: switchClimber(cur[kind], on, todayKey) } });
 }
 
 // ---------- Meals ----------

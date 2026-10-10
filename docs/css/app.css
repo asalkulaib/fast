@@ -1311,26 +1311,6 @@ sup.fn {
   stroke: none;
 }
 
-/* ---------- Jebel Uhud ---------- */
-
-.uhud {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-
-.climber-name {
-  display: inline-flex;
-  align-items: center;
-  column-gap: var(--s2);
-}
-
-.climber-key {
-  width: 14px;
-  height: 17px;
-  flex: none;
-}
-
 /* Arabic glosses keep their own letter shapes: no spacing, no capitals. */
 .ar {
   letter-spacing: 0;
@@ -1612,29 +1592,6 @@ html.locked body {
 .swatch.line-faint {
   height: 0;
   border-top: 1px solid rgba(42, 28, 16, 0.35);
-}
-
-/* Uhud keys stand on a piece of the mountain, as the trails do. */
-.swatch.walked-fast,
-.swatch.walked-full,
-.swatch.trail,
-.swatch.summiteer {
-  width: 18px;
-  height: 10px;
-  background: var(--rock-700);
-  border-top: 3px solid var(--accent);
-}
-
-.swatch.walked-full {
-  border-top-color: var(--bg-raised);
-}
-
-.swatch.trail {
-  border-top: 2px dotted var(--rock-400);
-}
-
-.swatch.summiteer {
-  border-top-color: var(--rock-400);
 }
 
 /* ---------- Satiety ---------- */

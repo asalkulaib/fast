@@ -214,3 +214,15 @@ test('the week on Today, early in the week: days still ahead are dashed', async 
   expect(await days.evaluateAll((els) => els.map((e) => e.dataset.result))).toEqual(['pending', 'future', 'future', 'future', 'future', 'future', 'future']);
   await expect(page.getByTestId('today-week-legend').locator('.legend-item')).toHaveText(['Open or not logged', 'Still ahead']);
 });
+
+test('no Jebel Uhud: the streak sits under the stage panel, and More has no climber switches', async ({ page }) => {
+  await openAt(page, '2026-09-27T22:30');
+  await seed(page, { ...LAST_NIGHT, days: [...LAST_NIGHT.days, { day: '2026-09-27', firstBite: ms('2026-09-27T17:30'), lastBite: ms('2026-09-27T21:30') }] });
+  await expect(page.locator('[data-block="climb"]')).toHaveCount(0);
+  await expect(page.getByTestId('uhud')).toHaveCount(0);
+  await expect(page.getByTestId('streak')).toHaveText('2 days');
+  await expect.poll(async () => (await panels(page)).slice(0, 5)).toEqual(['fasting', 'stages', 'closed', 'streak', 'checkin']);
+  await page.locator('.tab[data-tab="more"]').click();
+  await expect(page.locator('[data-block="climb-settings"]')).toHaveCount(0);
+  await expect(page.locator('.more')).not.toContainText('Uhud');
+});

@@ -76,7 +76,7 @@ function pausedSection(app, key, rec) {
 function pauseSection(app, key) {
   return h('section', { class: 'section', 'data-block': 'day-pause' },
     h('div', { class: 'label' }, 'Pause'),
-    h('p', { class: 'small gap-s' }, 'Travel, illness or Ramadan: fasting is not tracked on a paused day, and the fast climber waits. Fullness still counts.'),
+    h('p', { class: 'small gap-s' }, 'Travel, illness or Ramadan: fasting is not tracked on a paused day, and your streak holds. Fullness still counts.'),
     button('Pause this day', async () => {
       const res = await store.pauseDays(key, key, true);
       if (res.error) app.flash(res.error);

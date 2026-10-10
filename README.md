@@ -6,7 +6,7 @@ Live app: https://asalkulaib.github.io/fast/
 
 ## The look
 
-Nafud at midday: sand is the page and umber ink the text. Gold leaf means one thing, that you did it: a successful day, a fasting goal reached, a day left wanting, the fast climber on Uhud; and it is the sun. A miss is always clay stripes, so it never rests on its red alone. Each screen has one solid button for its main action; others are outlined or plain. Cormorant Garamond sets the words and the few big figures, EB Garamond the text, and Jost every other number. Big figures have large digits and small units, as in 15h 10m, 5 of 7 or 104.7 kg, so the eye lands on the number first. Each section sits on its own panel of lighter sand with soft corners, and what you tap is rounded: buttons are pills. Every choice and rating, and the tabs at the bottom (which float over the page, with no bar behind them), is a sliding track: an ink pill sits under your choice and glides to the next one you tap, across lines too, and on a single line (the tabs included) you can drag it along. With Reduce Motion on, it moves without the glide. The dial, the chart marks and the legend keys keep their drawn shapes.
+Nafud at midday: sand is the page and umber ink the text. Gold leaf means one thing, that you did it: a successful day, a fasting goal reached, a day left wanting; and it is the sun. A miss is always clay stripes, so it never rests on its red alone. Each screen has one solid button for its main action; others are outlined or plain. Cormorant Garamond sets the words and the few big figures, EB Garamond the text, and Jost every other number. Big figures have large digits and small units, as in 15h 10m, 5 of 7 or 104.7 kg, so the eye lands on the number first. Each section sits on its own panel of lighter sand with soft corners, and what you tap is rounded: buttons are pills. Every choice and rating, and the tabs at the bottom (which float over the page, with no bar behind them), is a sliding track: an ink pill sits under your choice and glides to the next one you tap, across lines too, and on a single line (the tabs included) you can drag it along. With Reduce Motion on, it moves without the glide. The dial, the chart marks and the legend keys keep their drawn shapes.
 
 ## Use it on your iPhone
 
@@ -26,7 +26,7 @@ Nafud at midday: sand is the page and umber ink the text. Gold leaf means one th
 - What makes a day a success is set in More. With Planned start (the default), a workday window that opens before 16:00 is a miss, and a day marked as a day off follows weekend rules. With Feasting hours, the window opens at any hour of any day, and only its length and eating outside it count. Today then shows no planned time, and the calendar file drops the window alerts. Like the goal, a change applies from that day on, and past days keep the rule they had.
 - Eating after "I'm done eating" counts as outside the window and makes the day a miss. While you are still inside the window goal, you can reopen the window instead.
 - Between midnight and 04:00, late eating can be counted against the night before.
-- The streak counts consecutive successful days, shown in Week. A day with nothing logged breaks it, so Fast asks you to fill in any gap.
+- The streak counts consecutive successful days, shown on Today and in Week. A day with nothing logged breaks it, so Fast asks you to fill in any gap.
 - A paused day is not tracked for fasting: it is never a miss, and it neither counts towards the streak nor breaks it. Fullness still counts.
 
 ## Today
@@ -81,26 +81,21 @@ Satiety has its own tab, laid out after your earlier satiety page. It has three 
 - Now shows the fullness check waiting, with its countdown and Score my fullness now; any meal in progress, with Finished this meal; and how the day's eating ended.
 - Meals lists the last 30 days by day, newest first. Each meal reads hunger before → fullness right after → fullness at 20 minutes, followed by the drift. Tap one to edit it.
 
-Add a meal, at the top of every view, adds a meal you already ate (see Add a meal you already ate). Today keeps the meal buttons, the check-in and Uhud. While a fullness check is running, Today shows a short line with a button to Satiety.
+Add a meal, at the top of every view, adds a meal you already ate (see Add a meal you already ate). Today keeps the meal buttons, the check-in and the streak. While a fullness check is running, Today shows a short line with a button to Satiety.
 
 ## Legends
 
 On Satiety and History, tap a legend item to show only that one; the rest fade out. On Satiety you can also tap a mark, line or bar, and the choice applies to every chart and the meal list at once. Tap the item again, or Show all, to see everything; leaving the tab also resets it. (On the History chart, tapping a day still reads that day.)
 
-Every colour-coded visual has a legend that names each colour in words: the week row, the sun dial and the window band on Today, the Week schedule, Uhud, the History chart, the weight chart and the Satiety charts. Clay stripes always mean a miss. Sand means a paused day on the schedule and the chart, time still ahead on the dial and the band, and the comfortable zone on Satiety. On Satiety each way of finishing also has its own shape: a triangle for left wanting, a square for satisfied and a diamond for overfull.
+Every colour-coded visual has a legend that names each colour in words: the week row, the sun dial and the window band on Today, the Week schedule, the History chart, the weight chart and the Satiety charts. Clay stripes always mean a miss. Sand means a paused day on the schedule and the chart, time still ahead on the dial and the band, and the comfortable zone on Satiety. On Satiety each way of finishing also has its own shape: a triangle for left wanting, a square for satisfied and a diamond for overfull.
 
 ## Fullness (شبع)
 
 When you finish a meal, Fast asks how you finished: Left wanting (the goal), Satisfied, or Overfull. A day counts as left wanting only when every meal was. When the day's meals were not rated, and on paused days, Satiety › Now asks once how the day's eating ended. Fullness is logged every day, holidays and pauses included. The 1 to 10 ratings and the 20-minute check stay as before.
 
-## Jebel Uhud
+## Streak
 
-Today shows your progress as a climb up Jebel Uhud, in place of the streak. Two climbers take their own paths:
-
-- The fast climber moves up one step for each successful day.
-- The fullness climber moves up one step for each day left wanting.
-
-Thirty steps reach the summit. A climber who arrives stays there, and a new one starts from the base, so the summit fills with every completed climb; the tallies read, for example, "Fasts: 2 summits · Fullness: 4 summits". A missed day holds a climber in place; nothing slips back. On paused days the fast climber waits while the fullness climber keeps climbing. In More, Jebel Uhud, either climber can be switched off: it is hidden and does not track, and switched on again it resumes where it stopped. With both off, Today shows the streak again.
+Today shows your streak under the stage panel: the run of successful days in a row as a big figure, with your best beside it. The Week tab shows it too, and the Tempted sheet reminds you of it.
 
 ## Fasting stages
 

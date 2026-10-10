@@ -3,9 +3,8 @@ import assert from 'node:assert/strict';
 import * as rules from '../../docs/js/core/rules.js';
 import { dailySeries } from '../../docs/js/core/history.js';
 import { LEFT_WANTING, dayFullness } from '../../docs/js/core/fullness.js';
-import { SUMMIT, climb, climbers, switchClimber, wasOff } from '../../docs/js/core/climb.js';
 
-// Goals, fullness and the Uhud climb.
+// Goals and fullness.
 
 const T = (s) => Date.parse(`${s}:00+03:00`);
 const H = 3_600_000;
@@ -158,45 +157,4 @@ test('a day is left wanting only when every meal was, or the day itself was rate
   assert.equal(dayFullness([m('before_full'), m(null)], { fullness: 'before_full' }), LEFT_WANTING);
   assert.equal(dayFullness([], { fullness: 'full' }), 'full'); // a paused day's own rating
   assert.equal(dayFullness([], null), null);
-});
-
-test('the climb: a step per qualifying day, 30 to the summit, never slipping back', () => {
-  const qualifying = new Set(['2026-09-01', '2026-09-03', '2026-09-04']);
-  const c = climb({ startKey: '2026-09-01', endKey: '2026-09-05', qualifies: (k) => qualifying.has(k), off: [] });
-  assert.deepEqual(c, { steps: 3, summits: 0, step: 3 });
-  assert.deepEqual(climb({ startKey: '2026-01-01', endKey: '2026-03-01', qualifies: () => true, off: [] }), { steps: 60, summits: 2, step: 0 });
-  assert.equal(SUMMIT, 30);
-  // Days switched off do not count.
-  assert.equal(climb({ startKey: '2026-09-01', endKey: '2026-09-05', qualifies: () => true, off: [{ from: '2026-09-02', to: '2026-09-03' }] }).steps, 3);
-  assert.equal(wasOff('2026-09-10', [{ from: '2026-09-08', to: null }]), true);
-});
-
-test('switching a climber off and on again leaves a gap only for the days it was off', () => {
-  let c = { on: true, off: [] };
-  c = switchClimber(c, false, '2026-09-10');
-  assert.deepEqual(c, { on: false, off: [{ from: '2026-09-10', to: null }] });
-  c = switchClimber(c, true, '2026-09-14');
-  assert.deepEqual(c, { on: true, off: [{ from: '2026-09-10', to: '2026-09-13' }] });
-  // Off and on within a day: no gap.
-  assert.deepEqual(switchClimber(switchClimber({ on: true, off: [] }, false, '2026-09-20'), true, '2026-09-20'), { on: true, off: [] });
-});
-
-test('both climbers from the data: paused days hold the fast climber, not the fullness climber', () => {
-  const d = days(
-    win('2026-09-20', '17:30', '21:00'),
-    { day: '2026-09-21', paused: 'travel', fullness: 'before_full' },
-    win('2026-09-22', '17:30', '22:30'), // a miss: over 4 h 15 min
-    win('2026-09-23', '17:30', '21:00'),
-  );
-  const meals = [
-    { id: 1, day: '2026-09-20', stop: 'before_full' },
-    { id: 2, day: '2026-09-22', stop: 'before_full' },
-    { id: 3, day: '2026-09-23', stop: 'stuffed' },
-  ];
-  const settings = {};
-  const evaluate = rules.makeEvaluator({ days: d, outside: [], nowTs: T('2026-09-24T12:00'), todayKey: '2026-09-24', startKey: '2026-09-20', settings });
-  const c = climbers({ days: d, meals, evaluate, startKey: '2026-09-20', todayKey: '2026-09-24', settings });
-  assert.equal(c.fast.steps, 2); // the 20th and the 23rd
-  assert.equal(c.fullness.steps, 3); // the 20th, the paused 21st and the 22nd
-  assert.equal(c.fast.on, true);
 });

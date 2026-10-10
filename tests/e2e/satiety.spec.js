@@ -76,13 +76,12 @@ test('Now: the meal in progress, then its 20-minute check; Today points to it', 
   await expect(sheet(page, 'fullness')).toBeVisible();
 });
 
-test('legends name every colour: week strip, ring, Uhud and weight', async ({ page }) => {
+test('legends name every colour: week strip, ring and weight', async ({ page }) => {
   await openAt(page, '2026-09-26T23:00', '#week');
   await seed(page, WEEK);
   await expect(items(page, 'strip-legend')).toHaveText(['Success', 'Miss', 'Paused', 'Open or not logged', 'Still ahead', 'Left wanting', '16:00 on workdays', 'Ate outside the window']);
   await tab(page, 'today').click();
   await expect(items(page, 'ring-legend')).toHaveText(['Fasted', 'Ahead', 'Now', 'Goal', 'Stage']);
-  await expect(items(page, 'uhud-legend')).toHaveText(['Fast trail walked', 'Fullness trail walked', 'Trail still ahead', 'Faded figures: past summits']);
   await tab(page, 'history').click();
   await choose(page, 'history-metric', 'weight');
   await expect(items(page, 'weight-legend')).toHaveText(['7-day average', 'Latest']);
