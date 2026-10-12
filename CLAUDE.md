@@ -15,6 +15,7 @@ How to work on Fast, and what the owner has decided. README.md covers what the a
 - Code: https://github.com/asalkulaib/fast, with a working copy in `Desktop\My Apps\Fast` on the owner's PC (synced by OneDrive).
 - The owner's data (fasts, meals, weights) lives only in IndexedDB on their iPhone, never in this repo. More, Back up now protects it.
 - Plain HTML, CSS and JavaScript modules: no framework, no build step. `docs/js/core/` holds the pure rules, `docs/js/ui/` the screens.
+- A second app with a fully new design is planned in a new repository (the owner's choice, October 2026). `REDESIGN.md` hands it the owner's decisions and first steps, and `redesign/inventory/` catalogues every feature and rule of this app as its contract. This app stays as it is.
 
 ## Every change
 
